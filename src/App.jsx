@@ -11312,6 +11312,20 @@ const DayPlanner = () => {
     setCloudSyncError(null);
     try {
       const payload = prebuiltPayload || buildSyncPayload();
+
+      // Safety check: never upload a payload that would wipe all user data.
+      // If local has tasks/habits/inbox items but the payload is empty, something
+      // went wrong (stale state, race condition, etc.) — abort rather than
+      // overwriting the remote with empty data.
+      const localTaskCount = JSON.parse(localStorage.getItem('day-planner-tasks') || '[]').length;
+      const localInboxCount = JSON.parse(localStorage.getItem('day-planner-unscheduled') || '[]').length;
+      const payloadTaskCount = (payload.data?.tasks?.length || 0) + (payload.data?.unscheduledTasks?.length || 0);
+      if (localTaskCount + localInboxCount > 0 && payloadTaskCount === 0) {
+        console.error('Cloud sync upload aborted: payload has 0 tasks but localStorage has', localTaskCount + localInboxCount);
+        setCloudSyncStatus('idle');
+        return;
+      }
+
       await provider.upload(cloudSyncConfig, payload);
       const elapsed = Date.now() - syncStart;
       if (elapsed < 2000) await new Promise(r => setTimeout(r, 2000 - elapsed));
@@ -11332,6 +11346,16 @@ const DayPlanner = () => {
   };
 
   const applyRemoteData = (data) => {
+    // Safety check: if remote/merged data has zero tasks but local has data,
+    // something went wrong in the merge — skip applying to avoid data wipe.
+    const localTaskCount = JSON.parse(localStorage.getItem('day-planner-tasks') || '[]').length;
+    const localInboxCount = JSON.parse(localStorage.getItem('day-planner-unscheduled') || '[]').length;
+    const remoteTaskCount = (data.tasks?.length || 0) + (data.unscheduledTasks?.length || 0);
+    if (localTaskCount + localInboxCount > 0 && remoteTaskCount === 0) {
+      console.error('applyRemoteData aborted: remote has 0 tasks but local has', localTaskCount + localInboxCount);
+      return;
+    }
+
     suppressCloudUploadRef.current = true;
     suppressTimestampRef.current = true;
 

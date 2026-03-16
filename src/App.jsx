@@ -15726,7 +15726,25 @@ const DayPlanner = () => {
                               >
                                 {task.completed && <Check size={12} strokeWidth={3} className="text-white" />}
                               </button>
-                              <div className="flex-1 min-w-0">
+                              <div
+                                className={`flex-1 min-w-0 ${task._overdueType === 'scheduled' ? 'cursor-pointer' : ''}`}
+                                onClick={() => {
+                                  if (task._overdueType !== 'scheduled') return;
+                                  if (task.date) setSelectedDate(new Date(task.date + 'T12:00:00'));
+                                  setMobileActiveTab('timeline');
+                                  setTimeout(() => {
+                                    const el = document.querySelector(`[data-task-id="${task.id}"]`);
+                                    if (el && calendarRef.current) {
+                                      const container = calendarRef.current;
+                                      const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+                                      const scrollTarget = Math.max(0, elTop - container.clientHeight / 2 + el.offsetHeight / 2);
+                                      container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+                                      el.classList.add('ring-2', 'ring-blue-400');
+                                      setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2000);
+                                    }
+                                  }, 200);
+                                }}
+                              >
                                 <div className={`text-sm font-medium truncate ${task.completed ? 'line-through opacity-50' : textPrimary}`}>
                                   {renderTitle(task.title)}
                                 </div>
@@ -19243,7 +19261,24 @@ const DayPlanner = () => {
                                     >
                                       {task.completed && <Check size={12} strokeWidth={3} className="text-white" />}
                                     </button>
-                                    <div className="flex-1 min-w-0">
+                                    <div
+                                      className={`flex-1 min-w-0 ${task._overdueType === 'scheduled' ? 'cursor-pointer' : ''}`}
+                                      onClick={() => {
+                                        if (task._overdueType !== 'scheduled') return;
+                                        if (task.date) setSelectedDate(new Date(task.date + 'T12:00:00'));
+                                        setTimeout(() => {
+                                          const el = document.querySelector(`[data-task-id="${task.id}"]`);
+                                          if (el && calendarRef.current) {
+                                            const container = calendarRef.current;
+                                            const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+                                            const scrollTarget = Math.max(0, elTop - container.clientHeight / 2 + el.offsetHeight / 2);
+                                            container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+                                            el.classList.add('ring-2', 'ring-blue-400');
+                                            setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2000);
+                                          }
+                                        }, 200);
+                                      }}
+                                    >
                                       <div className={`text-sm font-medium truncate ${task.completed ? 'line-through opacity-50' : textPrimary}`}>
                                         {renderTitle(task.title)}
                                       </div>
@@ -20363,7 +20398,24 @@ const DayPlanner = () => {
                                 >
                                   {task.completed && <Check size={12} strokeWidth={3} className="text-white" />}
                                 </button>
-                                <div className="flex-1 min-w-0">
+                                <div
+                                  className={`flex-1 min-w-0 ${task._overdueType === 'scheduled' ? 'cursor-pointer' : ''}`}
+                                  onClick={() => {
+                                    if (task._overdueType !== 'scheduled') return;
+                                    if (task.date) setSelectedDate(new Date(task.date + 'T12:00:00'));
+                                    setTimeout(() => {
+                                      const el = document.querySelector(`[data-task-id="${task.id}"]`);
+                                      if (el && calendarRef.current) {
+                                        const container = calendarRef.current;
+                                        const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+                                        const scrollTarget = Math.max(0, elTop - container.clientHeight / 2 + el.offsetHeight / 2);
+                                        container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+                                        el.classList.add('ring-2', 'ring-blue-400');
+                                        setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2000);
+                                      }
+                                    }, 200);
+                                  }}
+                                >
                                   <div className={`text-sm font-medium truncate ${task.completed ? 'line-through opacity-50' : textPrimary}`}>
                                     {renderTitle(task.title)}
                                   </div>

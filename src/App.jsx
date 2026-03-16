@@ -13181,6 +13181,10 @@ const DayPlanner = () => {
   }, [unscheduledTasks, activeFrameNudgeKey]);
 
   // Compute available time slots within a frame instance, subtracting existing tasks/events
+  // TODO: this function doesn't account for the current time — slots that have already elapsed
+  // are still counted as available. For a frame ending at 24:00 with a calendar event 23:30–23:55,
+  // at 23:40 the correct answer is 5 min (23:55–24:00), but elapsed free time before/during the
+  // event inflates the total. Fix: clip each slot's start to max(slot.start, now) before summing.
   const computeAvailableSlots = useCallback((frameInstance, date) => {
     const allDayTasks = getTasksForDate(date instanceof Date ? date : new Date(frameInstance.date + 'T12:00:00'));
     const timedTasks = allDayTasks.filter(t => !t.isAllDay && t.startTime);

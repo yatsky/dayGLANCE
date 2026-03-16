@@ -9,6 +9,8 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:gravity="center_vertical"
+    android:paddingStart="6dp"
+    android:paddingEnd="6dp"
     android:paddingTop="6dp"
     android:paddingBottom="3dp"
     android:background="@color/widget_frame_bg">

@@ -13259,14 +13259,27 @@ const DayPlanner = () => {
     const today = new Date();
     const todayStr = getTodayStr();
 
-    // ── Overdue tasks ──────────────────────────────────────────────────────
-    const overdueItems = getOverdueTasks().map(t => ({
-      id: t.id,
-      title: t.title,
-      colorHex: taskColorToHex(t.color, t.nativeCalendarColor),
-      overdueType: t._overdueType || 'scheduled',
-      startTime: t.startTime || '',
-    }));
+    // ── Overdue tasks (split: prior-day vs today-past-endtime) ────────────
+    const allOverdueTasks = getOverdueTasks();
+    // Prior-day tasks → dedicated OVERDUE section in widget (no time, no badge)
+    const overdueItems = allOverdueTasks
+      .filter(t => t._overdueType === 'scheduled' ? t.date < todayStr : true)
+      .map(t => ({
+        id: t.id,
+        title: t.title,
+        colorHex: taskColorToHex(t.color, t.nativeCalendarColor),
+        overdueType: t._overdueType || 'scheduled',
+      }));
+    // Today's tasks that have passed their end time → shown in SCHEDULED with time
+    const overdueTodayItems = allOverdueTasks
+      .filter(t => t._overdueType === 'scheduled' && t.date === todayStr)
+      .map(t => ({
+        id: t.id,
+        title: t.title,
+        colorHex: taskColorToHex(t.color, t.nativeCalendarColor),
+        startTime: t.startTime || '',
+        duration: t.duration || 0,
+      }));
 
     // ── Habits (up to 5) ──────────────────────────────────────────────────
     const habitItems = activeHabits.slice(0, 5).map(h => {
@@ -13321,7 +13334,7 @@ const DayPlanner = () => {
     const todayFramesW = getFrameInstancesForDate(today).filter(
       f => timeToMinutes(f.end) > nowMinW
     );
-    const overdueIdSet = new Set(overdueItems.map(t => String(t.id)));
+    const overdueIdSet = new Set([...overdueItems, ...overdueTodayItems].map(t => String(t.id)));
     const scheduledW = todayAgenda.filter(t => t._agendaType === 'scheduled' && !overdueIdSet.has(String(t.id)));
 
     const taskFrameMapW = new Map();
@@ -13413,6 +13426,7 @@ const DayPlanner = () => {
       steps,
       use24Hour: use24HourClock,
       overdue: overdueItems,
+      overdueToday: overdueTodayItems,
       habits: habitItems,
       allDay: allDayItems,
       deadlines: deadlineItems,
@@ -15438,6 +15452,21 @@ const DayPlanner = () => {
                     </button>
                   )}
                 </div>
+                {/* Reschedule Tasks — shown when overdue past-day tasks exist, or incomplete today tasks after 7pm */}
+                {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
+                  const _todayStr = getTodayStr();
+                  const _pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < _todayStr : true);
+                  if (!(_pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19))) return null;
+                  return (
+                    <button
+                      onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
+                      className={`w-full mb-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
+                    >
+                      <Sparkles size={15} />
+                      Reschedule Tasks
+                    </button>
+                  );
+                })()}
                 {/* Morning dayGLANCE — AI morning summary card (mobile) */}
                 {aiConfig.enabled && aiConfig.features.morningSummary && !morningGlanceDismissed && (
                   (morningGlanceText || morningGlanceLoading || morningGlanceError) ? (
@@ -16225,23 +16254,6 @@ const DayPlanner = () => {
                         })}
                       </div>
                     </div>
-                  );
-                })()}
-
-                {/* Reschedule button — shown when there are overdue past-day tasks, or incomplete today tasks after 7pm */}
-                {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
-                  const todayStr = getTodayStr();
-                  const pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < todayStr : true);
-                  const showBtn = pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19);
-                  if (!showBtn) return null;
-                  return (
-                    <button
-                      onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
-                      className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
-                    >
-                      <Sparkles size={15} />
-                      Reschedule Tasks
-                    </button>
                   );
                 })()}
 
@@ -18955,6 +18967,21 @@ const DayPlanner = () => {
                         )}
                       </div>
 
+                      {/* Reschedule Tasks — shown when overdue past-day tasks exist, or incomplete today tasks after 7pm */}
+                      {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
+                        const _todayStr = getTodayStr();
+                        const _pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < _todayStr : true);
+                        if (!(_pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19))) return null;
+                        return (
+                          <button
+                            onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
+                            className={`w-full mb-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
+                          >
+                            <Sparkles size={15} />
+                            Reschedule Tasks
+                          </button>
+                        );
+                      })()}
                       {/* Morning dayGLANCE — AI morning summary card */}
                       {aiConfig.enabled && aiConfig.features.morningSummary && !morningGlanceDismissed && (
                         (morningGlanceText || morningGlanceLoading || morningGlanceError) ? (
@@ -19704,23 +19731,6 @@ const DayPlanner = () => {
                         );
                       })()}
 
-                      {/* Reschedule button — shown when there are overdue past-day tasks, or incomplete today tasks after 7pm */}
-                      {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
-                        const todayStr = getTodayStr();
-                        const pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < todayStr : true);
-                        const showBtn = pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19);
-                        if (!showBtn) return null;
-                        return (
-                          <button
-                            onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
-                            className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
-                          >
-                            <Sparkles size={15} />
-                            Reschedule Tasks
-                          </button>
-                        );
-                      })()}
-
                     </div>
                   </div>
                 )}
@@ -20077,6 +20087,21 @@ const DayPlanner = () => {
                     )}
                   </div>
 
+                  {/* Reschedule Tasks — shown when overdue past-day tasks exist, or incomplete today tasks after 7pm */}
+                  {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
+                    const _todayStr = getTodayStr();
+                    const _pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < _todayStr : true);
+                    if (!(_pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19))) return null;
+                    return (
+                      <button
+                        onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
+                        className={`w-full mb-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
+                      >
+                        <Sparkles size={15} />
+                        Reschedule Tasks
+                      </button>
+                    );
+                  })()}
                   {/* Morning dayGLANCE — AI morning summary card (desktop) */}
                   {aiConfig.enabled && aiConfig.features.morningSummary && !morningGlanceDismissed && (
                     (morningGlanceText || morningGlanceLoading || morningGlanceError) ? (
@@ -20817,22 +20842,6 @@ const DayPlanner = () => {
                     );
                   })()}
 
-                  {/* Reschedule button — shown when there are overdue past-day tasks, or incomplete today tasks after 7pm */}
-                  {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
-                    const todayStr = getTodayStr();
-                    const pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < todayStr : true);
-                    const showBtn = pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19);
-                    if (!showBtn) return null;
-                    return (
-                      <button
-                        onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
-                        className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
-                      >
-                        <Sparkles size={15} />
-                        Reschedule Tasks
-                      </button>
-                    );
-                  })()}
                 </div>
               </div>
 

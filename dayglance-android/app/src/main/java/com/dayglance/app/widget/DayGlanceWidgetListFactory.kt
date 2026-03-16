@@ -132,17 +132,17 @@ class DayGlanceWidgetListFactory(
             if (habits.isNotEmpty()) items += AgendaItem.Habits(habits)
         }
 
-        // 2. Overdue tasks — collected here, injected into SCHEDULED below
-        val overdueItems = mutableListOf<AgendaItem.Task>()
+        // 2. OVERDUE section — prior-day tasks only (no time, no badge — section header is enough)
         val overdueArray = snapshot.optJSONArray("overdue")
-        if (overdueArray != null) {
+        if (overdueArray != null && overdueArray.length() > 0) {
+            items += AgendaItem.Section("OVERDUE", isOverdue = true)
             for (i in 0 until overdueArray.length()) {
                 val t = overdueArray.optJSONObject(i) ?: continue
-                overdueItems += AgendaItem.Task(
+                items += AgendaItem.Task(
                     title = t.optString("title", "Untitled"),
                     colorHex = t.optString("colorHex", "#ef4444"),
-                    badge = "OVERDUE",
-                    timeStr = buildTimeStr(t),
+                    badge = "",
+                    timeStr = "",
                 )
             }
         }
@@ -176,39 +176,65 @@ class DayGlanceWidgetListFactory(
             }
         }
 
-        // 5. Sections (frames + unframed scheduled tasks)
+        // 5. SCHEDULED section — today's past-endtime tasks + frames + unframed tasks
+        //    Emit a single "SCHEDULED" header before any frame/task content.
+        val overdueTodayArray = snapshot.optJSONArray("overdueToday")
         val sectionsArray = snapshot.optJSONArray("sections")
+
+        val hasOverdueToday = overdueTodayArray != null && overdueTodayArray.length() > 0
+        val hasSections = sectionsArray != null && (0 until (sectionsArray.length())).any { i ->
+            val sec = sectionsArray.optJSONObject(i) ?: return@any false
+            val tasks = sec.optJSONArray("tasks") ?: return@any false
+            tasks.length() > 0 || sec.optInt("availableMinutes", 0) > 0
+        }
+
+        if (hasOverdueToday || hasSections) {
+            items += AgendaItem.Section("SCHEDULED")
+        }
+
+        // Today's tasks that have passed their end time — shown with time, no badge
+        if (overdueTodayArray != null) {
+            for (i in 0 until overdueTodayArray.length()) {
+                val t = overdueTodayArray.optJSONObject(i) ?: continue
+                items += AgendaItem.Task(
+                    title = t.optString("title", "Untitled"),
+                    colorHex = t.optString("colorHex", "#ef4444"),
+                    badge = "",
+                    timeStr = buildTimeStr(t),
+                )
+            }
+        }
+
+        // Frames and unframed tasks — all under the single SCHEDULED header above
         if (sectionsArray != null) {
             for (i in 0 until sectionsArray.length()) {
                 val sec = sectionsArray.optJSONObject(i) ?: continue
                 when (sec.optString("type")) {
                     "frame" -> {
-                        items += AgendaItem.FrameHeader(
-                            name = sec.optString("name", "Frame"),
-                            colorHex = sec.optString("colorHex", "#3b82f6"),
-                            start = sec.optString("start", ""),
-                            end = sec.optString("end", ""),
-                            availableMinutes = sec.optInt("availableMinutes", 0),
-                        )
-                        val tasks = sec.optJSONArray("tasks") ?: continue
-                        for (j in 0 until tasks.length()) {
-                            val t = tasks.optJSONObject(j) ?: continue
-                            items += AgendaItem.Task(
-                                title = t.optString("title", "Untitled"),
-                                colorHex = t.optString("colorHex", "#3b82f6"),
-                                badge = "",
-                                timeStr = buildTimeStr(t),
-                                indent = true,
+                        val frameTasks = sec.optJSONArray("tasks") ?: JSONArray()
+                        val availMins = sec.optInt("availableMinutes", 0)
+                        if (frameTasks.length() > 0 || availMins > 0) {
+                            items += AgendaItem.FrameHeader(
+                                name = sec.optString("name", "Frame"),
+                                colorHex = sec.optString("colorHex", "#3b82f6"),
+                                start = sec.optString("start", ""),
+                                end = sec.optString("end", ""),
+                                availableMinutes = availMins,
                             )
+                            for (j in 0 until frameTasks.length()) {
+                                val t = frameTasks.optJSONObject(j) ?: continue
+                                items += AgendaItem.Task(
+                                    title = t.optString("title", "Untitled"),
+                                    colorHex = t.optString("colorHex", "#3b82f6"),
+                                    badge = "",
+                                    timeStr = buildTimeStr(t),
+                                    indent = true,
+                                )
+                            }
                         }
                     }
                     "unframed" -> {
                         val tasks = sec.optJSONArray("tasks") ?: continue
-                        if (tasks.length() > 0 || overdueItems.isNotEmpty()) {
-                            items += AgendaItem.Section("SCHEDULED")
-                            items.addAll(overdueItems)
-                            overdueItems.clear()
-                        }
                         for (j in 0 until tasks.length()) {
                             val t = tasks.optJSONObject(j) ?: continue
                             items += AgendaItem.Task(
@@ -222,12 +248,6 @@ class DayGlanceWidgetListFactory(
                     }
                 }
             }
-        }
-
-        // Overdue items not yet consumed (no unframed section existed) — add SCHEDULED now
-        if (overdueItems.isNotEmpty()) {
-            items += AgendaItem.Section("SCHEDULED")
-            items.addAll(overdueItems)
         }
 
         // 6. Routines — collapsed into a single grouped row, sorted by start time

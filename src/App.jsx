@@ -13217,17 +13217,27 @@ const DayPlanner = () => {
     playUISound('tick');
   }, [unscheduledTasks, activeFrameNudgeKey]);
 
-  // Compute available time slots within a frame instance, subtracting existing tasks/events
-  // TODO: this function doesn't account for the current time — slots that have already elapsed
-  // are still counted as available. For a frame ending at 24:00 with a calendar event 23:30–23:55,
-  // at 23:40 the correct answer is 5 min (23:55–24:00), but elapsed free time before/during the
-  // event inflates the total. Fix: clip each slot's start to max(slot.start, now) before summing.
+  // Compute available time slots within a frame instance, subtracting existing tasks/events.
+  // For today, elapsed time is excluded: each slot's start is clipped to the current time.
   const computeAvailableSlots = useCallback((frameInstance, date) => {
     const allDayTasks = getTasksForDate(date instanceof Date ? date : new Date(frameInstance.date + 'T12:00:00'));
     const timedTasks = allDayTasks.filter(t => !t.isAllDay && t.startTime);
     const frameStartMin = timeToMinutes(frameInstance.start);
     const frameEndMin = timeToMinutes(frameInstance.end);
     const buffer = frameInstance.bufferMinutes || 0;
+
+    // Determine the "now" floor: for today, clip slots to current time;
+    // for past dates all time is elapsed; for future dates no clipping.
+    const slotDate = date instanceof Date ? date : new Date(frameInstance.date + 'T12:00:00');
+    const slotDateStr = dateToString(slotDate);
+    const todayStr = dateToString(new Date());
+    let nowFloor = frameStartMin; // future dates: no clipping
+    if (slotDateStr === todayStr) {
+      const now = new Date();
+      nowFloor = now.getHours() * 60 + now.getMinutes();
+    } else if (slotDateStr < todayStr) {
+      nowFloor = frameEndMin; // past dates: everything elapsed
+    }
 
     // Collect occupied intervals within the frame
     const occupied = [];
@@ -13256,23 +13266,24 @@ const DayPlanner = () => {
       }
     }
 
-    // Compute free gaps
+    // Compute free gaps, clipping to nowFloor for today
     const slots = [];
     let cursor = frameStartMin;
     for (const m of merged) {
       const gapStart = cursor + (cursor === frameStartMin ? 0 : buffer);
       const gapEnd = m.start - buffer;
-      if (gapEnd > gapStart) {
+      const clippedStart = Math.max(gapStart, nowFloor);
+      if (gapEnd > clippedStart) {
         slots.push({
-          start: minutesToTime(gapStart),
+          start: minutesToTime(clippedStart),
           end: minutesToTime(gapEnd),
-          minutes: gapEnd - gapStart,
+          minutes: gapEnd - clippedStart,
         });
       }
       cursor = m.end;
     }
     // Final gap after last occupied block
-    const finalStart = cursor + (cursor === frameStartMin ? 0 : buffer);
+    const finalStart = Math.max(cursor + (cursor === frameStartMin ? 0 : buffer), nowFloor);
     if (finalStart < frameEndMin) {
       slots.push({
         start: minutesToTime(finalStart),

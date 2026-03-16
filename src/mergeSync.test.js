@@ -1497,7 +1497,23 @@ describe('mergeSyncData — GTD frames sync', () => {
     expect(remoteChanged).toBe(true); // remote needs Deep Work
   });
 
-  it('remote version of a frame wins when frames differ', () => {
+  it('newer frame wins when frames differ and both have lastModified', () => {
+    const deviceA = {
+      ...emptyData(),
+      gtdFrames: [F('f1', 'Deep Work', { start: '09:00', end: '12:00', lastModified: '2024-01-02T00:00:00Z' })],
+    };
+    const deviceB = {
+      ...emptyData(),
+      gtdFrames: [F('f1', 'Deep Work', { start: '08:00', end: '11:00', lastModified: '2024-01-03T00:00:00Z' })],
+    };
+
+    const { data, localChanged } = mergeSyncData(deviceA, deviceB);
+    expect(data.gtdFrames).toHaveLength(1);
+    expect(data.gtdFrames[0].start).toBe('08:00'); // remote is newer
+    expect(localChanged).toBe(true);
+  });
+
+  it('local frame wins when frames differ and neither has lastModified', () => {
     const deviceA = {
       ...emptyData(),
       gtdFrames: [F('f1', 'Deep Work', { start: '09:00', end: '12:00' })],
@@ -1507,10 +1523,10 @@ describe('mergeSyncData — GTD frames sync', () => {
       gtdFrames: [F('f1', 'Deep Work', { start: '08:00', end: '11:00' })],
     };
 
-    const { data, localChanged } = mergeSyncData(deviceA, deviceB);
+    const { data, remoteChanged } = mergeSyncData(deviceA, deviceB);
     expect(data.gtdFrames).toHaveLength(1);
-    expect(data.gtdFrames[0].start).toBe('08:00');
-    expect(localChanged).toBe(true);
+    expect(data.gtdFrames[0].start).toBe('09:00'); // local wins (no timestamps)
+    expect(remoteChanged).toBe(true);
   });
 
   it('frame deleted on one device is removed on the other via tombstone', () => {

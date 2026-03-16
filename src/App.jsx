@@ -10635,7 +10635,8 @@ const DayPlanner = () => {
         habitLogs: JSON.parse(localStorage.getItem('day-planner-habit-logs') || '{}'),
         habitsEnabled: JSON.parse(localStorage.getItem('day-planner-habits-enabled') || 'true'),
         routinesEnabled: JSON.parse(localStorage.getItem('day-planner-routines-enabled') || 'true'),
-        aiConfig: JSON.parse(localStorage.getItem('day-planner-ai-config') || 'null')
+        aiConfig: JSON.parse(localStorage.getItem('day-planner-ai-config') || 'null'),
+        calendarFilter: JSON.parse(localStorage.getItem('day-planner-calendar-filter') || '[]')
       }
     };
 
@@ -10678,7 +10679,8 @@ const DayPlanner = () => {
       cloudSyncConfig: JSON.parse(localStorage.getItem('day-planner-cloud-sync-config') || 'null'),
       reminderSettings: JSON.parse(localStorage.getItem('day-planner-reminder-settings') || 'null'),
       habits: JSON.parse(localStorage.getItem('day-planner-habits') || '[]'),
-      habitLogs: JSON.parse(localStorage.getItem('day-planner-habit-logs') || '{}')
+      habitLogs: JSON.parse(localStorage.getItem('day-planner-habit-logs') || '{}'),
+      calendarFilter: JSON.parse(localStorage.getItem('day-planner-calendar-filter') || '[]')
     }
   });
 
@@ -10835,6 +10837,7 @@ const DayPlanner = () => {
         if (data.habitsEnabled !== undefined) localStorage.setItem('day-planner-habits-enabled', JSON.stringify(data.habitsEnabled));
         if (data.routinesEnabled !== undefined) localStorage.setItem('day-planner-routines-enabled', JSON.stringify(data.routinesEnabled));
         if (data.aiConfig) localStorage.setItem('day-planner-ai-config', JSON.stringify(data.aiConfig));
+        if (data.calendarFilter) localStorage.setItem('day-planner-calendar-filter', JSON.stringify(data.calendarFilter));
 
         // Reload app to reflect changes
         // On Android WebView, use href assignment for a full reload; fall back to reload()
@@ -11298,7 +11301,7 @@ const DayPlanner = () => {
     };
   };
 
-  const cloudSyncUpload = async () => {
+  const cloudSyncUpload = async (prebuiltPayload) => {
     if (!cloudSyncConfig?.enabled || cloudSyncInProgressRef.current) return;
     const provider = cloudSyncProviders[cloudSyncConfig.provider];
     if (!provider) return;
@@ -11308,7 +11311,7 @@ const DayPlanner = () => {
     setCloudSyncStatus('uploading');
     setCloudSyncError(null);
     try {
-      const payload = buildSyncPayload();
+      const payload = prebuiltPayload || buildSyncPayload();
       await provider.upload(cloudSyncConfig, payload);
       const elapsed = Date.now() - syncStart;
       if (elapsed < 2000) await new Promise(r => setTimeout(r, 2000 - elapsed));
@@ -11460,9 +11463,17 @@ const DayPlanner = () => {
       }
 
       if (remoteChanged) {
-        // Upload merged result so both sides converge
+        // Upload merged result so both sides converge.
+        // Pass the merged data directly as a pre-built payload — reading from
+        // React state via buildSyncPayload() would return stale pre-merge data
+        // because applyRemoteData's setState calls haven't been processed yet.
+        const mergedPayload = {
+          version: 2,
+          lastModified: new Date().toISOString(),
+          data: mergedData,
+        };
         cloudSyncInProgressRef.current = false;
-        await cloudSyncUpload();
+        await cloudSyncUpload(mergedPayload);
         // cloudSyncUpload sets its own success status
         return;
       }
@@ -23130,7 +23141,9 @@ const DayPlanner = () => {
                   cloudSyncInProgressRef.current = false;
                   cloudSyncInitialDoneRef.current = true;
                   if (remoteChanged) {
-                    await cloudSyncUpload();
+                    // Pass merged data directly — React state is stale after applyRemoteData
+                    const mergedPayload = { version: 2, lastModified: now, data: mergedData };
+                    await cloudSyncUpload(mergedPayload);
                   } else {
                     setCloudSyncStatus('success');
                     setTimeout(() => setCloudSyncStatus((s) => s === 'success' ? 'idle' : s), 3000);

@@ -480,14 +480,19 @@ class DayGlanceWidgetListFactory(
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * One UI (Samsung) applies its own font scaling to widget RemoteViews, making text render
-     * smaller than the declared sp value. Detect Samsung devices and nudge sizes up to compensate.
+     * One UI's launcher applies its own font scaling to widget RemoteViews, making text render
+     * smaller than the declared sp value. Detect One UI specifically (not just Samsung hardware)
+     * so third-party launchers on Samsung devices are unaffected.
      */
-    private val isSamsungDevice: Boolean =
-        android.os.Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+    private val isOneUiLauncher: Boolean by lazy {
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN)
+            .addCategory(android.content.Intent.CATEGORY_HOME)
+        val info = context.packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        info?.activityInfo?.packageName == "com.sec.android.app.launcher"
+    }
 
     private fun RemoteViews.boostTextSizeForOneUi(viewId: Int, baseSp: Float) {
-        if (isSamsungDevice) setTextViewTextSize(viewId, TypedValue.COMPLEX_UNIT_SP, baseSp + 2f)
+        if (isOneUiLauncher) setTextViewTextSize(viewId, TypedValue.COMPLEX_UNIT_SP, baseSp + 2f)
     }
 
     private fun isDarkMode(): Boolean =

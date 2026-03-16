@@ -7962,12 +7962,13 @@ const DayPlanner = () => {
     const existingMap = {};
     todayRoutines.forEach(r => { existingMap[r.id] = r; });
 
+    const now = new Date().toISOString();
     const newTodayRoutines = dashboardSelectedChips.map(chip => {
       const existing = existingMap[chip.id];
       if (existing) {
-        return { ...existing, name: chip.name, bucket: chip.bucket, startTime: chip.startTime, isAllDay: !chip.startTime };
+        return { ...existing, name: chip.name, bucket: chip.bucket, startTime: chip.startTime, isAllDay: !chip.startTime, lastModified: now };
       }
-      return { id: chip.id, name: chip.name, bucket: chip.bucket, startTime: chip.startTime || null, duration: 15, isAllDay: !chip.startTime };
+      return { id: chip.id, name: chip.name, bucket: chip.bucket, startTime: chip.startTime || null, duration: 15, isAllDay: !chip.startTime, lastModified: now };
     });
 
     // Record tombstones for routines that were removed from today's list
@@ -7975,7 +7976,6 @@ const DayPlanner = () => {
     const newIds = new Set(newTodayRoutines.map(r => String(r.id)));
     const removedIds = todayRoutines.filter(r => !newIds.has(String(r.id)));
     if (removedIds.length > 0) {
-      const now = new Date().toISOString();
       setRemovedTodayRoutineIds(prev => {
         const updated = { ...prev };
         removedIds.forEach(r => { updated[String(r.id)] = now; });
@@ -8881,7 +8881,7 @@ const DayPlanner = () => {
       const deltaY = moveEvent.clientY - startY;
       const deltaMinutes = Math.round((deltaY / 80) * 60 / 15) * 15;
       const newDuration = Math.max(15, startDuration + deltaMinutes);
-      setTodayRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, duration: newDuration } : r));
+      setTodayRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, duration: newDuration, lastModified: new Date().toISOString() } : r));
     };
 
     const handleMouseUp = () => {
@@ -8907,7 +8907,7 @@ const DayPlanner = () => {
       const deltaY = moveEvent.touches[0].clientY - startY;
       const deltaMinutes = Math.round((deltaY / 80) * 60 / 15) * 15;
       const newDuration = Math.max(15, startDuration + deltaMinutes);
-      setTodayRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, duration: newDuration } : r));
+      setTodayRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, duration: newDuration, lastModified: new Date().toISOString() } : r));
     };
 
     const handleTouchEnd = () => {
@@ -9512,9 +9512,9 @@ const DayPlanner = () => {
       } else if (task.isRoutineDrag) {
         // Routine chip: update time/all-day on todayRoutines
         if (droppingToAllDay) {
-          setTodayRoutines(prev => prev.map(r => r.id === task.id ? { ...r, startTime: null, isAllDay: true } : r));
+          setTodayRoutines(prev => prev.map(r => r.id === task.id ? { ...r, startTime: null, isAllDay: true, lastModified: new Date().toISOString() } : r));
         } else {
-          setTodayRoutines(prev => prev.map(r => r.id === task.id ? { ...r, startTime: newTime, isAllDay: false } : r));
+          setTodayRoutines(prev => prev.map(r => r.id === task.id ? { ...r, startTime: newTime, isAllDay: false, lastModified: new Date().toISOString() } : r));
         }
       } else {
         // Regular task: update time, isAllDay status, and date (for cross-column drag)
@@ -9705,7 +9705,7 @@ const DayPlanner = () => {
         return;
       }
       const startTime = getTimeFromCursorPosition(e, { maxMinutes: 24 * 60, taskDuration: draggedTask.duration });
-      setTodayRoutines(prev => prev.map(r => r.id === draggedTask.id ? { ...r, startTime, isAllDay: false } : r));
+      setTodayRoutines(prev => prev.map(r => r.id === draggedTask.id ? { ...r, startTime, isAllDay: false, lastModified: new Date().toISOString() } : r));
       setDraggedTask(null); setDragSource(null); setDragPreviewTime(null); setDragPreviewDate(null);
       return;
     }
@@ -9978,7 +9978,7 @@ const DayPlanner = () => {
         setDraggedTask(null); setDragSource(null); setDragPreviewTime(null); setDragPreviewDate(null); setDragOverAllDay(null);
         return;
       }
-      setTodayRoutines(prev => prev.map(r => r.id === draggedTask.id ? { ...r, startTime: null, isAllDay: true } : r));
+      setTodayRoutines(prev => prev.map(r => r.id === draggedTask.id ? { ...r, startTime: null, isAllDay: true, lastModified: new Date().toISOString() } : r));
       setDraggedTask(null); setDragSource(null); setDragPreviewTime(null); setDragPreviewDate(null); setDragOverAllDay(null);
       return;
     }

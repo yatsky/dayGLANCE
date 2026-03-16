@@ -7147,7 +7147,7 @@ const DayPlanner = () => {
       }
 
       // Don't trigger shortcuts when a modal is open (except Escape and ? handled above)
-      if (showAddTask || showFocusMode || showRoutinesDashboard || showShortcutHelp || showSpotlight || showSettings || showRemindersSettings || showWeeklyReview || showVoiceInput || showHabitModal || showFramesModal || frameAdjustModal) {
+      if (showAddTask || showFocusMode || showRoutinesDashboard || showShortcutHelp || showSpotlight || showSettings || showRemindersSettings || showWeeklyReview || showVoiceInput || showHabitModal || showFramesModal || frameAdjustModal || showRescheduleModal) {
         return;
       }
 
@@ -7252,6 +7252,14 @@ const DayPlanner = () => {
         setShowHabitModal(true);
       }
 
+      // 'e' for end-of-day reschedule
+      if (e.key === 'e' && noModifiers && aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0) {
+        e.preventDefault();
+        setShowRescheduleModal(true);
+        setRescheduleResults(null);
+        setRescheduleError('');
+      }
+
       // 's' for smart schedule (open frames modal on schedule tab)
       if (e.key === 's' && noModifiers && aiConfig?.enabled && aiConfig.features?.smartScheduling && gtdFrames.filter(f => f.enabled).length > 0) {
         e.preventDefault();
@@ -7292,7 +7300,7 @@ const DayPlanner = () => {
 
     document.addEventListener('keydown', handleGlobalKeyDown);
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedDate, showAddTask, showRecurrencePicker, editingRecurrenceTaskId, showShortcutHelp, showHelpModal, showFocusMode, showRoutinesDashboard, showMonthView, showBackupMenu, showAutoBackupManager, showSpotlight, showSettings, showRemindersSettings, showWeeklyReview, showMobileDailySummary, showVoiceInput, hoverPreviewTime, hoverPreviewDate, isMobile, routinesEnabled, habitsEnabled, aiConfig, taskContextMenu, timelineContextMenu, quickAddFrameModal, frameContextMenu, frameAdjustModal, frameScheduleModal, showFramesModal, gtdFrames]);
+  }, [selectedDate, showAddTask, showRecurrencePicker, editingRecurrenceTaskId, showShortcutHelp, showHelpModal, showFocusMode, showRoutinesDashboard, showMonthView, showBackupMenu, showAutoBackupManager, showSpotlight, showSettings, showRemindersSettings, showWeeklyReview, showMobileDailySummary, showVoiceInput, hoverPreviewTime, hoverPreviewDate, isMobile, routinesEnabled, habitsEnabled, aiConfig, taskContextMenu, timelineContextMenu, quickAddFrameModal, frameContextMenu, frameAdjustModal, frameScheduleModal, showFramesModal, gtdFrames, showRescheduleModal]);
 
   // Mobile multi-finger long-press gestures: 2-finger hold = undo, 3-finger hold = redo
   useEffect(() => {
@@ -15696,8 +15704,8 @@ const DayPlanner = () => {
                                 <div className={`text-xs ${textSecondary} flex items-center gap-1 mt-0.5`}>
                                   {task._overdueType === 'scheduled' ? (
                                     <>
-                                      <Clock size={10} />
-                                      {formatDeadlineDate(task.date)} {!task.isAllDay && `• ${formatTime(task.startTime)}`}
+                                      <CalendarDays size={10} />
+                                      {formatDeadlineDate(task.date)}
                                     </>
                                   ) : (
                                     <>
@@ -16217,6 +16225,23 @@ const DayPlanner = () => {
                         })}
                       </div>
                     </div>
+                  );
+                })()}
+
+                {/* Reschedule button — shown when there are overdue past-day tasks, or incomplete today tasks after 7pm */}
+                {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
+                  const todayStr = getTodayStr();
+                  const pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < todayStr : true);
+                  const showBtn = pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19);
+                  if (!showBtn) return null;
+                  return (
+                    <button
+                      onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
+                      className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
+                    >
+                      <Sparkles size={15} />
+                      Reschedule Tasks
+                    </button>
                   );
                 })()}
 
@@ -19197,7 +19222,7 @@ const DayPlanner = () => {
                                       </div>
                                       <div className={`text-xs ${textSecondary} flex items-center gap-1 mt-0.5`}>
                                         {task._overdueType === 'scheduled' ? (
-                                          <><Clock size={10} /> {formatDeadlineDate(task.date)} {!task.isAllDay && `• ${formatTime(task.startTime)}`}</>
+                                          <><CalendarDays size={10} /> {formatDeadlineDate(task.date)}</>
                                         ) : (
                                           <><AlertCircle size={10} /> Due: {formatDeadlineDate(task.deadline)}</>
                                         )}
@@ -19676,6 +19701,23 @@ const DayPlanner = () => {
                               })}
                             </div>
                           </div>
+                        );
+                      })()}
+
+                      {/* Reschedule button — shown when there are overdue past-day tasks, or incomplete today tasks after 7pm */}
+                      {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
+                        const todayStr = getTodayStr();
+                        const pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < todayStr : true);
+                        const showBtn = pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19);
+                        if (!showBtn) return null;
+                        return (
+                          <button
+                            onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
+                            className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
+                          >
+                            <Sparkles size={15} />
+                            Reschedule Tasks
+                          </button>
                         );
                       })()}
 
@@ -20302,7 +20344,7 @@ const DayPlanner = () => {
                                   </div>
                                   <div className={`text-xs ${textSecondary} flex items-center gap-1 mt-0.5`}>
                                     {task._overdueType === 'scheduled' ? (
-                                      <><Clock size={10} /> {formatDeadlineDate(task.date)} {!task.isAllDay && `• ${formatTime(task.startTime)}`}</>
+                                      <><CalendarDays size={10} /> {formatDeadlineDate(task.date)}</>
                                     ) : (
                                       <><AlertCircle size={10} /> Due: {formatDeadlineDate(task.deadline)}</>
                                     )}
@@ -20772,6 +20814,23 @@ const DayPlanner = () => {
                           })}
                         </div>
                       </div>
+                    );
+                  })()}
+
+                  {/* Reschedule button — shown when there are overdue past-day tasks, or incomplete today tasks after 7pm */}
+                  {aiConfig?.enabled && aiConfig.features?.aiReschedule && gtdFrames.filter(f => f.enabled).length > 0 && (() => {
+                    const todayStr = getTodayStr();
+                    const pastOverdue = getOverdueTasks().filter(t => t._overdueType === 'scheduled' ? t.date < todayStr : true);
+                    const showBtn = pastOverdue.length > 0 || (incompleteTodayTasks.length > 0 && currentTime.getHours() >= 19);
+                    if (!showBtn) return null;
+                    return (
+                      <button
+                        onClick={() => { setShowRescheduleModal(true); setRescheduleResults(null); setRescheduleError(''); }}
+                        className={`w-full mt-3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold transition-colors ${darkMode ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200'}`}
+                      >
+                        <Sparkles size={15} />
+                        Reschedule Tasks
+                      </button>
                     );
                   })()}
                 </div>
@@ -27272,6 +27331,7 @@ const DayPlanner = () => {
                   ['N', 'New scheduled task'],
                   ['I', 'New inbox task'],
                   ['S', 'Smart schedule'],
+                  ['E', 'Reschedule tasks'],
                   ['V', 'Voice task input'],
                   ['R', 'Routines dashboard'],
                 ].map(([key, desc]) => (

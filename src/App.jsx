@@ -13777,9 +13777,9 @@ const DayPlanner = () => {
     try {
       const today = new Date();
       const todayStr = dateToString(today);
-      const tasksToReschedule = tasks.filter(t => t.date === todayStr && !t.completed && !t.imported && !t.isExample);
+      const tasksToReschedule = tasks.filter(t => t.date <= todayStr && !t.completed && !t.imported && !t.isExample);
       if (tasksToReschedule.length === 0) {
-        setRescheduleError('No incomplete tasks from today to reschedule.');
+        setRescheduleError('No incomplete tasks to reschedule.');
         setRescheduleLoading(false);
         return;
       }
@@ -24975,7 +24975,7 @@ const DayPlanner = () => {
               <SmartSchedulePanel
                 mode="reschedule"
                 aiConfig={aiConfig}
-                inboxTasks={incompleteTodayTasks}
+                inboxTasks={tasks.filter(t => t.date <= dateToString(new Date()) && !t.completed && !t.imported && !t.isExample)}
                 smartScheduleResults={rescheduleResults}
                 smartScheduleLoading={rescheduleLoading}
                 smartScheduleError={rescheduleError}

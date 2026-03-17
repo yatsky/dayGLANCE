@@ -13048,6 +13048,65 @@ const DayPlanner = () => {
     return { insertAfterIndex, nowTimeStr, showNudge, inboxCount: incompleteInbox.length, gapMinutes, insideTask };
   }, [todayAgenda, currentTime, unscheduledTasks]);
 
+  // GLANCEahead: compute tomorrow's preview data
+  const glanceAhead = useMemo(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = dateToString(tomorrow);
+
+    // Gather tomorrow's tasks (regular + recurring)
+    const regularTasks = tasks.filter(t => t.date === tomorrowStr && !t.completed && !t.isExample);
+    // Expand recurring tasks for tomorrow
+    const recurringInstances = recurringTasks.flatMap(template => {
+      const occs = getOccurrencesInRange(template, tomorrowStr, tomorrowStr);
+      return occs.map(dateStr => {
+        const completed = (template.completedDates || []).includes(dateStr);
+        if (completed) return null;
+        const exception = template.exceptions?.[dateStr];
+        if (exception?.deleted) return null;
+        return {
+          id: `recurring-${template.id}-${dateStr}`,
+          title: exception?.title ?? template.title,
+          startTime: exception?.startTime ?? template.startTime,
+          duration: exception?.duration ?? template.duration,
+          color: exception?.color ?? template.color,
+          isAllDay: exception?.isAllDay ?? template.isAllDay ?? false,
+          imported: false,
+          date: dateStr,
+        };
+      }).filter(Boolean);
+    });
+    const allTasks = [...regularTasks, ...recurringInstances];
+    const userTasks = allTasks.filter(t => !t.imported);
+    const calendarEvents = allTasks.filter(t => t.imported && !t.isTaskCalendar);
+    const deadlines = unscheduledTasks.filter(t => t.deadline === tomorrowStr && !t.completed && !t.isExample);
+    const scheduledItems = allTasks.filter(t => t.startTime && !t.isAllDay);
+
+    // First start time (earliest scheduled item)
+    let firstStartTime = null;
+    if (scheduledItems.length > 0) {
+      firstStartTime = scheduledItems
+        .map(t => t.startTime)
+        .sort((a, b) => a.localeCompare(b))[0];
+    }
+
+    // Committed hours (sum of durations of scheduled items)
+    const committedMinutes = scheduledItems.reduce((sum, t) => sum + (t.duration || 0), 0);
+
+    // Day label
+    const dayLabel = tomorrow.toLocaleDateString('en-US', { weekday: 'long' });
+
+    return {
+      dayLabel,
+      taskCount: userTasks.length,
+      eventCount: calendarEvents.length,
+      deadlineCount: deadlines.length,
+      firstStartTime,
+      committedMinutes,
+      isEmpty: allTasks.length === 0 && deadlines.length === 0,
+    };
+  }, [tasks, recurringTasks, unscheduledTasks, getOccurrencesInRange, dateToString]);
+
   // Group tasks + recurring by date for O(1) lookups (avoids repeated O(n) scans)
   const tasksByDate = useMemo(() => {
     const map = {};
@@ -16302,6 +16361,52 @@ const DayPlanner = () => {
                     })()}
                   </div>
                 ); })()}
+                {/* GLANCEahead — tomorrow preview */}
+                {(() => {
+                  const isDayDone = (todayAgenda.length > 0 && !agendaNowMarker.insideTask && agendaNowMarker.insertAfterIndex >= todayAgenda.length - 1) || todayAgenda.length === 0;
+                  const isEvening = currentTime.getHours() >= 19;
+                  if (!isDayDone && !isEvening) return null;
+                  const { dayLabel, taskCount, eventCount, deadlineCount, firstStartTime, committedMinutes, isEmpty } = glanceAhead;
+                  const committedH = Math.floor(committedMinutes / 60);
+                  const committedM = committedMinutes % 60;
+                  const committedStr = committedH > 0 ? `${committedH}h${committedM > 0 ? ` ${committedM}m` : ''}` : committedM > 0 ? `${committedM}m` : null;
+                  return (
+                    <div className={`mt-3 pt-3 border-t ${borderClass}`}>
+                      <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>
+                        <span className="flex items-center gap-1.5">
+                          <ChevronRight size={12} />
+                          {dayLabel}
+                        </span>
+                      </div>
+                      {isEmpty ? (
+                        <p className={`text-sm ${textSecondary} italic`}>Tomorrow is wide open</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {firstStartTime && (
+                            <div className="flex items-center gap-2">
+                              <Clock size={13} className={textSecondary} />
+                              <span className={`text-sm ${textPrimary}`}>Day starts at <span className="font-medium">{formatTime(firstStartTime)}</span></span>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            {taskCount > 0 && (
+                              <span className={`text-sm ${textPrimary}`}>{taskCount} task{taskCount !== 1 ? 's' : ''}</span>
+                            )}
+                            {eventCount > 0 && (
+                              <span className={`text-sm ${textPrimary}`}>{eventCount} event{eventCount !== 1 ? 's' : ''}</span>
+                            )}
+                            {deadlineCount > 0 && (
+                              <span className={`text-sm font-medium ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>{deadlineCount} deadline{deadlineCount !== 1 ? 's' : ''}</span>
+                            )}
+                            {committedStr && (
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{committedStr} committed</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
                 {/* Routines row */}
                 {routinesEnabled && todayRoutines.length > 0 && (() => {
                   const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
@@ -19799,6 +19904,53 @@ const DayPlanner = () => {
                         </div>
                       ); })()}
 
+                      {/* GLANCEahead — tomorrow preview */}
+                      {(() => {
+                        const isDayDone = (todayAgenda.length > 0 && !agendaNowMarker.insideTask && agendaNowMarker.insertAfterIndex >= todayAgenda.length - 1) || todayAgenda.length === 0;
+                        const isEvening = currentTime.getHours() >= 19;
+                        if (!isDayDone && !isEvening) return null;
+                        const { dayLabel, taskCount, eventCount, deadlineCount, firstStartTime, committedMinutes, isEmpty } = glanceAhead;
+                        const committedH = Math.floor(committedMinutes / 60);
+                        const committedM = committedMinutes % 60;
+                        const committedStr = committedH > 0 ? `${committedH}h${committedM > 0 ? ` ${committedM}m` : ''}` : committedM > 0 ? `${committedM}m` : null;
+                        return (
+                          <div className={`mt-3 pt-3 border-t ${borderClass}`}>
+                            <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>
+                              <span className="flex items-center gap-1.5">
+                                <ChevronRight size={12} />
+                                {dayLabel}
+                              </span>
+                            </div>
+                            {isEmpty ? (
+                              <p className={`text-sm ${textSecondary} italic`}>Tomorrow is wide open</p>
+                            ) : (
+                              <div className="space-y-1">
+                                {firstStartTime && (
+                                  <div className="flex items-center gap-2">
+                                    <Clock size={13} className={textSecondary} />
+                                    <span className={`text-sm ${textPrimary}`}>Day starts at <span className="font-medium">{formatTime(firstStartTime)}</span></span>
+                                  </div>
+                                )}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                  {taskCount > 0 && (
+                                    <span className={`text-sm ${textPrimary}`}>{taskCount} task{taskCount !== 1 ? 's' : ''}</span>
+                                  )}
+                                  {eventCount > 0 && (
+                                    <span className={`text-sm ${textPrimary}`}>{eventCount} event{eventCount !== 1 ? 's' : ''}</span>
+                                  )}
+                                  {deadlineCount > 0 && (
+                                    <span className={`text-sm font-medium ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>{deadlineCount} deadline{deadlineCount !== 1 ? 's' : ''}</span>
+                                  )}
+                                  {committedStr && (
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{committedStr} committed</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {/* Routines row */}
                       {routinesEnabled && todayRoutines.length > 0 && (() => {
                         const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
@@ -20926,6 +21078,53 @@ const DayPlanner = () => {
                       })()}
                     </div>
                   ); })()}
+
+                  {/* GLANCEahead — tomorrow preview */}
+                  {(() => {
+                    const isDayDone = (todayAgenda.length > 0 && !agendaNowMarker.insideTask && agendaNowMarker.insertAfterIndex >= todayAgenda.length - 1) || todayAgenda.length === 0;
+                    const isEvening = currentTime.getHours() >= 19;
+                    if (!isDayDone && !isEvening) return null;
+                    const { dayLabel, taskCount, eventCount, deadlineCount, firstStartTime, committedMinutes, isEmpty } = glanceAhead;
+                    const committedH = Math.floor(committedMinutes / 60);
+                    const committedM = committedMinutes % 60;
+                    const committedStr = committedH > 0 ? `${committedH}h${committedM > 0 ? ` ${committedM}m` : ''}` : committedM > 0 ? `${committedM}m` : null;
+                    return (
+                      <div className={`rounded-lg border ${borderClass} p-3`}>
+                        <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>
+                          <span className="flex items-center gap-1.5">
+                            <ChevronRight size={12} />
+                            {dayLabel}
+                          </span>
+                        </div>
+                        {isEmpty ? (
+                          <p className={`text-sm ${textSecondary} italic`}>Tomorrow is wide open</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {firstStartTime && (
+                              <div className="flex items-center gap-2">
+                                <Clock size={13} className={textSecondary} />
+                                <span className={`text-sm ${textPrimary}`}>Day starts at <span className="font-medium">{formatTime(firstStartTime)}</span></span>
+                              </div>
+                            )}
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                              {taskCount > 0 && (
+                                <span className={`text-sm ${textPrimary}`}>{taskCount} task{taskCount !== 1 ? 's' : ''}</span>
+                              )}
+                              {eventCount > 0 && (
+                                <span className={`text-sm ${textPrimary}`}>{eventCount} event{eventCount !== 1 ? 's' : ''}</span>
+                              )}
+                              {deadlineCount > 0 && (
+                                <span className={`text-sm font-medium ${darkMode ? 'text-orange-400' : 'text-orange-600'}`}>{deadlineCount} deadline{deadlineCount !== 1 ? 's' : ''}</span>
+                              )}
+                              {committedStr && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'bg-blue-900/40 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{committedStr} committed</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Routines row */}
                   {routinesEnabled && todayRoutines.length > 0 && (() => {

@@ -111,7 +111,9 @@ class NotificationBridge(private val context: Context) {
         type: String,
         isCalendarEvent: Boolean,
     ) {
-        val notifId = reminderId.hashCode()
+        // Use taskId (not reminderId) so subsequent reminders for the same
+        // task/event replace prior ones instead of stacking.
+        val notifId = taskId.hashCode()
 
         val builder = NotificationCompat.Builder(context, DayGlanceApplication.CHANNEL_REMINDERS)
             .setSmallIcon(R.drawable.ic_notification)

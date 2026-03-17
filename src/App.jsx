@@ -12751,7 +12751,7 @@ const DayPlanner = () => {
               reg.showNotification(r.taskTitle, {
                 body: r.message,
                 icon: '/icon-192.png',
-                tag: r.id,
+                tag: String(r.taskId), // Use taskId so subsequent reminders replace prior ones
               });
             } catch {}
           }

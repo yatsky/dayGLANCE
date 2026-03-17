@@ -58,7 +58,9 @@ class ReminderReceiver : BroadcastReceiver() {
         val type = intent.getStringExtra(EXTRA_TYPE) ?: "start"
         val isCalendar = intent.getBooleanExtra(EXTRA_IS_CALENDAR, false)
 
-        val notifId = id.hashCode()
+        // Use taskId (not reminder id) so subsequent reminders for the same
+        // task/event replace prior ones instead of stacking.
+        val notifId = taskId.hashCode()
 
         val tapIntent = PendingIntent.getActivity(
             context, 0,

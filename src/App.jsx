@@ -3660,7 +3660,7 @@ const DayPlanner = () => {
     const [hours, minutes] = timeStr.split(':').map(Number);
     const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
     const ampm = hours >= 12 ? 'PM' : 'AM';
-    return `${displayHour}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    return `${displayHour}:${minutes.toString().padStart(2, '0')}\u00A0${ampm}`;
   };
 
   // Remove detected date/time from title text

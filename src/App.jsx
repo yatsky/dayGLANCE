@@ -18499,7 +18499,7 @@ const DayPlanner = () => {
                 className={`flex flex-col items-center justify-center ${showLabels ? 'gap-0.5' : ''} flex-1 h-full ${mobileActiveTab === 'dayglance' ? 'text-blue-500' : textSecondary}`}
               >
                 <Eye size={iconSize} />
-                {showLabels && <span className="text-[10px] font-medium">Glance</span>}
+                {showLabels && <span className="text-[10px] font-medium">GLANCE</span>}
               </button>
               <button
                 onClick={() => {
@@ -19048,7 +19048,7 @@ const DayPlanner = () => {
                   onClick={() => setTabletActiveTab('glance')}
                   className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${tabletActiveTab === 'glance' ? 'text-blue-500 border-b-2 border-blue-500' : textSecondary}`}
                 >
-                  <span className="flex items-center justify-center gap-1.5"><Eye size={16} /> Glance</span>
+                  <span className="flex items-center justify-center gap-1.5"><Eye size={16} /> GLANCE</span>
                 </button>
                 <button
                   onClick={() => setTabletActiveTab('inbox')}
@@ -20232,7 +20232,7 @@ const DayPlanner = () => {
                 onClick={() => setTabletActiveTab('glance')}
                 className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${tabletActiveTab === 'glance' ? 'text-blue-500 border-b-2 border-blue-500' : textSecondary}`}
               >
-                <span className="flex items-center justify-center gap-1.5"><Eye size={16} /> Glance</span>
+                <span className="flex items-center justify-center gap-1.5"><Eye size={16} /> GLANCE</span>
               </button>
               <button
                 onClick={() => setTabletActiveTab('inbox')}
@@ -28579,7 +28579,7 @@ const DayPlanner = () => {
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-2xl flex items-center justify-center mx-auto mb-6">
                   <Eye size={32} className="text-blue-500" />
                 </div>
-                <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>Glance</h2>
+                <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>GLANCE</h2>
                 <ul className={`${textSecondary} text-sm text-center space-y-2 max-w-xs mx-auto list-none`}>
                   <li>Your <strong className={textPrimary}>smart agenda</strong> — see <strong className={textPrimary}>overdue</strong>, <strong className={textPrimary}>in-progress</strong>, and <strong className={textPrimary}>upcoming</strong> tasks in real time</li>
                   <li>Track your progress with <strong className={textPrimary}>daily</strong> and <strong className={textPrimary}>all-time summaries</strong> <BarChart3 size={14} className="inline mx-0.5" /></li>
@@ -28760,7 +28760,7 @@ const DayPlanner = () => {
                       <span className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                         <Eye size={16} className="text-blue-500" />
                       </span>
-                      <span><strong className={textPrimary}>Glance</strong> — your smart agenda with overdue tasks and today's schedule</span>
+                      <span><strong className={textPrimary}>GLANCE</strong> — your smart agenda with overdue tasks and today's schedule</span>
                     </div>
                     <div className="flex items-start gap-3">
                       <span className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">

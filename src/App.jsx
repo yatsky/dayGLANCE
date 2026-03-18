@@ -16374,7 +16374,7 @@ const DayPlanner = () => {
                     <div className={`mt-3 pt-3 border-t ${borderClass}`}>
                       <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>
                         <span className="flex items-center gap-1.5">
-                          <span className="italic">GLANCE</span><span className="normal-case not-italic">ahead</span>
+                          <span><span className="italic">GLANCE</span><span className="normal-case not-italic">ahead</span></span>
                           <span className="font-normal normal-case">— {dayLabel}</span>
                         </span>
                       </div>
@@ -19917,7 +19917,7 @@ const DayPlanner = () => {
                           <div className={`mt-3 pt-3 border-t ${borderClass}`}>
                             <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>
                               <span className="flex items-center gap-1.5">
-                                <span className="italic">GLANCE</span><span className="normal-case not-italic">ahead</span>
+                                <span><span className="italic">GLANCE</span><span className="normal-case not-italic">ahead</span></span>
                                 <span className="font-normal normal-case">— {dayLabel}</span>
                               </span>
                             </div>
@@ -21092,7 +21092,7 @@ const DayPlanner = () => {
                       <div className={`rounded-lg border ${borderClass} p-3`}>
                         <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>
                           <span className="flex items-center gap-1.5">
-                            <span className="italic">GLANCE</span><span className="normal-case not-italic">ahead</span>
+                            <span><span className="italic">GLANCE</span><span className="normal-case not-italic">ahead</span></span>
                             <span className="font-normal normal-case">— {dayLabel}</span>
                           </span>
                         </div>

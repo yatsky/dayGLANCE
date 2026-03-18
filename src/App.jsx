@@ -4187,7 +4187,7 @@ const DayPlanner = () => {
   useEffect(() => {
     if (!cloudSyncConfig?.enabled) return;
     const pollTimer = setInterval(() => {
-      cloudSyncDownload();
+      cloudSyncDownloadRef.current?.();
     }, 60 * 1000);
     return () => clearInterval(pollTimer);
   }, [cloudSyncConfig?.enabled]);
@@ -11546,7 +11546,8 @@ const DayPlanner = () => {
     }
   };
 
-  // Keep ref updated so visibilitychange handler can call latest version
+  // Keep ref updated so polling interval and visibilitychange handler always
+  // call the latest version (avoids stale closure reading outdated React state).
   cloudSyncDownloadRef.current = cloudSyncDownload;
 
   const cloudSyncTest = async (config) => {

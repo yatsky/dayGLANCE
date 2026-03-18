@@ -16144,7 +16144,7 @@ const DayPlanner = () => {
                       const endMin = startMin + (task.duration || 0);
                       const endH = String(Math.floor(endMin / 60)).padStart(2, '0');
                       const endM = String(endMin % 60).padStart(2, '0');
-                      timeLabel = `${formatTime(task.startTime)} – ${formatTime(endH + ':' + endM)}`;
+                      timeLabel = `${formatTime(task.startTime)}\u00A0–\u00A0${formatTime(endH + ':' + endM)}`;
                       const diff = startMin - nowMin;
                       if (diff > 0) {
                         relativeLabel = diff >= 60 ? `in ${Math.floor(diff / 60)}h ${diff % 60 > 0 ? `${diff % 60}m` : ''}` : `in ${diff}m`;
@@ -16242,8 +16242,8 @@ const DayPlanner = () => {
                               </button>
                             )}
                           </div>
-                          <div className={`text-sm ${textSecondary} flex items-center gap-1 whitespace-nowrap`}>
-                            {timeLabel}{relativeLabel ? <>{`, `}<span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span></> : ''}
+                          <div className={`text-sm ${textSecondary} flex items-center gap-1 flex-wrap`}>
+                            <span className="whitespace-nowrap">{timeLabel}{relativeLabel ? ',' : ''}</span>{relativeLabel ? <span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span> : ''}
                             {relativeLabel === 'In Progress' && focusModeAvailable && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); enterFocusMode(); }}
@@ -19730,7 +19730,7 @@ const DayPlanner = () => {
                             const endMin = startMin + (task.duration || 0);
                             const endH = String(Math.floor(endMin / 60)).padStart(2, '0');
                             const endM = String(endMin % 60).padStart(2, '0');
-                            timeLabel = `${formatTime(task.startTime)} – ${formatTime(endH + ':' + endM)}`;
+                            timeLabel = `${formatTime(task.startTime)}\u00A0–\u00A0${formatTime(endH + ':' + endM)}`;
                             const diff = startMin - nowMin;
                             if (diff > 0) {
                               relativeLabel = diff >= 60 ? `in ${Math.floor(diff / 60)}h ${diff % 60 > 0 ? `${diff % 60}m` : ''}` : `in ${diff}m`;
@@ -19780,8 +19780,8 @@ const DayPlanner = () => {
                                     <button key={i} className="flex-shrink-0 text-purple-400 active:text-purple-300" onClick={(e) => { e.stopPropagation(); window.DayGlanceObsidian?.openNote(note); }} title={`Open "${note}" in Obsidian`}><NotebookPen size={13} /></button>
                                   ))}
                                 </div>
-                                <div className={`text-sm ${textSecondary} flex items-center gap-1 whitespace-nowrap`}>
-                                  {timeLabel}{relativeLabel ? <>{`, `}<span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span></> : ''}
+                                <div className={`text-sm ${textSecondary} flex items-center gap-1 flex-wrap`}>
+                                  <span className="whitespace-nowrap">{timeLabel}{relativeLabel ? ',' : ''}</span>{relativeLabel ? <span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span> : ''}
                                   {relativeLabel === 'In Progress' && focusModeAvailable && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); enterFocusMode(); }}
@@ -20906,7 +20906,7 @@ const DayPlanner = () => {
                         const endMin = startMin + (task.duration || 0);
                         const endH = String(Math.floor(endMin / 60)).padStart(2, '0');
                         const endM = String(endMin % 60).padStart(2, '0');
-                        timeLabel = `${formatTime(task.startTime)} – ${formatTime(endH + ':' + endM)}`;
+                        timeLabel = `${formatTime(task.startTime)}\u00A0–\u00A0${formatTime(endH + ':' + endM)}`;
                         const diff = startMin - nowMin;
                         if (diff > 0) {
                           relativeLabel = diff >= 60 ? `in ${Math.floor(diff / 60)}h ${diff % 60 > 0 ? `${diff % 60}m` : ''}` : `in ${diff}m`;
@@ -20956,8 +20956,8 @@ const DayPlanner = () => {
                                 <button key={i} className="flex-shrink-0 text-purple-400 active:text-purple-300" onClick={(e) => { e.stopPropagation(); window.DayGlanceObsidian?.openNote(note); }} title={`Open "${note}" in Obsidian`}><NotebookPen size={13} /></button>
                               ))}
                             </div>
-                            <div className={`text-sm ${textSecondary} flex items-center gap-1 whitespace-nowrap`}>
-                              {timeLabel}{relativeLabel ? <>{`, `}<span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span></> : ''}
+                            <div className={`text-sm ${textSecondary} flex items-center gap-1 flex-wrap`}>
+                              <span className="whitespace-nowrap">{timeLabel}{relativeLabel ? ',' : ''}</span>{relativeLabel ? <span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span> : ''}
                               {relativeLabel === 'In Progress' && focusModeAvailable && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); enterFocusMode(); }}

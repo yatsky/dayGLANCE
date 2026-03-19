@@ -44,11 +44,9 @@ echo "==> Building Android APK (${GRADLE_TASK})..."
 cd "$ANDROID_DIR"
 ./gradlew "$GRADLE_TASK"
 
-# Gradle on macOS hides build outputs — clear both the BSD hidden flag and the
-# com.apple.FinderInfo extended attribute so Finder can see the files.
-# Use find -exec for both: chflags -R won't recurse into hidden subdirectories.
-find "$ANDROID_DIR/app/build/outputs/apk" -exec chflags nohidden {} \; 2>/dev/null || true
-find "$ANDROID_DIR/app/build/outputs/apk" -exec xattr -d com.apple.FinderInfo {} \; 2>/dev/null || true
+# Gradle on macOS hides build outputs — start from outputs/ so chflags -R
+# can recurse into the hidden apk/release/ subdirectory.
+chflags -R nohidden "$ANDROID_DIR/app/build/outputs" 2>/dev/null || true
 
 if $RELEASE; then
   echo "==> Release APK: $APK_PATH"

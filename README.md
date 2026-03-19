@@ -1,159 +1,34 @@
 # dayGLANCE
 
-**Your day, at a glance.** A beautiful, feature-rich day planner with visual time-blocking, task management, and calendar sync. Use it instantly at [dayglance.app](https://dayglance.app) or self-host it on your own server. All data is stored locally in your browser -- nothing is ever sent to a server.
+**Your day, at a glance.** A privacy-first day planner with visual time-blocking, deep integrations, and zero lock-in. Use it free at [dayglance.app](https://dayglance.app) or self-host it on your own server. Your data stays on your device — nothing is ever sent to a server unless you choose to sync it yourself.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.2.13-green.svg)](https://github.com/krelltunez/day-planner)
+[![Version](https://img.shields.io/badge/version-1.2.12-green.svg)](https://github.com/krelltunez/dayglance/releases)
 
-[Live App](https://dayglance.app) | [Documentation](https://docs.dayglance.app)
+[**Live App**](https://dayglance.app) · [**Documentation**](https://docs.dayglance.app) · [**Releases**](https://github.com/krelltunez/dayglance/releases) · [**Android APK**](https://github.com/krelltunez/dayglance/releases)
 
-![dayGLANCE Desktop Overview](screenshots/hero-light.png)
+![dayGLANCE Desktop Overview](screenshots/hero-dark.png)
 
 ---
 
 ## Why dayGLANCE?
 
-Most planners either lock your data in someone else's cloud or lack the polish of commercial apps. dayGLANCE gives you both: **a rich, intuitive planning experience** you can use right away at [dayglance.app](https://dayglance.app), or deploy on your own infrastructure. Even on the hosted version, your data never leaves your machine — everything is stored locally in your browser. Optionally sync across devices through your own Nextcloud or generic WebDAV server, and work offline as a full PWA. A native Android app is now available (see below)!
+Most day planners make you choose: polished but cloud-dependent, or self-hosted but clunky. dayGLANCE doesn't ask you to compromise.
 
----
-
-## Features
-
-### The Glance Panel
-
-The heart of the app. The Glance panel gives you an intelligent, real-time snapshot of your day — no scrolling through a calendar required. It shows your full agenda with color-coded tasks, a "now" marker that tracks where you are in the day and how much free time you have, overdue tasks that need attention, and today's routines.
-
-![The Glance Panel](screenshots/glance.png)
-
-### Visual Time-Blocking
-
-Drag and drop tasks onto a 24-hour timeline to plan your day. Resize tasks by dragging their edges and move them between time slots. Filter the timeline by `#tags` to focus on what matters. Supports multi-day views (1, 2, or 3 days) depending on screen size.
-
-![Time-Blocking on the Timeline](screenshots/timeline.png)
-
-### Smart Inbox
-
-Capture tasks as they come to mind without worrying about when to do them. Prioritize with three priority levels, filter by priority, and drag tasks to the timeline when you're ready to commit.
-
-![Inbox with Priorities and Tags](screenshots/inbox.png)
-
-### Recurring Tasks & Routines
-
-Set tasks to repeat daily, weekly on specific days, monthly, or on custom intervals. Edit a single occurrence or the entire series. Build daily **Routines** — reusable task templates for each day of the week that you drag onto the timeline with one gesture.
-
-### Focus Mode
-
-A built-in Pomodoro-style timer with customizable work, short break, and long break durations. Associate a timer session with a specific task and mark it complete when you're done. Keeps your screen awake during focus sessions. On mobile, Focus Mode goes fully immersive — enabling Do Not Disturb, locking to portrait, and expanding the notes/subtasks panel to fill the screen.
-
-![Focus Mode Timer](screenshots/focus-mode.png)
-
-### Daily Summary & Statistics
-
-Track your productivity with a daily dashboard: tasks completed, completion rate ring, time planned vs. time spent, and focus time logged. Tap the habit ring row to see a popup summary of the prior day's habit completion. An all-time statistics view shows lifetime trends, averages, and streaks.
-
-![Daily Summary & All-Time Statistics](screenshots/daily-summary.png)
-
-### Weekly Review
-
-End each week with a guided review. See your weekly stats, reflect with built-in prompts, and plan ahead. Set a configurable weekly reminder so you never skip a review.
-
-### Calendar Sync & Import
-
-Import events from **iCal, Google Calendar, or Nextcloud** calendar URLs. Imported events appear color-coded on your timeline alongside your tasks, refreshing automatically every 15 minutes.
-
-### Cloud Sync
-
-Sync your entire planner across devices via WebDAV. dayGLANCE supports **Nextcloud** and any **generic WebDAV** server (e.g. Hetzner Storage Box, Synology, Seafile, Radicale). The smart merge engine resolves conflicts at the task level using timestamps — not last-write-wins — so simultaneous edits from two devices won't clobber each other.
-
-### Auto-Backup
-
-Automatic local and remote backups with configurable frequency (hourly, daily, weekly) and retention policies. Restore from any backup with one click. Remote backups are stored on your WebDAV server (Nextcloud, generic WebDAV, etc.).
-
-### Daily Notes
-
-Attach freeform notes to any day for journaling, reflections, or quick references. Notes sync across devices alongside your tasks.
-
-### Dark Mode
-
-A full dark theme that respects your preference across sessions. Every component is theme-aware, including the custom scrollbars and mobile status bar.
-
-![Dark Mode](screenshots/dark-mode.png)
-
-### Spotlight Search
-
-Press `Ctrl+K` (or `Cmd+K`) to instantly search across all tasks — scheduled, inbox, recurring, and even deleted. Results highlight matching text and let you jump straight to the task.
-
-### Notifications & Reminders
-
-Configurable reminders for calendar events, scheduled tasks, all-day tasks, and recurring tasks. Choose to be notified 15, 10, or 5 minutes before, at the start, or at the end. Supports both in-app toasts and native browser notifications.
-
-### Tags & Filtering
-
-Add `#tags` to any task title. Filter your view by one or more tags, toggle untagged tasks on and off, and get autocomplete suggestions as you type.
-
-### Recycle Bin & Undo/Redo
-
-Deleted tasks go to a recycle bin for easy recovery. A full undo/redo stack lets you reverse any action — task creation, edits, moves, completions, and deletions — with `Ctrl+Z` and `Ctrl+Y`.
-
-### Weather & Daily Content
-
-See current weather conditions, temperature, and a 5-day forecast in the header (by zip code). A rotating panel cycles through dad jokes, fun facts, inspirational quotes, and "this day in history" moments.
-
-### Responsive Across Every Device
-
-dayGLANCE adapts its layout and interactions per device:
-
-- **Desktop**: Multi-day timeline, sidebar with inbox and stats, hover states, mouse drag-and-drop, task resizing
-- **Tablet**: Tabbed side panel (Glance | Inbox), floating action buttons, touch-optimized spacing
-- **Phone**: Tab-based navigation, swipe gestures to schedule tasks, long-press to drag on the timeline, bottom sheets for modals
-
-| 3-Column (Wide Desktop) | 2-Column (Medium) | 1-Column (Narrow) |
-|:-:|:-:|:-:|
-| ![3-Column Layout](screenshots/desktop-3col.png) | ![2-Column Layout](screenshots/desktop-2col.png) | ![1-Column Layout](screenshots/desktop-1col.png) |
-
-### Progressive Web App
-
-Install dayGLANCE on any device — desktop, tablet, or phone — for a native app-like experience. Works fully offline after first load with service worker caching. Auto-updates when a new version is deployed.
-
-### Obsidian Integration
-
-Sync tasks and daily notes with your **Obsidian vault** via the Obsidian Local REST API plugin. Scheduled tasks with `[[wikilinks]]` link directly back to notes in your vault — tap the link icon in any task title to open the note. Supports reading and writing all Obsidian task formats, duration ranges (`HH:MM-HH:MM`), moves, rescheduling, and title edits. Daily notes sync bidirectionally. Configure vault connection in **Settings > Obsidian**.
-
-### AI Assistant
-
-An optional AI layer (powered by any OpenAI-compatible API) surfaces suggestions throughout the day:
-
-- **AI voice assistant** - create tasks or manipulate existing ones, all via natural language
-- **Frame nudge** — when a time block is active, the Glance panel suggests a specific task to work on
-- **Duration & tag estimates** — AI pre-fills likely duration and tags when you create a task
-- **Subtask generation** — generate a subtask list from the notes panel or task context menu
-- **End-of-day rescheduling** — review incomplete tasks and move them forward with AI-suggested times
-- **Evening reflection** — a guided end-of-day prompt to capture wins and plan tomorrow
-
-Enable AI features in **Settings > AI** and enter your API key and endpoint.
-
-### Android App
-
-A native Android wrapper is available as an APK download from the [Releases](https://github.com/krelltunez/dayglance/releases) page. It ships the full web app in a WebView with native enhancements:
-
-- **Home screen widget** — live view of your current frame and upcoming tasks, with a manual refresh button
-- **Obsidian deep links** — tap `[[wikilinks]]` to open notes directly in the Obsidian Android app
-- **Background notifications** — task and event reminders fire reliably even when the app is closed
-- **Immersive Focus Mode** — full-screen timer with automatic Do Not Disturb and portrait lock
-- **Calendar integration** — read-only access to your Android calendar; events appear on the timeline
-- **Theme-aware status bar** — status bar icons match the app's light/dark theme
-
-### Getting Started Checklist
-
-A built-in onboarding flow guides new users through the app's features: adding tasks, using drag-and-drop, setting priorities, configuring sync, and more. Tracks progress and unlocks features as you explore.
+- **No account required.** Open [dayglance.app](https://dayglance.app) and start planning — your data lives in your browser.
+- **Self-host in one command.** Drop a `docker-compose.yml`, run `docker compose up -d`, and you own everything.
+- **Sync your way.** Bring your own Nextcloud, WebDAV server, or Obsidian vault. No proprietary cloud required.
+- **Add what you need.** Optional add-ons (AI, health data, TRMNL display) stay off by default. You opt in.
 
 ---
 
 ## Quick Start
 
-### Docker (recommended)
+### Try it now
 
-No build required. Create a `docker-compose.yml`:
+Go to [dayglance.app](https://dayglance.app) — no sign-up, no install.
+
+### Self-host with Docker
 
 ```yaml
 services:
@@ -165,77 +40,237 @@ services:
       - "6767:80"
 ```
 
-Then run:
-
 ```bash
 docker compose up -d
 ```
 
-The app will be available at `http://localhost:6767`.
+Available at `http://localhost:6767`. For HTTPS with Caddy:
+
+```caddy
+dayglance.yourdomain.com {
+    reverse_proxy localhost:6767
+}
+```
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/krelltunez/day-planner.git
-cd day-planner
+git clone https://github.com/krelltunez/dayglance.git
+cd dayglance
 npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser. To build for production: `npm run build`.
+Open [http://localhost:5173](http://localhost:5173). For production: `npm run build`.
 
-### Production Deployment
-
-1. Run the Docker container on your server (see above).
-
-2. Set up a reverse proxy (e.g., Caddy) for HTTPS:
-
-   ```caddy
-   dayglance.yourdomain.com {
-       reverse_proxy localhost:6767
-   }
-   ```
-
-3. Access your instance at `https://dayglance.yourdomain.com`.
-
-For detailed deployment instructions, see the [Documentation](https://docs.dayglance.app).
+→ See the [full deployment guide](https://docs.dayglance.app/self-hosting) for reverse proxy setup and update instructions.
 
 ---
 
-## Tech Stack
+## Android App
 
-| Layer | Technology |
-|-------|-----------|
-| UI Framework | [React 18](https://react.dev) |
-| Build Tool | [Vite 5](https://vitejs.dev) |
-| Styling | [Tailwind CSS 3](https://tailwindcss.com) |
-| Icons | [Lucide React](https://lucide.dev) |
-| PWA | [vite-plugin-pwa](https://vite-pwa-org.netlify.app) + Workbox |
-| Testing | [Vitest](https://vitest.dev) |
-| Containerization | Docker + Nginx |
+A native Android app is available as a direct APK download — no Play Store required.
 
----
+[**Download APK from Releases →**](https://github.com/krelltunez/dayglance/releases)
 
-## Cloud Sync Setup
+The Android app ships the full web app in a WebView with native enhancements that aren't possible in a browser:
 
-dayGLANCE syncs via WebDAV and supports **Nextcloud** and any **generic WebDAV** server. To configure:
+| Feature | Details |
+|---|---|
+| 🏠 **Home screen widget** | Live view of your current time block and upcoming tasks |
+| 📅 **Android Calendar** | Read-only access to your device calendar; events appear on the timeline |
+| ❤️ **Health Connect** | Pull step counts and activity data from Google Health Connect |
+| 🔗 **Obsidian deep links** | Tap `[[wikilinks]]` to open notes directly in the Obsidian Android app |
+| 🔔 **Background notifications** | Task and event reminders fire reliably even when the app is closed |
+| ⏱️ **Immersive Focus Mode** | Full-screen timer with automatic Do Not Disturb and portrait lock |
+| 🎨 **Theme-aware status bar** | Status bar icons match the app's light/dark theme |
 
-1. Open **Settings > Cloud Sync** in dayGLANCE.
-2. Choose your provider (Nextcloud or Generic WebDAV).
-3. Enter your WebDAV URL and credentials.
-4. Sync runs automatically every 15 minutes, or trigger it manually.
+![Android Home Screen Widget](screenshots/android-widget.png)
 
-The sync engine merges at the task level, so edits made on different devices to different tasks will be combined cleanly. When the same task is edited on two devices, the most recent edit wins.
+![Android App Timeline](screenshots/android-timeline.png)
 
 ---
 
-## Calendar Import
+## Core Features
 
-Import events from any iCal-compatible source:
+### The Glance Panel
 
-1. Open **Settings** > **Calendar Import**.
-2. Paste your calendar URL (Google Calendar, Nextcloud, iCal, etc.).
-3. Events appear on your timeline, refreshing every 15 minutes.
+The heart of dayGLANCE. A real-time snapshot of your day without scrolling through a calendar — color-coded tasks, a live "now" marker showing remaining free time, overdue items, and your daily routines.
+
+![The Glance Panel](screenshots/glance.png)
+
+### *GLANCE*ahead
+
+When your day is winding down — either once today's agenda is clear or after 7pm — the Glance panel shifts its focus to tomorrow. *GLANCE*ahead shows the day label, first start time, task and event counts, any deadlines (highlighted in orange), and total committed hours. If tomorrow is empty, it says so. Available across all layouts: mobile, tablet, and desktop.
+
+![GLANCEahead](screenshots/glanceahead.png)
+
+### Visual Time-Blocking
+
+Drag tasks onto a 24-hour timeline, resize by dragging edges, and filter by `#tags`. Supports 1, 2, or 3-day views depending on screen size.
+
+![Time-Blocking on the Timeline](screenshots/timeline.png)
+
+### Smart Inbox
+
+Capture tasks without scheduling them. Three priority levels, tag filtering, and drag-to-timeline when you're ready to commit.
+
+![Inbox with Priorities and Tags](screenshots/inbox.png)
+
+### Focus Mode
+
+A Pomodoro-style timer with customizable work, short break, and long break durations. Attach a timer session to a specific task and mark it complete when done. On mobile, goes fully immersive with Do Not Disturb and portrait lock.
+
+| Setup | Active Session |
+|:-:|:-:|
+| ![Focus Mode Setup](screenshots/focus-mode-1.png) | ![Focus Mode Timer](screenshots/focus-mode-2.png) |
+
+### Spotlight Search
+
+`Ctrl+K` / `Cmd+K` searches across all tasks — scheduled, inbox, recurring, and deleted — with highlighted matches.
+
+### Notifications & Reminders
+
+Configurable reminders for tasks and calendar events: 5, 10, or 15 minutes before, at start, or at end. In-app toasts and native browser (or Android background) notifications.
+
+### Tags & Filtering
+
+Add `#tags` to any task. Filter the timeline and inbox by one or more tags, with autocomplete as you type.
+
+### Recycle Bin & Undo/Redo
+
+Deleted tasks go to a recycle bin. Full undo/redo stack (`Ctrl+Z` / `Ctrl+Y`) for all actions.
+
+### Light & Dark Mode
+
+Light and dark themes across every component — including custom scrollbars and mobile status bar.
+
+![Light Mode](screenshots/light-mode.png)
+
+### Responsive Layout
+
+dayGLANCE adapts per device:
+
+| 3-Column (Wide Desktop) | 2-Column (Medium) | 1-Column (Narrow) |
+|:-:|:-:|:-:|
+| ![3-Column Layout](screenshots/desktop-3col.png) | ![2-Column Layout](screenshots/desktop-2col.png) | ![1-Column Layout](screenshots/desktop-1col.png) |
+
+- **Desktop** — Multi-day timeline, sidebar with inbox and stats, mouse drag-and-drop, task resizing
+- **Tablet** — Tabbed side panel (Glance | Inbox), floating action buttons, touch-optimized spacing
+- **Phone** — Tab-based navigation, swipe gestures to schedule tasks, long-press drag, bottom sheet modals
+
+### Progressive Web App
+
+Install on any device for a native-like experience. Core planning features work fully offline after the first load — integrations (weather, calendar sync, cloud sync, AI) require an active connection. Auto-updates when a new version is deployed.
+
+### Weather & Daily Content
+
+Current weather and a 5-day forecast in the header (by zip code). A rotating panel shows dad jokes, fun facts, quotes, and "this day in history."
+
+---
+
+## Routines & Habits
+
+### Routines
+
+Build reusable daily task templates for each day of the week. Drag a routine onto the timeline in one gesture to populate your day instantly — no re-entering recurring tasks.
+
+![Routines Dashboard](screenshots/routines.png)
+
+### Recurring Tasks
+
+Set tasks to repeat daily, weekly on specific days, monthly, or on custom intervals. Edit a single occurrence or the entire series.
+
+### Habit Tracking
+
+Track streaks and daily habit completion alongside your schedule. The agenda view shows habit rings for the current day, and tapping habit rings on past days gives you a popup breakdown of that day.
+
+### Weekly Review
+
+A guided end-of-week flow: weekly stats, reflection prompts, and planning ahead. Set a configurable reminder so you never skip it.
+
+### Daily Summary & Statistics
+
+Tasks completed, completion rate, time planned vs. spent, focus time logged, and lifetime trends with averages and streaks.
+
+![Daily Summary](screenshots/daily-summary.png)
+
+---
+
+## Integrations
+
+### Nextcloud & WebDAV Sync
+
+Sync your entire planner across devices via WebDAV. Compatible with **Nextcloud**, Hetzner Storage Box, Synology, Seafile, Radicale, and any generic WebDAV server.
+
+The sync engine resolves conflicts at the task level using timestamps — not last-write-wins — so simultaneous edits from two devices merge cleanly.
+
+**Setup:** Settings → Cloud Sync → choose Nextcloud or Generic WebDAV → enter URL and credentials. Syncs automatically every 15 minutes or on demand.
+
+### CalDAV / iCal Calendar Import
+
+Import events from any iCal-compatible source — Google Calendar, Nextcloud Calendar, Apple Calendar, Fastmail, Proton Calendar, etc. Events appear color-coded on your timeline and refresh every 15 minutes.
+
+**Setup:** Settings → Calendar Sync → paste your calendar URL.
+
+### TRMNL
+
+Display your current time block and upcoming tasks on your **TRMNL** e-ink display. dayGLANCE provides a TRMNL-compatible plugin endpoint so your display always reflects what's next.
+
+**Setup:** See the [TRMNL integration guide](https://docs.dayglance.app/trmnl) in the documentation.
+
+### Obsidian
+
+Sync tasks and daily notes directly with your **Obsidian vault** — no plugin required. dayGLANCE reads and writes your vault's markdown files directly via the browser's File System Access API (desktop) or Android's native file bridge.
+
+- Tasks with `[[wikilinks]]` are recognized and displayed across all platforms
+- On desktop, tap the link icon to expand the linked note inline on the timeline
+- On Android, tap the link icon to open the note directly in the Obsidian app
+- Supports all Obsidian task formats, duration ranges (`HH:MM-HH:MM`), moves, rescheduling, and title edits
+- Daily notes sync **bidirectionally**
+
+**Setup:** Settings → Obsidian → select your vault folder. Available on desktop browsers (Chrome, Edge, Brave) and the Android app.
+
+![Obsidian Integration](screenshots/obsidian.png)
+
+---
+
+## Optional Add-Ons
+
+These features are **off by default**. Enable what you want — nothing runs in the background until you opt in.
+
+### AI Assistant (BYO API Key)
+
+Bring your own OpenAI-compatible API key (OpenAI, Ollama, OpenRouter, etc.). No key is ever stored on our servers.
+
+Once enabled in **Settings → AI**:
+
+| Feature | What it does |
+|---|---|
+| 🎙️ **Voice assistant** | Create or edit tasks via natural language |
+| 💡 **Frame nudge** | Suggests a specific task when a time block is active |
+| ⏱️ **Duration & tag estimates** | Pre-fills likely duration and tags on task creation |
+| ✅ **Subtask generation** | Generates a subtask list from any task's notes panel |
+| 🔄 **End-of-day rescheduling** | Reviews incomplete tasks and suggests times to move them |
+| 🌙 **Evening reflection** | Guided end-of-day prompt to capture wins and plan tomorrow |
+
+### Health Connect (Android)
+
+Pull step counts and activity data from **Google Health Connect** into your daily summary. Visualize your movement alongside your schedule.
+
+**Setup:** Enable in the Android app under Settings → Health Connect and grant the requested permissions.
+
+---
+
+## Auto-Backup
+
+Automatic local and remote backups with configurable frequency (hourly, daily, weekly) and retention policies. Remote backups go to your WebDAV server. Restore from any backup with one click.
+
+---
+
+## Daily Notes
+
+Attach freeform notes to any day for journaling, reflections, or quick references. Notes sync across devices via WebDAV alongside your tasks, and bidirectionally with Obsidian daily notes.
 
 ---
 
@@ -254,39 +289,57 @@ Import events from any iCal-compatible source:
 
 ---
 
-## Running Tests
+## Tech Stack
 
-```bash
-npm run test
-```
+| Layer | Technology |
+|-------|-----------|
+| UI Framework | [React 18](https://react.dev) |
+| Build Tool | [Vite 5](https://vitejs.dev) |
+| Styling | [Tailwind CSS 3](https://tailwindcss.com) |
+| Icons | [Lucide React](https://lucide.dev) |
+| PWA | [vite-plugin-pwa](https://vite-pwa-org.netlify.app) + Workbox |
+| Testing | [Vitest](https://vitest.dev) |
+| Containerization | Docker + Nginx |
 
 ---
 
-## Planned Improvements
+## Roadmap
 
+- **Multiple calendar feeds** — support for more than one iCal/CalDAV source simultaneously
 - **PWA shortcuts** — Quick actions from the app icon (new task, open inbox, etc.)
-- **IndexedDB storage** — Optional self-hosted database backend for persistent server-side storage
+- **Server-side storage** — Optional self-hosted database backend (SQLite or Postgres)
 - **iOS app** — Native iOS wrapper with widget and Obsidian deep-link support
+
+Have a feature request? [Open an issue →](https://github.com/krelltunez/dayglance/issues)
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/krelltunez/day-planner).
+dayGLANCE is MIT-licensed and actively maintained. Contributions are welcome — from bug fixes to new integrations.
 
-We'd especially appreciate help with:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the app locally, run tests, and submit a pull request. For a deeper understanding of how the codebase is structured, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-- **Sync providers** — Dropbox, Google Drive, and other cloud storage integrations
-- **Documentation** — Guides, tutorials, and translations
+### Where help is most wanted
+
+- **Sync providers** — Dropbox, Google Drive, S3, and other WebDAV-compatible storage backends
+- **CalDAV write support** — Two-way calendar event sync (task sync is bidirectional; event sync is currently read-only import)
+- **iOS app** — A Capacitor or WKWebView wrapper equivalent to the Android app
+- **Translations / i18n** — The UI is English-only today
+- **Documentation** — Setup guides, video walkthroughs, integration how-tos
+
+Please open an issue before starting large changes so we can discuss approach. For small fixes, PRs are welcome directly.
 
 ---
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — free to use, self-host, modify, and distribute.
 
 ---
 
 <p align="center">
-  <a href="https://dayglance.app">dayglance.app</a>
+  <a href="https://dayglance.app">dayglance.app</a> &nbsp;·&nbsp;
+  <a href="https://docs.dayglance.app">docs</a> &nbsp;·&nbsp;
+  <a href="https://github.com/krelltunez/dayglance/releases">releases</a>
 </p>

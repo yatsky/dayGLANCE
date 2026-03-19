@@ -1669,15 +1669,13 @@ const HabitRing = ({ size = 40, habit, count = 0, onClick, onContextMenu, onMous
             className="transition-all duration-300"
           />
         </svg>
-        {/* Icon overlay */}
+        {/* Icon overlay — always show the habit icon so users can identify it;
+            colour it green on success or red when a limit is exceeded */}
         <div className="absolute inset-0 flex items-center justify-center">
-          {showCheck ? (
-            <Check size={iconSize} strokeWidth={3} style={{ color: '#22c55e' }} />
-          ) : showX ? (
-            <X size={iconSize} strokeWidth={3} style={{ color: '#ef4444' }} />
-          ) : (
-            <IconComponent size={iconSize} style={{ color: ringColor === (darkMode ? '#4b5563' : '#d1d5db') ? (darkMode ? '#9ca3af' : '#9ca3af') : ringColor }} />
-          )}
+          <IconComponent
+            size={iconSize}
+            style={{ color: showCheck ? '#22c55e' : showX ? '#ef4444' : (ringColor === (darkMode ? '#4b5563' : '#d1d5db') ? (darkMode ? '#9ca3af' : '#9ca3af') : ringColor) }}
+          />
         </div>
         {/* Auto-sync indicator — small dot in top-right corner */}
         {autoSynced && (
@@ -4425,12 +4423,14 @@ const DayPlanner = () => {
       const titleChanged = p.title !== undefined && p.title !== task.title;
       const stateChanged = p.completed !== task.completed || p.startTime !== (task.startTime || null) || p.duration !== (task.duration || null);
 
-      if (!titleChanged && !stateChanged) continue;
+      // Detect rescheduling to a different day by comparing against the prev snapshot
+      // (not obsidianFileDate) so this is a one-shot trigger per reschedule.
+      const dateChanged = !!(task.date && p.date && task.date !== p.date);
 
-      // Always look up the ORIGINAL file date, not the rescheduled task.date.
-      // obsidianFileDate is set at parse time to the markdown file's date, so
-      // a task that was moved inbox↔timeline or rescheduled to a different day
-      // still writes back to the file where it actually lives.
+      if (!titleChanged && !stateChanged && !dateChanged) continue;
+
+      // Always write back to the original file the task was parsed from.
+      // obsidianFileDate is set at parse time and never changes.
       const sourceDate = task.obsidianFileDate || task.id.match(/^obsidian-(\d{4}-\d{2}-\d{2})/)?.[1] || task.date;
       if (!sourceDate) continue;
 
@@ -4438,6 +4438,11 @@ const DayPlanner = () => {
       const newRawTitle = titleChanged
         ? task.title.replace(/\s*#obsidian\b/gi, '').trim()
         : undefined;
+
+      // When the task has been rescheduled to a different day, pass the new date
+      // so the write adds/updates an inline date prefix in the original file
+      // (e.g. "- [ ] 2026-03-20 10:00 Task").  No new file is created.
+      const targetDate = dateChanged ? task.date : undefined;
 
       if (isNative) {
         writeTaskStateNative(
@@ -4447,6 +4452,7 @@ const DayPlanner = () => {
           task.startTime || null,
           newRawTitle,
           task.duration || null,
+          targetDate,
         );
       } else {
         writeTaskStateToFile(
@@ -4458,6 +4464,7 @@ const DayPlanner = () => {
           task.startTime || null,
           newRawTitle,
           task.duration || null,
+          targetDate,
         ).catch(err => console.error('Obsidian: failed to write task state back', err));
       }
 
@@ -4479,11 +4486,12 @@ const DayPlanner = () => {
     }
 
     // Update previous-state snapshot (keyed by new IDs after title changes)
+    // Include date so we can detect future rescheduling to a different day
     const next = {};
     for (const task of allObsidian) {
       const u = titleUpdates.find(u => u.oldId === task.id);
       const snapshotId = u ? u.newId : task.id;
-      next[snapshotId] = { completed: task.completed, startTime: task.startTime || null, duration: task.duration || null, title: task.title };
+      next[snapshotId] = { completed: task.completed, startTime: task.startTime || null, duration: task.duration || null, title: task.title, date: task.date || null };
     }
     obsidianPrevTaskStateRef.current = next;
   }, [tasks, unscheduledTasks, obsidianConfig?.enabled]);
@@ -6306,7 +6314,7 @@ const DayPlanner = () => {
       // Snapshot the fresh task state so the writeback effect doesn't re-trigger
       const snapshot = {};
       for (const t of [...result.scheduledTasks, ...result.inboxTasks]) {
-        snapshot[t.id] = { completed: t.completed, startTime: t.startTime || null, duration: t.duration || null, title: t.title };
+        snapshot[t.id] = { completed: t.completed, startTime: t.startTime || null, duration: t.duration || null, title: t.title, date: t.date || null };
       }
       obsidianPrevTaskStateRef.current = snapshot;
 
@@ -7633,8 +7641,15 @@ const DayPlanner = () => {
   };
 
   const goToDate = (date) => {
-    const newDate = new Date(date);
-    newDate.setHours(12, 0, 0, 0);
+    let newDate;
+    if (typeof date === 'string') {
+      // Parse date strings as local time to avoid UTC midnight → previous day shift
+      const [y, m, d] = date.split('-').map(Number);
+      newDate = new Date(y, m - 1, d, 12, 0, 0, 0);
+    } else {
+      newDate = new Date(date);
+      newDate.setHours(12, 0, 0, 0);
+    }
     setSelectedDate(newDate);
     setShowMonthView(false);
   };
@@ -14703,7 +14718,7 @@ const DayPlanner = () => {
                                   const taskCalendarStyle = getTaskCalendarStyle(task, darkMode);
                                   const isImported = task.imported;
                                   return (
-                                    <div key={task.id} className="relative" style={(!isImported || !!task.nativeEventId) ? { marginLeft: '12px' } : {}}
+                                    <div key={task.id} className={`relative ${task.completed && (!isImported || task.isTaskCalendar) ? 'opacity-50' : ''}`} style={(!isImported || !!task.nativeEventId) ? { marginLeft: '12px' } : {}}
                                       data-ctx-menu
                                       onContextMenu={(e) => {
                                         e.preventDefault();
@@ -14751,7 +14766,7 @@ const DayPlanner = () => {
                                       )}
                                     <div
                                       data-task-id={task.id}
-                                      className={`relative ${task.isTaskCalendar ? '' : task.color} rounded-lg p-2.5 text-white text-sm select-none ${task.completed && (!isImported || task.isTaskCalendar) ? 'opacity-50' : ''} ${mobileDragTaskIdState === task.id ? 'scale-105 shadow-2xl z-40' : ''}`}
+                                      className={`relative ${task.isTaskCalendar ? '' : task.color} rounded-lg p-2.5 text-white text-sm select-none ${mobileDragTaskIdState === task.id ? 'scale-105 shadow-2xl z-40' : ''}`}
                                       style={{ touchAction: 'pan-y', ...(taskCalendarStyle || {}) }}
                                       onTouchStart={(e) => handleMobileTaskTouchStart(e, task, 'allday')}
                                       onTouchMove={(e) => handleMobileTaskTouchMove(e)}
@@ -21854,7 +21869,7 @@ const DayPlanner = () => {
                                 setDragPreviewTime(null);
                               }}
                               onDrop={(e) => handleDropOnDateHeader(e, date)}
-                              className={`notes-panel-container relative`}
+                              className={`notes-panel-container relative ${task.completed && (!isImported || task.isTaskCalendar) ? 'opacity-50' : ''}`}
                               style={isTablet && !isImported ? { marginLeft: '12px' } : {}}
                             >
                               {/* Protruding drag tab (tablet only) */}
@@ -21895,7 +21910,7 @@ const DayPlanner = () => {
                                 onTouchMove: (e) => handleMobileTaskTouchMove(e),
                                 onTouchEnd: (e) => handleMobileTaskTouchEnd(e, task.id, 'allday'),
                               } : {})}
-                              className={`${!isTablet ? 'notes-panel-container' : 'select-none'} ${task.isTaskCalendar ? '' : task.color} rounded-lg shadow-sm ${isImported && !task.isTaskCalendar || isTablet ? 'cursor-default' : 'cursor-move'} ${task.completed && (!isImported || task.isTaskCalendar) ? 'opacity-50' : ''} relative ${task.isExample ? 'border-2 border-dashed border-white/50' : ''}`}
+                              className={`${!isTablet ? 'notes-panel-container' : 'select-none'} ${task.isTaskCalendar ? '' : task.color} rounded-lg shadow-sm ${isImported && !task.isTaskCalendar || isTablet ? 'cursor-default' : 'cursor-move'} relative ${task.isExample ? 'border-2 border-dashed border-white/50' : ''}`}
                               style={{ ...(taskCalendarStyle || {}), ...(isTablet ? { touchAction: 'pan-y' } : {}) }}
                             >
                               {task.isExample && (

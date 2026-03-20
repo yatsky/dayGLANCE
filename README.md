@@ -3,7 +3,7 @@
 **Your day, at a glance.** A privacy-first day planner with visual time-blocking, deep integrations, and zero lock-in. Use it free at [dayglance.app](https://dayglance.app) or self-host it on your own server. Your data stays on your device — nothing is ever sent to a server unless you choose to sync it yourself.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.2.12-green.svg)](https://github.com/krelltunez/dayglance/releases)
+[![Version](https://img.shields.io/badge/version-1.2.16-green.svg)](https://github.com/krelltunez/dayglance/releases)
 
 [**Live App**](https://dayglance.app) · [**Documentation**](https://docs.dayglance.app) · [**Releases**](https://github.com/krelltunez/dayglance/releases) · [**Android APK**](https://github.com/krelltunez/dayglance/releases)
 
@@ -107,7 +107,6 @@ The heart of dayGLANCE. A real-time snapshot of your day without scrolling throu
 
 When your day is winding down — either once today's agenda is clear or after 7pm — the Glance panel shifts its focus to tomorrow. *GLANCE*ahead shows the day label, first start time, task and event counts, any deadlines (highlighted in orange), and total committed hours. If tomorrow is empty, it says so. Available across all layouts: mobile, tablet, and desktop.
 
-<!-- screenshot placeholder: GLANCEahead panel -->
 ![GLANCEahead](screenshots/glanceahead.png)
 
 ### Visual Time-Blocking
@@ -126,7 +125,9 @@ Capture tasks without scheduling them. Three priority levels, tag filtering, and
 
 A Pomodoro-style timer with customizable work, short break, and long break durations. Attach a timer session to a specific task and mark it complete when done. On mobile, goes fully immersive with Do Not Disturb and portrait lock.
 
-![Focus Mode Timer](screenshots/focus-mode.png)
+| Setup | Active Session |
+|:-:|:-:|
+| ![Focus Mode Setup](screenshots/focus-mode-1.png) | ![Focus Mode Timer](screenshots/focus-mode-2.png) |
 
 ### Spotlight Search
 
@@ -142,13 +143,13 @@ Add `#tags` to any task. Filter the timeline and inbox by one or more tags, with
 
 ### Recycle Bin & Undo/Redo
 
-Deleted tasks go to a recycle bin. Full undo/redo stack (`Ctrl+Z` / `Ctrl+Y`) for all actions.
+Deleted tasks go to a recycle bin. Full undo/redo stack (`Ctrl/Cmd+Z` / `Ctrl/Cmd+Shift+Z` or `Ctrl/Cmd+Y`) for all actions.
 
-### Dark Mode
+### Light & Dark Mode
 
-Full dark theme across every component — including custom scrollbars and mobile status bar.
+Light and dark themes across every component — including custom scrollbars and mobile status bar.
 
-![Dark Mode](screenshots/dark-mode.png)
+![Light Mode](screenshots/light-mode.png)
 
 ### Responsive Layout
 
@@ -178,7 +179,6 @@ Current weather and a 5-day forecast in the header (by zip code). A rotating pan
 
 Build reusable daily task templates for each day of the week. Drag a routine onto the timeline in one gesture to populate your day instantly — no re-entering recurring tasks.
 
-<!-- screenshot placeholder: Routines dashboard -->
 ![Routines Dashboard](screenshots/routines.png)
 
 ### Recurring Tasks
@@ -187,10 +187,7 @@ Set tasks to repeat daily, weekly on specific days, monthly, or on custom interv
 
 ### Habit Tracking
 
-Track streaks and daily habit completion alongside your schedule. The daily summary shows a habit completion ring, and tapping it gives you a popup breakdown of the prior day.
-
-<!-- screenshot placeholder: Habit ring and daily summary -->
-![Habit Tracking & Daily Summary](screenshots/daily-summary.png)
+Track streaks and daily habit completion alongside your schedule. The agenda view shows habit rings for the current day, and tapping habit rings on past days gives you a popup breakdown of that day.
 
 ### Weekly Review
 
@@ -199,6 +196,8 @@ A guided end-of-week flow: weekly stats, reflection prompts, and planning ahead.
 ### Daily Summary & Statistics
 
 Tasks completed, completion rate, time planned vs. spent, focus time logged, and lifetime trends with averages and streaks.
+
+![Daily Summary](screenshots/daily-summary.png)
 
 ---
 
@@ -218,28 +217,25 @@ Import events from any iCal-compatible source — Google Calendar, Nextcloud Cal
 
 **Setup:** Settings → Calendar Sync → paste your calendar URL.
 
-### Obsidian
-
-Sync tasks and daily notes directly with your **Obsidian vault** — no plugin required. dayGLANCE reads and writes your vault's markdown files directly via the browser's File System Access API (desktop) or Android's native file bridge.
-
-- Tasks with `[[wikilinks]]` link directly to notes in your vault
-- Tap the link icon to open the note in Obsidian (or the Obsidian Android app)
-- Supports all Obsidian task formats, duration ranges (`HH:MM-HH:MM`), moves, rescheduling, and title edits
-- Daily notes sync **bidirectionally**
-
-**Setup:** Settings → Obsidian → select your vault folder. Available on desktop browsers (Chrome, Edge, Brave) and the Android app.
-
-<!-- screenshot placeholder: Obsidian integration settings or wikilink task -->
-![Obsidian Integration](screenshots/obsidian.png)
-
 ### TRMNL
 
 Display your current time block and upcoming tasks on your **TRMNL** e-ink display. dayGLANCE provides a TRMNL-compatible plugin endpoint so your display always reflects what's next.
 
 **Setup:** See the [TRMNL integration guide](https://docs.dayglance.app/trmnl) in the documentation.
 
-<!-- screenshot placeholder: TRMNL display showing dayGLANCE widget -->
-![TRMNL Display](screenshots/trmnl.png)
+### Obsidian
+
+Sync tasks and daily notes directly with your **Obsidian vault** — no plugin required. dayGLANCE reads and writes your vault's markdown files directly via the browser's File System Access API (desktop) or Android's native file bridge.
+
+- Tasks with `[[wikilinks]]` are recognized and displayed across all platforms
+- On desktop, tap the link icon to expand the linked note inline on the timeline
+- On Android, tap the link icon to open the note directly in the Obsidian app
+- Supports all Obsidian task formats, duration ranges (`HH:MM-HH:MM`), moves, rescheduling, and title edits
+- Daily notes sync **bidirectionally**
+
+**Setup:** Settings → Obsidian → select your vault folder. Available on desktop browsers (Chrome, Edge, Brave) and the Android app.
+
+![Obsidian Integration](screenshots/obsidian.png)
 
 ---
 
@@ -290,8 +286,13 @@ Attach freeform notes to any day for journaling, reflections, or quick reference
 | `N` | New scheduled task |
 | `I` | New inbox task |
 | `R` | Open routines dashboard |
+| `F` | Focus mode |
+| `T` | Jump to today |
+| `M` | Toggle month view |
+| `D` | Toggle dark mode |
+| `/` | Toggle tag filter |
 | `Ctrl/Cmd + Z` | Undo |
-| `Ctrl/Cmd + Y` | Redo |
+| `Ctrl/Cmd + Shift + Z` / `Ctrl/Cmd + Y` | Redo |
 | `Escape` | Close modal / dropdown |
 | `?` | Show full shortcut list |
 
@@ -315,7 +316,7 @@ Attach freeform notes to any day for journaling, reflections, or quick reference
 
 - **Multiple calendar feeds** — support for more than one iCal/CalDAV source simultaneously
 - **PWA shortcuts** — Quick actions from the app icon (new task, open inbox, etc.)
-- **Server-side storage** — Optional self-hosted database backend via IndexedDB
+- **Server-side storage** — Optional self-hosted database backend (SQLite or Postgres)
 - **iOS app** — Native iOS wrapper with widget and Obsidian deep-link support
 
 Have a feature request? [Open an issue →](https://github.com/krelltunez/dayglance/issues)

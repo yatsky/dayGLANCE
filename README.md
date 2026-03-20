@@ -87,11 +87,11 @@ The Android app ships the full web app in a WebView with native enhancements tha
 | ⏱️ **Immersive Focus Mode** | Full-screen timer with automatic Do Not Disturb and portrait lock |
 | 🎨 **Theme-aware status bar** | Status bar icons match the app's light/dark theme |
 
-![Android Home Screen Widget](screenshots/android-widget.png)
+| Home Screen Widget | App Timeline |
+|:-:|:-:|
+| ![Android Home Screen Widget](screenshots/android-widget.png) | ![Android App Timeline](screenshots/android-timeline.png) |
 
 https://github.com/user-attachments/assets/58ba5bef-c563-48ff-8a8d-16e632002f81
-
-![Android App Timeline](screenshots/android-timeline.png)
 
 ---
 

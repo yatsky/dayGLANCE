@@ -8,8 +8,10 @@ ANDROID_DIR="$SCRIPT_DIR/dayglance-android"
 FULL_CLEAN=false
 RELEASE=false
 for arg in "$@"; do
-  [[ "$arg" == "--clean" ]] && FULL_CLEAN=true
-  [[ "$arg" == "--release" ]] && RELEASE=true
+  if [[ "$arg" == "--clean" ]]; then FULL_CLEAN=true
+  elif [[ "$arg" == "--release" ]]; then RELEASE=true
+  else echo "Unknown flag: $arg (valid flags: --clean, --release)" && exit 1
+  fi
 done
 
 if $RELEASE; then

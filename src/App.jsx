@@ -2705,6 +2705,10 @@ const DayPlanner = () => {
     const saved = localStorage.getItem('day-planner-task-calendar-auth');
     return saved ? JSON.parse(saved) : { username: '', appPassword: '', caldavBaseUrl: '' };
   });
+  const [calendarUrlAuth, setCalendarUrlAuth] = useState(() => {
+    const saved = localStorage.getItem('day-planner-calendar-url-auth');
+    return saved ? JSON.parse(saved) : { username: '', password: '' };
+  });
   const [syncRetentionDays, setSyncRetentionDays] = useState(() => {
     const saved = localStorage.getItem('day-planner-sync-retention-days');
     return saved ? JSON.parse(saved) : 30;
@@ -4067,6 +4071,11 @@ const DayPlanner = () => {
   useEffect(() => {
     localStorage.setItem('day-planner-task-calendar-auth', JSON.stringify(taskCalendarAuth));
   }, [taskCalendarAuth]);
+
+  // Persist calendar URL auth to localStorage
+  useEffect(() => {
+    localStorage.setItem('day-planner-calendar-url-auth', JSON.stringify(calendarUrlAuth));
+  }, [calendarUrlAuth]);
 
   // Track for onboarding when sync is set up
   useEffect(() => {
@@ -11063,7 +11072,11 @@ const DayPlanner = () => {
       // Use proxy to bypass CORS restrictions
       // Note: URL is not encoded because nginx's $arg_url doesn't auto-decode
       const proxyUrl = `/api/calendar-proxy/?url=${syncUrl}`;
-      const response = await fetch(proxyUrl);
+      const calProxyHeaders = {};
+      if (calendarUrlAuth.username && calendarUrlAuth.password) {
+        calProxyHeaders['X-Calendar-Auth'] = 'Basic ' + toBase64(calendarUrlAuth.username + ':' + calendarUrlAuth.password);
+      }
+      const response = await fetch(proxyUrl, { headers: calProxyHeaders });
       if (!response.ok) throw new Error('Failed to fetch calendar');
 
       const icsContent = await response.text();
@@ -11095,14 +11108,22 @@ const DayPlanner = () => {
 
     try {
       let icsContent;
+      const taskAuthHeaders = { Accept: 'text/calendar, text/plain, */*' };
+      if (taskCalendarAuth.username && taskCalendarAuth.appPassword) {
+        taskAuthHeaders['Authorization'] = 'Basic ' + toBase64(taskCalendarAuth.username + ':' + taskCalendarAuth.appPassword);
+      }
       if (isNativeAndroid()) {
         // On Android: fetch directly — no CORS restrictions, no proxy server available
-        const result = nativeHttpRequest('GET', taskCalendarUrl, { Accept: 'text/calendar, text/plain, */*' }, '');
+        const result = nativeHttpRequest('GET', taskCalendarUrl, taskAuthHeaders, '');
         if (!result || !result.ok) throw new Error('Failed to fetch task calendar');
         icsContent = result.body;
       } else {
         const proxyUrl = `/api/calendar-proxy/?url=${taskCalendarUrl}`;
-        const response = await fetch(proxyUrl);
+        const taskProxyHeaders = {};
+        if (taskCalendarAuth.username && taskCalendarAuth.appPassword) {
+          taskProxyHeaders['X-Calendar-Auth'] = 'Basic ' + toBase64(taskCalendarAuth.username + ':' + taskCalendarAuth.appPassword);
+        }
+        const response = await fetch(proxyUrl, { headers: taskProxyHeaders });
         if (!response.ok) throw new Error('Failed to fetch task calendar');
         icsContent = await response.text();
       }
@@ -17439,6 +17460,31 @@ const DayPlanner = () => {
                         />
                       </div>
                       )}
+                      {!isNativeAndroid() && syncUrl && (
+                        <div className={`space-y-2 pl-3 border-l-2 ${darkMode ? 'border-gray-600' : 'border-stone-300'}`}>
+                          <p className={`text-xs font-medium ${textSecondary}`}>Basic auth (optional — for private calendars)</p>
+                          <div>
+                            <label className={`block text-xs ${textSecondary} mb-1`}>Username</label>
+                            <input
+                              type="text"
+                              placeholder="username"
+                              value={calendarUrlAuth.username}
+                              onChange={(e) => setCalendarUrlAuth(prev => ({ ...prev, username: e.target.value }))}
+                              className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
+                            />
+                          </div>
+                          <div>
+                            <label className={`block text-xs ${textSecondary} mb-1`}>Password</label>
+                            <input
+                              type="password"
+                              placeholder="password"
+                              value={calendarUrlAuth.password}
+                              onChange={(e) => setCalendarUrlAuth(prev => ({ ...prev, password: e.target.value }))}
+                              className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
+                            />
+                          </div>
+                        </div>
+                      )}
                       {isNativeAndroid() && (
                         <p className={`text-xs ${textSecondary}`}>
                           Calendar events are read from your device accounts. Use the Device Calendars section below to choose which calendars to show.
@@ -17456,20 +17502,7 @@ const DayPlanner = () => {
                       </div>
                       {taskCalendarUrl && (
                         <div className={`space-y-2 pl-3 border-l-2 ${darkMode ? 'border-gray-600' : 'border-stone-300'}`}>
-                          <p className={`text-xs font-medium ${textSecondary}`}>Sync completions back (optional)</p>
-                          <div>
-                            <label className={`block text-xs ${textSecondary} mb-1`}>CalDAV Base URL</label>
-                            <input
-                              type="url"
-                              placeholder="https://cloud.example.com/remote.php/dav/calendars/user/personal/"
-                              value={taskCalendarAuth.caldavBaseUrl}
-                              onChange={(e) => setTaskCalendarAuth(prev => ({ ...prev, caldavBaseUrl: e.target.value }))}
-                              className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
-                            />
-                            <p className={`text-xs ${textSecondary} mt-0.5`}>
-                              The CalDAV collection URL (without ?export). In Nextcloud, find the internal calendar ID via CalDAV settings — it may differ from the display name.
-                            </p>
-                          </div>
+                          <p className={`text-xs font-medium ${textSecondary}`}>Basic auth / sync completions back (optional)</p>
                           <div>
                             <label className={`block text-xs ${textSecondary} mb-1`}>Username</label>
                             <input
@@ -17490,8 +17523,21 @@ const DayPlanner = () => {
                               className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
                             />
                           </div>
+                          <div>
+                            <label className={`block text-xs ${textSecondary} mb-1`}>CalDAV Base URL</label>
+                            <input
+                              type="url"
+                              placeholder="https://cloud.example.com/remote.php/dav/calendars/user/personal/"
+                              value={taskCalendarAuth.caldavBaseUrl}
+                              onChange={(e) => setTaskCalendarAuth(prev => ({ ...prev, caldavBaseUrl: e.target.value }))}
+                              className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
+                            />
+                            <p className={`text-xs ${textSecondary} mt-0.5`}>
+                              For syncing completions back: the CalDAV collection URL (without ?export). In Nextcloud, find the internal calendar ID via CalDAV settings — it may differ from the display name.
+                            </p>
+                          </div>
                           <p className={`text-xs ${textSecondary}`}>
-                            When set, completing a task syncs the status back to your CalDAV server
+                            Username + password fetches protected task calendars. Adding a CalDAV Base URL also syncs completion status back to your server.
                           </p>
                         </div>
                       )}
@@ -26942,6 +26988,33 @@ const DayPlanner = () => {
                         </p>
                       </div>
                       )}
+                      {!isNativeAndroid() && syncUrl && (
+                        <div className={`space-y-2 pl-3 border-l-2 ${darkMode ? 'border-gray-600' : 'border-stone-300'}`}>
+                          <p className={`text-xs font-medium ${textSecondary}`}>Basic auth (optional — for private calendars)</p>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className={`block text-xs ${textSecondary} mb-1`}>Username</label>
+                              <input
+                                type="text"
+                                placeholder="username"
+                                value={calendarUrlAuth.username}
+                                onChange={(e) => setCalendarUrlAuth(prev => ({ ...prev, username: e.target.value }))}
+                                className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className={`block text-xs ${textSecondary} mb-1`}>Password</label>
+                              <input
+                                type="password"
+                                placeholder="password"
+                                value={calendarUrlAuth.password}
+                                onChange={(e) => setCalendarUrlAuth(prev => ({ ...prev, password: e.target.value }))}
+                                className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {isNativeAndroid() && (
                         <p className={`text-xs ${textSecondary}`}>
                           Calendar events are read from your device accounts. Use the Device Calendars section below to choose which calendars to show.
@@ -26964,20 +27037,7 @@ const DayPlanner = () => {
                       </div>
                       {taskCalendarUrl && (
                         <div className={`space-y-2 pl-3 border-l-2 ${darkMode ? 'border-gray-600' : 'border-stone-300'}`}>
-                          <p className={`text-xs font-medium ${textSecondary}`}>Sync completions back (optional)</p>
-                          <div>
-                            <label className={`block text-xs ${textSecondary} mb-1`}>CalDAV Base URL</label>
-                            <input
-                              type="url"
-                              placeholder="https://cloud.example.com/remote.php/dav/calendars/user/personal/"
-                              value={taskCalendarAuth.caldavBaseUrl}
-                              onChange={(e) => setTaskCalendarAuth(prev => ({ ...prev, caldavBaseUrl: e.target.value }))}
-                              className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
-                            />
-                            <p className={`text-xs ${textSecondary} mt-0.5`}>
-                              The CalDAV collection URL (without ?export). In Nextcloud, the calendar ID in the URL may differ from the display name.
-                            </p>
-                          </div>
+                          <p className={`text-xs font-medium ${textSecondary}`}>Basic auth / sync completions back (optional)</p>
                           <div className="flex gap-2">
                             <div className="flex-1">
                               <label className={`block text-xs ${textSecondary} mb-1`}>Username</label>
@@ -27000,8 +27060,21 @@ const DayPlanner = () => {
                               />
                             </div>
                           </div>
+                          <div>
+                            <label className={`block text-xs ${textSecondary} mb-1`}>CalDAV Base URL</label>
+                            <input
+                              type="url"
+                              placeholder="https://cloud.example.com/remote.php/dav/calendars/user/personal/"
+                              value={taskCalendarAuth.caldavBaseUrl}
+                              onChange={(e) => setTaskCalendarAuth(prev => ({ ...prev, caldavBaseUrl: e.target.value }))}
+                              className={`w-full px-3 py-1.5 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-xs`}
+                            />
+                            <p className={`text-xs ${textSecondary} mt-0.5`}>
+                              For syncing completions back: the CalDAV collection URL (without ?export). In Nextcloud, the calendar ID in the URL may differ from the display name.
+                            </p>
+                          </div>
                           <p className={`text-xs ${textSecondary}`}>
-                            When set, completing a task syncs the status back to your CalDAV server
+                            Username + password fetches protected task calendars. Adding a CalDAV Base URL also syncs completion status back to your server.
                           </p>
                         </div>
                       )}

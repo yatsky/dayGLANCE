@@ -27741,7 +27741,6 @@ const DayPlanner = () => {
                   <ExternalLink size={14} />
                   docs.dayglance.app
                 </a>
-                <p className={`text-xs ${textSecondary} mt-1`}>Full documentation is on the way — check back soon.</p>
               </div>
 
               {/* Contact */}
@@ -28896,6 +28895,14 @@ const DayPlanner = () => {
                     <Cloud size={18} /> Set Up Cloud Sync
                   </button>
                 </div>
+                <a
+                  href="https://docs.dayglance.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-block mt-4 text-sm ${textSecondary} hover:text-blue-500 transition-colors`}
+                >
+                  Explore the docs at docs.dayglance.app
+                </a>
               </div>
             )}
           </div>
@@ -29141,6 +29148,14 @@ const DayPlanner = () => {
                       <Cloud size={18} /> Set Up Cloud Sync
                     </button>
                   </div>
+                  <a
+                    href="https://docs.dayglance.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-block mt-4 text-sm ${textSecondary} hover:text-blue-500 transition-colors`}
+                  >
+                    Explore the docs at docs.dayglance.app
+                  </a>
                 </div>
               )}
             </div>

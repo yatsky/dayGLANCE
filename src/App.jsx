@@ -2959,7 +2959,10 @@ const DayPlanner = () => {
     localStorage.getItem('day-planner-trmnl-last-synced') || null
   );
   const trmnlSyncTimerRef = useRef(null);
-  const trmnlLastPushRef = useRef(0); // timestamp of last push attempt
+  // Seed from persisted last-synced so the 2-min throttle survives page reloads
+  const trmnlLastPushRef = useRef(
+    (() => { const s = localStorage.getItem('day-planner-trmnl-last-synced'); return s ? new Date(s).getTime() : 0; })()
+  ); // timestamp of last push attempt
   const trmnlBackoffUntilRef = useRef(0); // timestamp: skip auto-sync until this time (429 backoff)
   const trmnlBackoffCountRef = useRef(0); // consecutive 429s — drives exponential backoff
   const trmnlSyncInProgressRef = useRef(false); // prevents concurrent pushes

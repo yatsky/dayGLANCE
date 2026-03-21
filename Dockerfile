@@ -1,5 +1,5 @@
-# Build stage
-FROM node:20-alpine AS builder
+# Build stage - pinned to amd64 because the output is static files (arch-independent)
+FROM --platform=linux/amd64 node:20-alpine AS builder
 
 WORKDIR /app
 LABEL org.opencontainers.image.source=https://github.com/krelltunez/dayglance

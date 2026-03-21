@@ -235,7 +235,7 @@ export async function pushToTrmnl({ webhookUrl, apiKey }, mergeVars) {
 // ---------------------------------------------------------------------------
 
 export const TRMNL_MARKUP_FULL = `<div class="layout layout--col">
-  <div class="columns">
+  <div class="columns" style="flex:1">
     <div class="column" style="flex:2">
       <div class="gap--small">
         {% for t in schedule %}
@@ -263,7 +263,7 @@ export const TRMNL_MARKUP_FULL = `<div class="layout layout--col">
       {% endif %}
     </div>
 
-    <div class="column" style="display:flex;flex-direction:column">
+    <div class="column" style="flex:1;display:flex;flex-direction:column">
       <span class="title title--small">{{ day_name }}, {{ date_label }}</span>
 
       <span class="value">{{ pct }}%</span>

@@ -235,7 +235,7 @@ export async function pushToTrmnl({ webhookUrl, apiKey }, mergeVars) {
 // ---------------------------------------------------------------------------
 
 export const TRMNL_MARKUP_FULL = `<div class="layout layout--col">
-  <div class="columns" style="flex:1">
+  <div class="columns">
     <div class="column" style="flex:2">
       <div class="gap--small">
         {% for t in schedule %}
@@ -253,27 +253,27 @@ export const TRMNL_MARKUP_FULL = `<div class="layout layout--col">
       </div>
 
       {% if routines.size > 0 %}
-      <div style="margin-top:12px">
+      <div class="gap--medium">
         <span class="label label--gray">ROUTINES</span>
         {% for r in routines %}
-        <div style="border-top:1px solid #ccc;margin:4px 0"></div>
+        <div class="divider"></div>
         <span class="description">{{ r.time }}{% if r.dur != blank %} · {{ r.dur }}{% endif %} {{ r.name }}</span>
         {% endfor %}
       </div>
       {% endif %}
     </div>
 
-    <div class="column" style="flex:1;display:flex;flex-direction:column">
+    <div class="column" style="display:flex;flex-direction:column">
       <span class="title title--small">{{ day_name }}, {{ date_label }}</span>
 
-      <span class="value" style="margin-top:8px">{{ pct }}%</span>
+      <span class="value">{{ pct }}%</span>
       <span class="label">{{ completed }}/{{ total }} done</span>
-      {% if overdue > 0 %}<span class="label" style="font-weight:bold">{{ overdue }} overdue</span>{% endif %}
+      {% if overdue > 0 %}<span class="label label--underline">{{ overdue }} overdue</span>{% endif %}
       <span class="label label--gray">{{ time_planned }} planned</span>
       {% if inbox_count > 0 %}<span class="label label--gray">{{ inbox_count }} tasks in inbox</span>{% endif %}
 
       {% if next_task %}
-      <div style="margin-top:12px">
+      <div class="gap--small">
         <span class="label label--gray">UP NEXT</span>
         <span class="title title--small">{{ next_task.title }}</span>
         <span class="label">{{ next_task.time }}</span>
@@ -281,7 +281,7 @@ export const TRMNL_MARKUP_FULL = `<div class="layout layout--col">
       {% endif %}
 
       {% if habits.size > 0 %}
-      <div style="margin-top:12px">
+      <div class="gap--small">
         <span class="label label--gray">HABITS</span>
         {% for h in habits %}
         <span class="description">{{ h.name }}: {{ h.count }}/{{ h.target }}</span>
@@ -289,19 +289,17 @@ export const TRMNL_MARKUP_FULL = `<div class="layout layout--col">
       </div>
       {% endif %}
 
-      <div style="margin-top:auto">
-        <div class="title_bar"><span class="title_bar__title">dayGLANCE</span></div>
-      </div>
+      <div class="title_bar" style="margin-top:auto"><span class="title_bar__title">dayGLANCE</span></div>
     </div>
   </div>
 </div>`;
 
 export const TRMNL_MARKUP_HALF_HORIZONTAL = `<div class="layout layout--col">
-  <div style="display:flex;justify-content:space-between;align-items:baseline">
-    <span class="title title--small">{{ day_name }}, {{ date_label }}</span>
-    <span class="label" style="white-space:nowrap">| {{ completed }}/{{ total }} · {{ pct }}%</span>
+  <div class="columns">
+    <div class="column"><span class="title title--small">{{ day_name }}, {{ date_label }}</span></div>
+    <div class="column"><span class="label">{{ completed }}/{{ total }} · {{ pct }}%</span></div>
   </div>
-  <div style="border-top:1px solid #ccc;margin:4px 0"></div>
+  <div class="divider"></div>
   <div class="gap--small">
     {% for t in schedule limit:4 %}
     <div class="item">
@@ -320,11 +318,11 @@ export const TRMNL_MARKUP_HALF_HORIZONTAL = `<div class="layout layout--col">
 export const TRMNL_MARKUP_HALF_VERTICAL = `<div class="layout layout--col">
   <span class="title title--small">{{ day_name }}</span>
   <span class="label">{{ date_label }}</span>
-  <span class="value" style="margin:4px 0">{{ pct }}%</span>
+  <span class="value">{{ pct }}%</span>
   <span class="label">{{ completed }}/{{ total }} done</span>
-  {% if overdue > 0 %}<span class="label" style="font-weight:bold">{{ overdue }} overdue</span>{% endif %}
+  {% if overdue > 0 %}<span class="label label--underline">{{ overdue }} overdue</span>{% endif %}
   {% if next_task %}
-  <div style="margin-top:8px">
+  <div class="gap--small">
     <span class="label label--gray">NEXT</span>
     <span class="description">{{ next_task.time }} {{ next_task.title }}</span>
   </div>
@@ -335,6 +333,6 @@ export const TRMNL_MARKUP_HALF_VERTICAL = `<div class="layout layout--col">
 export const TRMNL_MARKUP_QUADRANT = `<div class="layout layout--col layout--center">
   <span class="value">{{ pct }}%</span>
   <span class="label">{{ completed }}/{{ total }}</span>
-  {% if next_task %}<span class="description" style="margin-top:4px">{{ next_task.time }} {{ next_task.title }}</span>{% endif %}
+  {% if next_task %}<span class="description">{{ next_task.time }} {{ next_task.title }}</span>{% endif %}
   <div class="title_bar"><span class="title_bar__title">dayGLANCE</span></div>
 </div>`;

@@ -26993,7 +26993,7 @@ const DayPlanner = () => {
                         />
                         <p className={`text-xs ${textSecondary} mt-1`}>
                           {showCalendarUrlHint
-                            ? <>For public calendars in Nextcloud: Go to Calendar → Settings → Copy the public link. For private (authenticated) calendars, use the internal CalDAV URL with ?export appended (e.g. …/remote.php/dav/calendars/user/personal/?export) and enter your credentials below. <button onClick={() => setShowCalendarUrlHint(false)} className="underline">Show less</button></>
+                            ? <>Paste any public ICS/iCal URL here. <strong>Google Calendar:</strong> Settings → [your calendar] → "Secret address in iCal format". <strong>Outlook:</strong> Settings → View all → Calendar → Shared calendars → Publish → ICS link. <strong>Nextcloud (public):</strong> Calendar → Settings → Copy the public link. <strong>Nextcloud (private):</strong> use the internal CalDAV URL with ?export appended (e.g. …/remote.php/dav/calendars/user/personal/?export) and enter credentials below. <button onClick={() => setShowCalendarUrlHint(false)} className="underline">Show less</button></>
                             : <>Where do I find this URL? <button onClick={() => setShowCalendarUrlHint(true)} className="underline">Show more</button></>
                           }
                         </p>

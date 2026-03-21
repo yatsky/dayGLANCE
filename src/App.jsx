@@ -28511,6 +28511,68 @@ const DayPlanner = () => {
         });
         const tagBreakdown = Object.entries(tagStats).map(([tag, s]) => ({ tag, ...s })).sort((a, b) => b.total - a.total).slice(0, 8);
 
+        // Habit stats for past week
+        const habitColorMap = {
+          blue: '#3b82f6', green: '#22c55e', red: '#ef4444', amber: '#f59e0b',
+          purple: '#a855f7', pink: '#ec4899', cyan: '#06b6d4', orange: '#f97316',
+        };
+        const habitStats = (habitsEnabled && habits.length > 0)
+          ? habits.filter(h => h.enabled !== false).map(h => {
+              const days = pastWeekDates.map(ds => {
+                const count = (habitLogs?.[ds]?.[h.id]) ?? 0;
+                return h.type === 'limit' ? count <= h.target : count >= h.target;
+              });
+              return {
+                id: h.id,
+                name: h.name,
+                type: h.type,
+                target: h.target,
+                hexColor: habitColorMap[h.color] || '#3b82f6',
+                days,
+                daysHit: days.filter(Boolean).length,
+              };
+            })
+          : [];
+
+        // Frame utilization for past week
+        const frameStats = gtdFrames.filter(f => f.enabled && !f.singleDate).map(frame => {
+          let totalCapacityMin = 0;
+          let scheduledMin = 0;
+          pastWeekDates.forEach(ds => {
+            const dayOfWeek = new Date(ds + 'T12:00:00').getDay();
+            if (!frame.days.includes(dayOfWeek)) return;
+            const exception = frame.exceptions?.[ds];
+            if (exception?.deleted) return;
+            const instanceStart = exception?.start || frame.start;
+            const instanceEnd = exception?.end || frame.end;
+            const capacityMin = timeToMinutes(instanceEnd) - timeToMinutes(instanceStart);
+            if (capacityMin <= 0) return;
+            totalCapacityMin += capacityMin;
+            tasks
+              .filter(t => !t.imported && t.date === ds && t.startTime &&
+                timeToMinutes(t.startTime) >= timeToMinutes(instanceStart) &&
+                timeToMinutes(t.startTime) < timeToMinutes(instanceEnd))
+              .forEach(t => { scheduledMin += (t.duration || 0); });
+            recurringTasks.forEach(rt => {
+              if (getOccurrencesInRange(rt, ds, ds).length === 0) return;
+              const rtStart = rt.exceptions?.[ds]?.startTime || rt.startTime;
+              if (!rtStart) return;
+              if (timeToMinutes(rtStart) >= timeToMinutes(instanceStart) &&
+                  timeToMinutes(rtStart) < timeToMinutes(instanceEnd)) {
+                scheduledMin += (rt.duration || 0);
+              }
+            });
+          });
+          if (totalCapacityMin === 0) return null;
+          return {
+            frameId: frame.id,
+            label: frame.label,
+            totalCapacityMin,
+            scheduledMin,
+            utilizationPct: Math.round((scheduledMin / totalCapacityMin) * 100),
+          };
+        }).filter(Boolean).sort((a, b) => b.totalCapacityMin - a.totalCapacityMin);
+
         // Stats for AI weekly summary (used by click-to-reveal prompt)
         const nextWeekTopTasks = nextRegular
           .filter(t => !t.isExample)
@@ -28541,6 +28603,8 @@ const DayPlanner = () => {
           nextWeekTaskCount: nextScheduled,
           nextWeekTopTasks,
           nextWeekCalendarEvents,
+          habitStats: habitStats.map(h => ({ name: h.name, type: h.type, target: h.target, daysHit: h.daysHit })),
+          frameStats: frameStats.map(f => ({ label: f.label, totalCapacityMin: f.totalCapacityMin, scheduledMin: f.scheduledMin, utilizationPct: f.utilizationPct })),
         };
 
         const StatCard = ({ value, label, icon }) => (
@@ -28641,6 +28705,58 @@ const DayPlanner = () => {
                         )}
                       </div>
                     </>
+                  )}
+
+                  {/* Habits */}
+                  {habitsEnabled && habitStats.length > 0 && (
+                    <div className="mb-4">
+                      <div className={`text-xs font-semibold uppercase ${textSecondary} tracking-wider mb-2`}>Habits</div>
+                      <div className="space-y-2">
+                        {habitStats.map(h => (
+                          <div key={h.id} className="flex items-center gap-2">
+                            <span className={`text-xs ${textPrimary} w-20 truncate flex-shrink-0`}>{h.name}</span>
+                            <div className="flex gap-1 flex-1">
+                              {h.days.map((hit, i) => (
+                                <div
+                                  key={i}
+                                  className="w-4 h-4 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: hit ? h.hexColor : (darkMode ? '#374151' : '#e7e5e4') }}
+                                  title={new Date(pastWeekDates[i] + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                />
+                              ))}
+                            </div>
+                            <span className={`text-xs ${textSecondary} flex-shrink-0`}>{h.daysHit}/7</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Frame Utilization */}
+                  {frameStats.length > 0 && (
+                    <div className="mb-4">
+                      <div className={`text-xs font-semibold uppercase ${textSecondary} tracking-wider mb-2`}>Frame Utilization</div>
+                      <div className="space-y-2">
+                        {frameStats.map(f => {
+                          const pct = Math.min(f.utilizationPct, 100);
+                          const barColor = f.utilizationPct >= 70 ? '#22c55e' : f.utilizationPct >= 30 ? '#3b82f6' : (darkMode ? '#4b5563' : '#d6d3d1');
+                          return (
+                            <div key={f.frameId}>
+                              <div className="flex justify-between items-center mb-1">
+                                <span className={`text-xs ${textPrimary} truncate flex-1 mr-2`}>{f.label}</span>
+                                <span className={`text-xs ${textSecondary} flex-shrink-0`}>{f.utilizationPct}% &middot; {formatMinutes(f.scheduledMin)}</span>
+                              </div>
+                              <div className={`h-1.5 rounded-full w-full ${darkMode ? 'bg-gray-700' : 'bg-stone-200'}`}>
+                                <div
+                                  className="h-full rounded-full transition-all"
+                                  style={{ width: `${pct}%`, backgroundColor: barColor }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
 
                   {/* Incomplete list */}

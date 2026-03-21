@@ -70,11 +70,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        Accept: 'text/calendar, text/plain, */*',
-      },
-    });
+    const fetchHeaders = { Accept: 'text/calendar, text/plain, */*' };
+    const calendarAuth = req.headers['x-calendar-auth'];
+    if (calendarAuth) {
+      fetchHeaders['Authorization'] = calendarAuth;
+    }
+    const response = await fetch(url, { headers: fetchHeaders });
 
     const body = await response.text();
 

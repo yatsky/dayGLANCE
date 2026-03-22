@@ -12,6 +12,8 @@ import { cloudSyncProviders } from './utils/cloudSyncProviders.js';
 import { autoBackupDB, autoBackupProviders, AUTO_BACKUP_RETENTION, AUTO_BACKUP_INTERVALS } from './utils/autoBackup.js';
 import { URL_REGEX, isOnlyUrl, renderFormattedText, hasNotesOrSubtasks, isLinkOnlyTask, getLinkUrl, hasOnlySubtasks, renderTitle, highlightMatch, renderTitleWithoutTags } from './utils/textFormatting.jsx';
 import { dateToString, localDateStr, extractTags, extractWikilinks, stripWikilinks, getRecurrenceLabel, formatDate, formatDateRange, formatShortDate, formatDeadlineDate } from './utils/taskUtils.js';
+import { TASK_COLORS, FRAME_COLORS, HABIT_COLORS, TAILWIND_TO_HEX, taskColorToHex, DAY_LABELS } from './utils/colorUtils.js';
+import { getOccurrencesInRange, getRecurrencePresets } from './utils/recurrenceEngine.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
@@ -977,47 +979,6 @@ const HABIT_ICONS = {
 };
 const HABIT_ICON_NAMES = Object.keys(HABIT_ICONS);
 
-// Habit tracking: color palette for habits
-const HABIT_COLORS = [
-  { name: 'blue', ring: '#3b82f6', bg: 'bg-blue-500', text: 'text-blue-500' },
-  { name: 'green', ring: '#22c55e', bg: 'bg-green-500', text: 'text-green-500' },
-  { name: 'red', ring: '#ef4444', bg: 'bg-red-500', text: 'text-red-500' },
-  { name: 'amber', ring: '#f59e0b', bg: 'bg-amber-500', text: 'text-amber-500' },
-  { name: 'purple', ring: '#a855f7', bg: 'bg-purple-500', text: 'text-purple-500' },
-  { name: 'pink', ring: '#ec4899', bg: 'bg-pink-500', text: 'text-pink-500' },
-  { name: 'cyan', ring: '#06b6d4', bg: 'bg-cyan-500', text: 'text-cyan-500' },
-  { name: 'orange', ring: '#f97316', bg: 'bg-orange-500', text: 'text-orange-500' },
-];
-
-// Maps Tailwind CSS background-color classes to hex values for the native Android widget.
-// The widget renders in a separate process and cannot resolve Tailwind classes.
-const TAILWIND_TO_HEX = {
-  'bg-blue-500': '#3b82f6', 'bg-blue-400': '#60a5fa', 'bg-blue-600': '#2563eb',
-  'bg-red-500': '#ef4444',  'bg-red-400': '#f87171',  'bg-red-600': '#dc2626',
-  'bg-green-500': '#22c55e','bg-green-400': '#4ade80', 'bg-green-600': '#16a34a',
-  'bg-purple-500': '#a855f7','bg-purple-400': '#c084fc','bg-purple-600': '#9333ea',
-  'bg-orange-500': '#f97316','bg-orange-400': '#fb923c','bg-orange-600': '#ea580c',
-  'bg-pink-500': '#ec4899', 'bg-pink-400': '#f472b6', 'bg-pink-600': '#db2777',
-  'bg-indigo-500': '#6366f1','bg-indigo-400': '#818cf8','bg-indigo-600': '#4f46e5',
-  'bg-teal-500': '#14b8a6', 'bg-teal-400': '#2dd4bf', 'bg-teal-600': '#0d9488',
-  'bg-yellow-500': '#eab308','bg-yellow-400': '#facc15','bg-yellow-600': '#ca8a04',
-  'bg-amber-500': '#f59e0b', 'bg-amber-400': '#fbbf24','bg-amber-600': '#d97706',
-  'bg-cyan-500': '#06b6d4', 'bg-cyan-400': '#22d3ee', 'bg-cyan-600': '#0891b2',
-  'bg-emerald-500': '#10b981','bg-emerald-400': '#34d399',
-  'bg-violet-500': '#8b5cf6','bg-violet-400': '#a78bfa',
-  'bg-rose-500': '#f43f5e', 'bg-rose-400': '#fb7185',
-  'bg-sky-500': '#0ea5e9',  'bg-sky-400': '#38bdf8',
-  'bg-lime-500': '#84cc16', 'bg-fuchsia-500': '#d946ef',
-};
-
-/** Converts a task's .color field (Tailwind class or native hex) to a hex string. */
-const taskColorToHex = (color, nativeCalendarColor) => {
-  if (nativeCalendarColor) return nativeCalendarColor;
-  if (!color || color === 'task-calendar') return '#3b82f6';
-  if (color.startsWith('#')) return color;
-  return TAILWIND_TO_HEX[color] || '#3b82f6';
-};
-
 // HabitRing — SVG circular progress ring component
 // autoSynced: true when the count comes from Health Connect — disables tap interactions
 const HabitRing = ({ size = 40, habit, count = 0, onClick, onContextMenu, onMouseDown, onMouseUp, onMouseLeave, onTouchStart, onTouchEnd, darkMode, autoSynced = false }) => {
@@ -1141,20 +1102,6 @@ const MiniHabitRing = ({ habit, count = 0, darkMode }) => {
     </svg>
   );
 };
-
-// GTD Frame color options
-const FRAME_COLORS = [
-  { name: 'Indigo', class: 'bg-indigo-200' },
-  { name: 'Amber', class: 'bg-amber-200' },
-  { name: 'Green', class: 'bg-green-200' },
-  { name: 'Blue', class: 'bg-blue-200' },
-  { name: 'Rose', class: 'bg-rose-200' },
-  { name: 'Purple', class: 'bg-purple-200' },
-  { name: 'Teal', class: 'bg-teal-200' },
-  { name: 'Orange', class: 'bg-orange-200' },
-];
-
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // 12/24hr-aware time picker used inside FrameEditor
 const TimePicker = ({ value, onChange, use24HourClock, borderClass, darkMode }) => {
@@ -2603,17 +2550,7 @@ const DayPlanner = () => {
   // Show all 24 hours (full day) - scrollable
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const firstHour = 0; // Always start at midnight for positioning
-  const colors = [
-    { name: 'Blue', class: 'bg-blue-500' },
-    { name: 'Purple', class: 'bg-purple-500' },
-    { name: 'Green', class: 'bg-green-500' },
-    { name: 'Orange', class: 'bg-orange-500' },
-    { name: 'Pink', class: 'bg-pink-500' },
-    { name: 'Indigo', class: 'bg-indigo-500' },
-    { name: 'Red', class: 'bg-red-500' },
-    { name: 'Teal', class: 'bg-teal-500' },
-    { name: 'Yellow', class: 'bg-yellow-500' },
-  ];
+  const colors = TASK_COLORS;
   const durationOptions = [15, 30, 45, 60, 90, 120];
 
   // Try to lock orientation to portrait on phones (works for installed PWAs)
@@ -4503,140 +4440,6 @@ const DayPlanner = () => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-  };
-
-  // Recurrence engine: compute occurrences of a recurring template in a date range
-  const getOccurrencesInRange = (template, rangeStartStr, rangeEndStr) => {
-    const rec = template.recurrence;
-    if (!rec) return [];
-    const results = [];
-    const startDate = new Date(rec.startDate + 'T12:00:00');
-    const rangeStart = new Date(rangeStartStr + 'T12:00:00');
-    const rangeEnd = new Date(rangeEndStr + 'T12:00:00');
-    const endDate = rec.endDate ? new Date(rec.endDate + 'T12:00:00') : null;
-    let count = 0;
-    const maxOcc = rec.maxOccurrences || Infinity;
-
-    const addIfInRange = (d) => {
-      if (count >= maxOcc) return false;
-      if (endDate && d > endDate) return false;
-      const ds = dateToString(d);
-      if (template.exceptions && template.exceptions[ds]?.deleted) { count++; return true; }
-      if (d >= rangeStart && d <= rangeEnd) results.push(ds);
-      count++;
-      return true;
-    };
-
-    if (rec.type === 'daily') {
-      // Fast-forward: skip directly to rangeStart instead of iterating from a
-      // potentially distant startDate.  Adjust count so maxOccurrences still works.
-      const cursor = new Date(Math.max(startDate.getTime(), rangeStart.getTime()));
-      if (cursor > startDate) {
-        // All noon-anchored dates, so dividing by 86400000 and rounding handles DST correctly.
-        count = Math.round((cursor.getTime() - startDate.getTime()) / 86400000);
-      }
-      while (cursor <= rangeEnd && count < maxOcc) {
-        if (endDate && cursor > endDate) break;
-        addIfInRange(cursor);
-        cursor.setDate(cursor.getDate() + 1);
-      }
-    } else if (rec.type === 'weekly' || rec.type === 'biweekly') {
-      const step = rec.type === 'biweekly' ? 2 : 1;
-      const days = (rec.daysOfWeek && rec.daysOfWeek.length > 0) ? rec.daysOfWeek : [startDate.getDay()];
-      // Find the week start (Sunday) of the start date
-      const weekStart = new Date(startDate);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      // Fast-forward weekStart to the week that contains rangeStart, adjusting count.
-      if (rangeStart > startDate) {
-        const rangeWeekStart = new Date(rangeStart);
-        rangeWeekStart.setDate(rangeWeekStart.getDate() - rangeWeekStart.getDay());
-        const msPerCycle = 7 * step * 86400000;
-        const cyclesSkip = Math.max(0, Math.floor((rangeWeekStart.getTime() - weekStart.getTime()) / msPerCycle));
-        if (cyclesSkip > 0) {
-          weekStart.setDate(weekStart.getDate() + cyclesSkip * 7 * step);
-          // Conservatively under-count to avoid cutting off valid occurrences.
-          // Each skipped cycle has at most days.length occurrences; subtract one
-          // cycle as a safety buffer so early occurrences in the window aren't missed.
-          count = Math.max(0, (cyclesSkip - 1)) * days.length;
-        }
-      }
-      const cursor = new Date(weekStart);
-      while (cursor <= rangeEnd && count < maxOcc) {
-        for (const dow of days.sort((a, b) => a - b)) {
-          const d = new Date(cursor);
-          d.setDate(d.getDate() + dow);
-          if (d < startDate) continue;
-          if (endDate && d > endDate) break;
-          if (d > rangeEnd) break;
-          if (!addIfInRange(d)) break;
-        }
-        cursor.setDate(cursor.getDate() + 7 * step);
-      }
-    } else if (rec.type === 'monthly') {
-      const cursor = new Date(startDate);
-      cursor.setDate(1);
-      while (cursor <= rangeEnd && count < maxOcc) {
-        let target;
-        if (rec.monthWeekday) {
-          // Nth weekday of month (e.g., 1st Monday)
-          const { week, day } = rec.monthWeekday;
-          const firstOfMonth = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-          const firstDow = firstOfMonth.getDay();
-          let offset = day - firstDow;
-          if (offset < 0) offset += 7;
-          target = new Date(firstOfMonth);
-          target.setDate(1 + offset + (week - 1) * 7);
-          // Verify still in same month
-          if (target.getMonth() !== cursor.getMonth()) {
-            cursor.setMonth(cursor.getMonth() + 1, 1);
-            continue;
-          }
-        } else {
-          const md = rec.monthDay || startDate.getDate();
-          const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
-          target = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(md, daysInMonth));
-        }
-        target.setHours(12, 0, 0, 0);
-        if (target >= startDate) {
-          if (endDate && target > endDate) break;
-          if (!addIfInRange(target)) break;
-        }
-        cursor.setMonth(cursor.getMonth() + 1, 1);
-      }
-    } else if (rec.type === 'yearly') {
-      const cursor = new Date(startDate);
-      while (cursor <= rangeEnd && count < maxOcc) {
-        if (cursor >= startDate) {
-          if (endDate && cursor > endDate) break;
-          if (!addIfInRange(cursor)) break;
-        }
-        cursor.setFullYear(cursor.getFullYear() + 1);
-      }
-    }
-    return results;
-  };
-
-  const getRecurrencePresets = (dateStr) => {
-    const taskDate = new Date(dateStr + 'T12:00:00');
-    const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][taskDate.getDay()];
-    const monthDay = taskDate.getDate();
-    const monthName = ['January','February','March','April','May','June','July','August','September','October','November','December'][taskDate.getMonth()];
-    const suffix = monthDay === 1 || monthDay === 21 || monthDay === 31 ? 'st' : monthDay === 2 || monthDay === 22 ? 'nd' : monthDay === 3 || monthDay === 23 ? 'rd' : 'th';
-    const weekOfMonth = Math.ceil(monthDay / 7);
-    const ordinals = ['','1st','2nd','3rd','4th','5th'];
-
-    return [
-      { label: 'None', value: null },
-      { label: 'Every day', value: { type: 'daily' } },
-      taskDate.getDay() === 0 || taskDate.getDay() === 6
-        ? { label: 'Every weekend (Sat-Sun)', value: { type: 'weekly', daysOfWeek: [0,6] } }
-        : { label: 'Every weekday (Mon-Fri)', value: { type: 'weekly', daysOfWeek: [1,2,3,4,5] } },
-      { label: `Every week on ${dayName}`, value: { type: 'weekly', daysOfWeek: [taskDate.getDay()] } },
-      { label: `Every 2 weeks on ${dayName}`, value: { type: 'biweekly', daysOfWeek: [taskDate.getDay()] } },
-      { label: `Monthly on the ${monthDay}${suffix}`, value: { type: 'monthly', monthDay: monthDay, monthWeekday: null } },
-      { label: `Monthly on the ${ordinals[weekOfMonth]} ${dayName}`, value: { type: 'monthly', monthDay: null, monthWeekday: { week: weekOfMonth, day: taskDate.getDay() } } },
-      { label: `Yearly on ${monthName} ${monthDay}`, value: { type: 'yearly' } },
-    ];
   };
 
   const checkConflicts = () => {

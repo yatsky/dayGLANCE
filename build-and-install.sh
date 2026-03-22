@@ -7,14 +7,19 @@ ANDROID_DIR="$SCRIPT_DIR/dayglance-android"
 # Flags
 FULL_CLEAN=false
 RELEASE=false
+AAB=false
 for arg in "$@"; do
   if [[ "$arg" == "--clean" ]]; then FULL_CLEAN=true
   elif [[ "$arg" == "--release" ]]; then RELEASE=true
-  else echo "Unknown flag: $arg (valid flags: --clean, --release)" && exit 1
+  elif [[ "$arg" == "--aab" ]]; then AAB=true; RELEASE=true
+  else echo "Unknown flag: $arg (valid flags: --clean, --release, --aab)" && exit 1
   fi
 done
 
-if $RELEASE; then
+if $AAB; then
+  AAB_PATH="$ANDROID_DIR/app/build/outputs/bundle/release/app-release.aab"
+  GRADLE_TASK="bundleRelease"
+elif $RELEASE; then
   APK_PATH="$ANDROID_DIR/app/build/outputs/apk/release/dayglance.apk"
   GRADLE_TASK="assembleRelease"
 else
@@ -42,15 +47,22 @@ echo "==> Building web assets..."
 cd "$SCRIPT_DIR"
 npm run build:android
 
-echo "==> Building Android APK (${GRADLE_TASK})..."
+if $AAB; then
+  echo "==> Building Android AAB (${GRADLE_TASK})..."
+else
+  echo "==> Building Android APK (${GRADLE_TASK})..."
+fi
 cd "$ANDROID_DIR"
 ./gradlew "$GRADLE_TASK"
 
 # Gradle on macOS hides build outputs — start from outputs/ so chflags -R
-# can recurse into the hidden apk/release/ subdirectory.
+# can recurse into the hidden apk/release/ or bundle/release/ subdirectory.
 chflags -R nohidden "$ANDROID_DIR/app/build/outputs" 2>/dev/null || true
 
-if $RELEASE; then
+if $AAB; then
+  echo "==> AAB ready: $AAB_PATH"
+  echo "==> Done! Upload app-release.aab to Google Play Console."
+elif $RELEASE; then
   echo "==> Release APK: $APK_PATH"
   echo "==> Done! Copy dayglance.apk to your F-Droid repo."
 else

@@ -101,7 +101,7 @@ git push -u origin develop
 **For every PR in this refactor:**
 - Branch from `develop` (not `main`)
 - Open PR targeting `develop` (not `main`)
-- Merge to `main` only at the end of a stable phase, as a deliberate release
+- PRs to be merged with `develop` (not `main`)
 
 **Commit:** none — this is a branch setup step only.
 

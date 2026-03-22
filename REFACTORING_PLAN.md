@@ -1,5 +1,3 @@
-# App.jsx Refactoring Plan
-
 ## Why the Previous Branch Failed
 
 The previous attempt (`claude/app-review-ltS3z`) collapsed under its own weight:
@@ -22,6 +20,43 @@ The previous attempt (`claude/app-review-ltS3z`) collapsed under its own weight:
 5. **Map dependencies before touching code.** Know what every hook receives and returns.
 6. **No context until layouts are stable.** Context is step 7, not step 1.
 7. **No context splitting until everything else is done.** SyncContext/FeaturesContext is optional and last.
+
+## Branch Workflow (strictly followed for every step)
+
+All refactor work is done on step branches off `develop`. **Never branch from `main`. Never
+open a PR targeting `main`.** Merging to `main` deploys immediately to production.
+
+For every step in this plan:
+
+```bash
+# 1. Start from develop
+git checkout develop
+git pull origin develop
+
+# 2. Create a step branch
+git checkout -b refactor/step-X-Y-short-description
+
+# 3. Do the work. One file. Build passes.
+
+# 4. Commit
+git add .
+git commit -m "refactor: <description from the step>"
+
+# 5. Push and open PR targeting `develop`
+git push -u origin refactor/step-X-Y-short-description
+# Open PR → base: develop (NOT main)
+```
+
+**Branch naming:** `refactor/step-{phase}-{step}-{slug}`
+Examples:
+- `refactor/step-1-1-storage-utils`
+- `refactor/step-2-3-frame-editor`
+- `refactor/step-6-4-use-habits`
+
+**Merging `develop` → `main`:** Only when the entire refactor is confirmed complete and
+working — not at the end of individual phases. This is a single deliberate release (v2.0.0),
+not a series of incremental merges. If the refactor needs to be abandoned at any point,
+`develop` is simply discarded and `main` remains untouched. Production is never at risk.
 
 ---
 
@@ -50,6 +85,30 @@ Run this at the end of every Phase. Keep it open in the browser while testing.
 ## Phase 0 — Groundwork (no App.jsx changes)
 
 These are one-time setup steps that make every subsequent step safer.
+
+### Step 0.0 — Create the `develop` branch and set it as the PR target
+
+All refactor work happens on branches off `develop`, not `main`. Merging to `main` deploys
+immediately to production (dayglance.app). Never open a refactor PR targeting `main`.
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b develop
+git push -u origin develop
+```
+
+**For every PR in this refactor:**
+- Branch from `develop` (not `main`)
+- Open PR targeting `develop` (not `main`)
+- Merge to `main` only at the end of a stable phase, as a deliberate release
+
+**Commit:** none — this is a branch setup step only.
+
+**Test:** Confirm `develop` branch exists on GitHub. Confirm Vercel shows a preview deployment
+for `develop` (not a production deployment). Production at dayglance.app should be unchanged.
+
+---
 
 ### Step 0.1 — Enable source maps in production build
 

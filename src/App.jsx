@@ -7,6 +7,7 @@ import { loadAIConfig, saveAIConfig, aiComplete, aiJSON, aiTranscribe, supportsT
 import { voiceParseSystemPrompt, voiceParseUserPrompt, taskSuggestSystemPrompt, taskSuggestUserPrompt, frameNudgeSystemPrompt, frameNudgeUserPrompt, rescheduleSystemPrompt, rescheduleUserPrompt, aiSubtasksSystemPrompt, aiSubtasksUserPrompt, morningSummarySystemPrompt, morningSummaryUserPrompt, eveningReflectionSystemPrompt, eveningReflectionUserPrompt, weeklySummarySystemPrompt, weeklySummaryUserPrompt, smartScheduleSystemPrompt, smartScheduleUserPrompt } from './ai-prompts.js';
 import { gatherTrmnlData, pushToTrmnl, TRMNL_MARKUP_FULL, TRMNL_MARKUP_HALF_HORIZONTAL, TRMNL_MARKUP_HALF_VERTICAL, TRMNL_MARKUP_QUADRANT } from './trmnl.js';
 import { checkForUpdate } from './versionCheck.js';
+import { getStorageUsage, formatBytes } from './utils/storage.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
@@ -105,43 +106,6 @@ const useIsLandscape = () => {
   }, []);
 
   return isLandscape;
-};
-
-// Compute localStorage usage with per-key breakdown
-const getStorageUsage = () => {
-  const entries = [];
-  let totalBytes = 0;
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      const val = localStorage.getItem(key) || '';
-      const bytes = (key.length + val.length) * 2; // UTF-16
-      // Split day-planner-tasks into user tasks vs imported calendar events
-      if (key === 'day-planner-tasks') {
-        try {
-          const tasks = JSON.parse(val);
-          const userTasks = tasks.filter(t => !t.imported);
-          const importedTasks = tasks.filter(t => t.imported);
-          const userBytes = (key.length + JSON.stringify(userTasks).length) * 2;
-          const importedBytes = bytes - userBytes;
-          if (userTasks.length > 0) entries.push({ key: 'day-planner-tasks:user', bytes: userBytes, count: userTasks.length });
-          if (importedTasks.length > 0) entries.push({ key: 'day-planner-tasks:imported', bytes: importedBytes, count: importedTasks.length });
-        } catch {
-          entries.push({ key, bytes });
-        }
-      } else {
-        entries.push({ key, bytes });
-      }
-      totalBytes += bytes;
-    }
-  } catch {}
-  entries.sort((a, b) => b.bytes - a.bytes);
-  return { totalBytes, entries };
-};
-
-const formatBytes = (bytes) => {
-  if (bytes > 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / 1024).toFixed(0)} KB`;
 };
 
 // URL detection regex for notes

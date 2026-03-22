@@ -135,6 +135,29 @@ depend on React state, inbox/tag classification helpers.
 
 ---
 
+### Step 1.5a — Extract `src/utils/colorUtils.js` ✓ (completed out of order)
+
+`TAILWIND_TO_HEX`, `taskColorToHex`, `TASK_COLORS`. Powers the task color picker and the
+Android home screen widget (which cannot resolve Tailwind classes directly).
+
+**Commit:** `refactor: extract color constants and recurrence engine to utils`
+
+**Build:** `npm run build` ✓
+**Test:** Task color picker shows all colors. Android widget shows correct task colors.
+
+---
+
+### Step 1.5b — Extract `src/utils/recurrenceEngine.js` ✓ (completed out of order)
+
+`getOccurrencesInRange`, `getRecurrencePresets`. The recurrence computation engine.
+
+**Commit:** `refactor: extract color constants and recurrence engine to utils`
+
+**Build:** `npm run build` ✓
+**Test:** Recurring tasks appear on correct dates. Recurrence preset picker shows all options.
+
+---
+
 ### Step 1.6 — Extract `src/utils/suggestionParser.js`
 
 The AI suggestion parsing logic (parses time/tag/date suggestions from task input text).

@@ -35,6 +35,7 @@ import useAudio from './hooks/useAudio.js';
 import useUndo from './hooks/useUndo.js';
 import useWeather from './hooks/useWeather.js';
 import useTagFilter from './hooks/useTagFilter.js';
+import useOnboarding from './hooks/useOnboarding.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
@@ -336,36 +337,12 @@ const DayPlanner = () => {
   const [mobileDragPreviewDate, setMobileDragPreviewDate] = useState(null);
   const [mobileDragTaskIdState, setMobileDragTaskIdState] = useState(null);
 
-  // Onboarding state - start false, set true after data loads if zero tasks
-  const [showWelcome, setShowWelcome] = useState(false);
+  const { showWelcome, setShowWelcome, gettingStartedDismissed, setGettingStartedDismissed, onboardingComplete, setOnboardingComplete, onboardingProgress, setOnboardingProgress } = useOnboarding();
   const [sectionInfoDismissed, setSectionInfoDismissed] = useState(() => {
     const saved = localStorage.getItem('sectionInfoDismissed');
     return saved ? JSON.parse(saved) : { inbox: false, tags: false, recycleBin: false };
   });
   const [expandedSectionInfo, setExpandedSectionInfo] = useState(null); // 'inbox' | 'tags' | 'recycleBin' | null
-  const [gettingStartedDismissed, setGettingStartedDismissed] = useState(() => {
-    return localStorage.getItem('gettingStartedDismissed') === 'true';
-  });
-  const [onboardingComplete, setOnboardingComplete] = useState(false); // Session-only: user clicked "I'm Good to Go"
-  const [onboardingProgress, setOnboardingProgress] = useState(() => {
-    const saved = localStorage.getItem('onboardingProgress');
-    return saved ? JSON.parse(saved) : {
-      hasAddedInboxTask: false,
-      hasAddedScheduledTask: false,
-      hasDraggedToTimeline: false,
-      hasAddedDeadline: false,
-      hasSetPriority: false,
-      hasAddedNotes: false,
-      hasUsedTags: false,
-      hasUsedActionButtons: false,
-      hasCompletedTask: false,
-      hasSetupSync: false,
-      hasCreatedRecurring: false,
-      hasSetupRoutines: false,
-      hasUsedFocusMode: false,
-      hasEnabledOptionalFeature: false,
-    };
-  });
   const [suggestions, setSuggestions] = useState([]); // Array of { type: 'tag'|'date'|'time', value, display, ... }
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -1008,16 +985,6 @@ const DayPlanner = () => {
       localStorage.setItem('sectionInfoDismissed', JSON.stringify(sectionInfoDismissed));
     }
   }, [sectionInfoDismissed]);
-
-  useEffect(() => {
-    if (gettingStartedDismissed && !skipOnboardingPersist.current) {
-      localStorage.setItem('gettingStartedDismissed', 'true');
-    }
-  }, [gettingStartedDismissed]);
-
-  useEffect(() => {
-    localStorage.setItem('onboardingProgress', JSON.stringify(onboardingProgress));
-  }, [onboardingProgress]);
 
   // Android back button: navigate from settings sub-screen back to main settings
   useEffect(() => {

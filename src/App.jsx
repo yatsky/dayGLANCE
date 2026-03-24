@@ -594,6 +594,8 @@ const DayPlanner = () => {
     focusTimerRunning, setFocusTimerRunning,
     focusTaskMinutes, setFocusTaskMinutes,
     focusBlockTasks, setFocusBlockTasks,
+    focusLog, setFocusLog,
+    focusLogModalDate, setFocusLogModalDate,
     wakeLockSentinel,
     focusTimerRef,
     handleFocusTimerEndRef,
@@ -1020,10 +1022,6 @@ const DayPlanner = () => {
     return () => window.removeEventListener('popstate', onPopState);
   }, [mobileActiveTab, mobileSettingsView, isMobile]);
 
-  // Persist focusLog to localStorage
-  useEffect(() => {
-    localStorage.setItem('day-planner-focus-log', JSON.stringify(focusLog));
-  }, [focusLog]);
 
   // Persist dailyNotes to localStorage and trigger cloud sync upload
   useEffect(() => {

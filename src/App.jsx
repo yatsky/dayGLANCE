@@ -59,6 +59,7 @@ import useTaskActions from './hooks/useTaskActions.js';
 import useRecycleBin from './hooks/useRecycleBin.js';
 import useReminderEngine from './hooks/useReminderEngine.js';
 import useReminders from './hooks/useReminders.js';
+import useMobileEdit from './hooks/useMobileEdit.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
@@ -333,8 +334,10 @@ const DayPlanner = () => {
   const [mobileActiveTab, setMobileActiveTab] = useState('dayglance');
   const [mobileWelcomeStep, setMobileWelcomeStep] = useState(0);
   const [desktopWelcomeStep, setDesktopWelcomeStep] = useState(0);
-  const [mobileEditingTask, setMobileEditingTask] = useState(null);
-  const [mobileEditIsInbox, setMobileEditIsInbox] = useState(false);
+  const {
+    mobileEditingTask, setMobileEditingTask,
+    mobileEditIsInbox, setMobileEditIsInbox,
+  } = useMobileEdit();
   const [mobileEditingNativeEvent, setMobileEditingNativeEvent] = useState(null);
   const [nativeCalendarKey, setNativeCalendarKey] = useState(0);
   const [mobileSettingsView, setMobileSettingsView] = useState('main');

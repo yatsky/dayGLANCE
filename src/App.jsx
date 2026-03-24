@@ -42,6 +42,7 @@ import useRoutines from './hooks/useRoutines.js';
 import useFocusMode from './hooks/useFocusMode.js';
 import useTrmnlSync from './hooks/useTrmnlSync.js';
 import useObsidian from './hooks/useObsidian.js';
+import useCloudSync from './hooks/useCloudSync.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
@@ -400,25 +401,22 @@ const DayPlanner = () => {
   const tagFilterBtnRef = useRef(null);
 
   // Cloud Sync state
-  const [cloudSyncConfig, setCloudSyncConfig] = useState(() => {
-    const saved = localStorage.getItem('day-planner-cloud-sync-config');
-    return saved ? JSON.parse(saved) : null;
-  });
-  const [cloudSyncStatus, setCloudSyncStatus] = useState('idle');
-  const [cloudSyncError, setCloudSyncError] = useState(null);
-  const [cloudSyncLastSynced, setCloudSyncLastSynced] = useState(() =>
-    localStorage.getItem('day-planner-cloud-sync-last-synced') || null
-  );
-  const cloudSyncDebounceRef = useRef(null);
-  const suppressCloudUploadRef = useRef(false);
-  const suppressTimestampRef = useRef(false);
-  const suppressClearPendingRef = useRef(false);
-  const cloudSyncInProgressRef = useRef(false);
-  const cloudSyncInitialDoneRef = useRef(false);
-  const cloudSyncDownloadRef = useRef(null);
-  const cloudSyncErrorCountRef = useRef(0); // consecutive download failures
-  const cloudSyncBackoffUntilRef = useRef(0); // timestamp: skip poll/visibility retries until this time
-  const [cloudSyncConflict, setCloudSyncConflict] = useState(null); // { remoteData, remoteModified }
+  const {
+    cloudSyncConfig, setCloudSyncConfig,
+    cloudSyncStatus, setCloudSyncStatus,
+    cloudSyncError, setCloudSyncError,
+    cloudSyncLastSynced, setCloudSyncLastSynced,
+    cloudSyncConflict, setCloudSyncConflict,
+    cloudSyncDebounceRef,
+    suppressCloudUploadRef,
+    suppressTimestampRef,
+    suppressClearPendingRef,
+    cloudSyncInProgressRef,
+    cloudSyncInitialDoneRef,
+    cloudSyncDownloadRef,
+    cloudSyncErrorCountRef,
+    cloudSyncBackoffUntilRef,
+  } = useCloudSync();
 
   // Daily Notes state — keyed by date string "YYYY-MM-DD" → { text, lastModified }
   const [dailyNotes, setDailyNotes] = useState(() => {
@@ -1239,15 +1237,6 @@ const DayPlanner = () => {
     }, 60 * 1000);
     return () => clearInterval(pollTimer);
   }, [cloudSyncConfig?.enabled]);
-
-  // Persist cloud sync config
-  useEffect(() => {
-    if (cloudSyncConfig) {
-      localStorage.setItem('day-planner-cloud-sync-config', JSON.stringify(cloudSyncConfig));
-    } else {
-      localStorage.removeItem('day-planner-cloud-sync-config');
-    }
-  }, [cloudSyncConfig]);
 
   // TRMNL auto-sync: push data when tasks/habits change
   // Debounce 10s to batch rapid edits, then throttle to at most once per 2 min.

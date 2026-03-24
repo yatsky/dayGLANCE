@@ -46,6 +46,7 @@ import useCloudSync from './hooks/useCloudSync.js';
 import useCalendarSync from './hooks/useCalendarSync.js';
 import useBackup from './hooks/useBackup.js';
 import useGTDFrames from './hooks/useGTDFrames.js';
+import useVoiceAI from './hooks/useVoiceAI.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
@@ -590,31 +591,49 @@ const DayPlanner = () => {
     playUISound,
   });
 
-  // AI configuration state
-  const [aiConfig, setAiConfig] = useState(() => loadAIConfig());
-  const [aiConnectionStatus, setAiConnectionStatus] = useState(null); // null | 'testing' | 'success' | 'error'
-  const [aiConnectionMessage, setAiConnectionMessage] = useState('');
-  const [aiOllamaHelp, setAiOllamaHelp] = useState(null);
-  const [showVoiceInput, setShowVoiceInput] = useState(false);
-  const [voiceIsRecording, setVoiceIsRecording] = useState(false);
-  const [voiceIsTranscribing, setVoiceIsTranscribing] = useState(false);
-  const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [voiceParsedTasks, setVoiceParsedTasks] = useState(null);
-  const [voiceTaskTimePickerIdx, setVoiceTaskTimePickerIdx] = useState(null);
-  const [voiceParsedEdits, setVoiceParsedEdits] = useState(null); // resolved edit commands from AI
-  const [voiceIsParsing, setVoiceIsParsing] = useState(false);
-  const [voiceParseError, setVoiceParseError] = useState('');
-  const [voiceEditingParsed, setVoiceEditingParsed] = useState(null);
-  const [voiceManualMode, setVoiceManualMode] = useState(false);
-  const [voiceMicError, setVoiceMicError] = useState(null);
-  const voiceRecorderRef = useRef(null); // { recorder: MediaRecorder, stream: MediaStream }
-  const voiceAudioChunksRef = useRef([]);
-  const voiceAutoStartRef = useRef(false); // set by voice-input shortcut to auto-start recording
-  const voiceTextareaRef = useRef(null);
-  const voiceAllTagsRef = useRef([]);
-  const voiceBuildTaskContextRef = useRef(() => 'No tasks currently.');
-  const voiceResolveTaskMatchRef = useRef(() => null);
-  const voiceCanRecord = typeof MediaRecorder !== 'undefined' && typeof navigator !== 'undefined' && !!navigator.mediaDevices;
+  // AI configuration, voice input, and weekly review state
+  const {
+    aiConfig, setAiConfig,
+    aiConnectionStatus, setAiConnectionStatus,
+    aiConnectionMessage, setAiConnectionMessage,
+    aiOllamaHelp, setAiOllamaHelp,
+    showVoiceInput, setShowVoiceInput,
+    voiceIsRecording, setVoiceIsRecording,
+    voiceIsTranscribing, setVoiceIsTranscribing,
+    voiceTranscript, setVoiceTranscript,
+    voiceParsedTasks, setVoiceParsedTasks,
+    voiceTaskTimePickerIdx, setVoiceTaskTimePickerIdx,
+    voiceParsedEdits, setVoiceParsedEdits,
+    voiceIsParsing, setVoiceIsParsing,
+    voiceParseError, setVoiceParseError,
+    voiceEditingParsed, setVoiceEditingParsed,
+    voiceManualMode, setVoiceManualMode,
+    voiceMicError, setVoiceMicError,
+    voiceRecorderRef,
+    voiceAudioChunksRef,
+    voiceAutoStartRef,
+    voiceTextareaRef,
+    voiceAllTagsRef,
+    voiceBuildTaskContextRef,
+    voiceResolveTaskMatchRef,
+    voiceCanRecord,
+    showWeeklyReview, setShowWeeklyReview,
+    showWeeklyReviewTimePicker, setShowWeeklyReviewTimePicker,
+    showWeeklyReviewReminder, setShowWeeklyReviewReminder,
+    lastWeeklyReviewFiredRef,
+    weeklyReviewDismissedRef,
+    morningGlanceText, setMorningGlanceText,
+    morningGlanceLoading, setMorningGlanceLoading,
+    morningGlanceDismissed, setMorningGlanceDismissed,
+    morningGlanceError, setMorningGlanceError,
+    eveningGlanceText, setEveningGlanceText,
+    eveningGlanceLoading, setEveningGlanceLoading,
+    eveningGlanceDismissed, setEveningGlanceDismissed,
+    eveningGlanceError, setEveningGlanceError,
+    weeklyAISummary, setWeeklyAISummary,
+    weeklyAILoading, setWeeklyAILoading,
+    weeklyAIError, setWeeklyAIError,
+  } = useVoiceAI();
 
   // GTD Frames state
   const {
@@ -642,63 +661,6 @@ const DayPlanner = () => {
 
   // Incomplete tasks modal
   const [showIncompleteTasks, setShowIncompleteTasks] = useState(null); // null | 'today' | 'allTime'
-
-  // Weekly Review modal
-  const [showWeeklyReview, setShowWeeklyReview] = useState(false);
-  const [showWeeklyReviewTimePicker, setShowWeeklyReviewTimePicker] = useState(false);
-  const [showWeeklyReviewReminder, setShowWeeklyReviewReminder] = useState(false);
-  const lastWeeklyReviewFiredRef = useRef(
-    localStorage.getItem('day-planner-weekly-review-fired') || ''
-  );
-  const weeklyReviewDismissedRef = useRef(
-    localStorage.getItem('day-planner-weekly-review-dismissed') || ''
-  );
-
-  // Morning dayGLANCE (AI morning summary)
-  const [morningGlanceText, setMorningGlanceText] = useState(() => {
-    try {
-      const cached = localStorage.getItem('day-planner-morning-glance');
-      if (cached) {
-        const { date, text } = JSON.parse(cached);
-        if (date === localDateStr()) return text;
-      }
-    } catch {}
-    return null;
-  });
-  const [morningGlanceLoading, setMorningGlanceLoading] = useState(false);
-  const [morningGlanceDismissed, setMorningGlanceDismissed] = useState(() => {
-    try {
-      // Key was renamed from 'day-planner-morning-glance-dismissed' to drop
-      // stale values that were stored using UTC instead of local time.
-      localStorage.removeItem('day-planner-morning-glance-dismissed');
-      const d = localStorage.getItem('day-planner-mg-dismissed');
-      return d === localDateStr();
-    } catch { return false; }
-  });
-  const [morningGlanceError, setMorningGlanceError] = useState('');
-
-  // Evening reflection state
-  const [eveningGlanceText, setEveningGlanceText] = useState(() => {
-    try {
-      const cached = localStorage.getItem('day-planner-evening-glance');
-      if (cached) {
-        const { date, text } = JSON.parse(cached);
-        if (date === localDateStr()) return text;
-      }
-    } catch {}
-    return null;
-  });
-  const [eveningGlanceLoading, setEveningGlanceLoading] = useState(false);
-  const [eveningGlanceDismissed, setEveningGlanceDismissed] = useState(() => {
-    try { return localStorage.getItem('day-planner-eg-dismissed') === localDateStr(); }
-    catch { return false; }
-  });
-  const [eveningGlanceError, setEveningGlanceError] = useState('');
-
-  // Weekly AI summary (enhanced weekly review)
-  const [weeklyAISummary, setWeeklyAISummary] = useState(null);
-  const [weeklyAILoading, setWeeklyAILoading] = useState(false);
-  const [weeklyAIError, setWeeklyAIError] = useState('');
 
   // Spotlight search
   const [showSpotlight, setShowSpotlight] = useState(false);
@@ -930,12 +892,6 @@ const DayPlanner = () => {
   useEffect(() => {
     localStorage.setItem('day-planner-reminder-settings', JSON.stringify(reminderSettings));
   }, [reminderSettings]);
-
-  // Persist AI config to localStorage
-  useEffect(() => {
-    saveAIConfig(aiConfig);
-  }, [aiConfig]);
-
 
   // Persist inboxPriorityFilter to localStorage
   useEffect(() => {

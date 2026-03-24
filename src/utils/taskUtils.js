@@ -8,8 +8,10 @@ export const dateToString = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// Alias used by top-level useState initialisers (same implementation).
-export const localDateStr = dateToString;
+// Zero-arg variant: localDateStr() returns today's YYYY-MM-DD string.
+// The original App.jsx defined this with a default parameter (d = new Date()),
+// so callers throughout the codebase rely on being able to call it with no args.
+export const localDateStr = (d = new Date()) => dateToString(d);
 
 // Extract #hashtags from a task title (tags must start with a letter).
 export const extractTags = (title) => {

@@ -12372,14 +12372,14 @@ const DayPlanner = () => {
                       <p className={`text-base font-semibold ${textPrimary} mb-1`}>
                         {unscheduledTasks.filter(t => !t.isExample).length === 0
                           ? "Inbox zero"
-                          : nonOverdueInboxTasks.filter(t => !t.isExample).length === 0
+                          : unscheduledTasks.filter(t => !t.isExample).length === 0
                             ? "All overdue"
                             : "No matches"}
                       </p>
                       <p className={`text-sm ${textSecondary} text-center mb-5`}>
                         {unscheduledTasks.filter(t => !t.isExample).length === 0
                           ? "Add tasks here to schedule later"
-                          : nonOverdueInboxTasks.filter(t => !t.isExample).length === 0
+                          : unscheduledTasks.filter(t => !t.isExample).length === 0
                             ? "All inbox tasks have overdue deadlines"
                             : "No tasks match the current filter"}
                       </p>
@@ -15950,14 +15950,14 @@ const DayPlanner = () => {
                           <p className={`text-base font-semibold ${textPrimary} mb-1`}>
                             {unscheduledTasks.filter(t => !t.isExample).length === 0
                               ? "Inbox zero"
-                              : nonOverdueInboxTasks.filter(t => !t.isExample).length === 0
+                              : unscheduledTasks.filter(t => !t.isExample).length === 0
                                 ? "All overdue"
                                 : "No matches"}
                           </p>
                           <p className={`text-sm ${textSecondary} text-center mb-5`}>
                             {unscheduledTasks.filter(t => !t.isExample).length === 0
                               ? "Add tasks here to schedule later"
-                              : nonOverdueInboxTasks.filter(t => !t.isExample).length === 0
+                              : unscheduledTasks.filter(t => !t.isExample).length === 0
                                 ? "All inbox tasks have overdue deadlines"
                                 : "No tasks match the current filter"}
                           </p>
@@ -17115,7 +17115,7 @@ const DayPlanner = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-0.5">
-                      {nonOverdueInboxTasks.filter(t => !t.deadline).length > 0 && (
+                      {unscheduledTasks.filter(t => !t.deadline).length > 0 && (
                         <>
                           <button
                             onClick={() => { setHideCompletedInbox(prev => !prev); playUISound('click'); }}
@@ -17152,7 +17152,7 @@ const DayPlanner = () => {
                       <p className={`text-sm ${textSecondary} text-center py-4`}>
                         {unscheduledTasks.length === 0
                           ? "Drag tasks here to unschedule them"
-                          : nonOverdueInboxTasks.length === 0
+                          : unscheduledTasks.length === 0
                             ? "All tasks have overdue deadlines"
                             : "No tasks match current filter"}
                       </p>

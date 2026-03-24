@@ -41,6 +41,7 @@ import useHabits from './hooks/useHabits.js';
 import useRoutines from './hooks/useRoutines.js';
 import useFocusMode from './hooks/useFocusMode.js';
 import useTrmnlSync from './hooks/useTrmnlSync.js';
+import useObsidian from './hooks/useObsidian.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
@@ -433,23 +434,16 @@ const DayPlanner = () => {
 
 
   // Obsidian Integration state
-  const [obsidianConfig, setObsidianConfig] = useState(() => {
-    try {
-      const saved = localStorage.getItem('day-planner-obsidian-config');
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  });
-  const [obsidianSyncStatus, setObsidianSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'success' | 'error'
-  const [obsidianLastSynced, setObsidianLastSynced] = useState(() =>
-    localStorage.getItem('day-planner-obsidian-last-synced') || null
-  );
-  const obsidianVaultHandleRef = useRef(null);
-  const obsidianSyncInProgressRef = useRef(false);
-  const obsidianPrevTaskStateRef = useRef({}); // tracks {id: {completed, startTime, title}} for change detection
-  // Always-fresh refs so performObsidianSync (called from a long-lived interval)
-  // never reads stale task state from a closed-over render.
-  const obsidianTasksRef = useRef([]);
-  const obsidianInboxRef = useRef([]);
+  const {
+    obsidianConfig, setObsidianConfig,
+    obsidianSyncStatus, setObsidianSyncStatus,
+    obsidianLastSynced, setObsidianLastSynced,
+    obsidianVaultHandleRef,
+    obsidianSyncInProgressRef,
+    obsidianPrevTaskStateRef,
+    obsidianTasksRef,
+    obsidianInboxRef,
+  } = useObsidian();
 
   // Auto-Backup state
   const [autoBackupConfig, setAutoBackupConfig] = useState(() => {
@@ -1282,15 +1276,6 @@ const DayPlanner = () => {
     }, 10 * 1000); // 10-second debounce after last change
     return () => { if (trmnlSyncTimerRef.current) clearTimeout(trmnlSyncTimerRef.current); };
   }, [tasks, unscheduledTasks, habits, habitLogs, todayRoutines, routinesEnabled, trmnlConfig?.enabled, dataLoaded]);
-
-  // Persist Obsidian config
-  useEffect(() => {
-    if (obsidianConfig) {
-      localStorage.setItem('day-planner-obsidian-config', JSON.stringify(obsidianConfig));
-    } else {
-      localStorage.removeItem('day-planner-obsidian-config');
-    }
-  }, [obsidianConfig]);
 
   // Obsidian sync: restore vault handle on mount and do initial sync
   useEffect(() => {

@@ -34,9 +34,44 @@ export default function useDragDrop({
   const [hoverPreviewDate, setHoverPreviewDate] = useState(null);
   const [isResizing, setIsResizing] = useState(false);
 
+  // Mobile drag state
+  const [mobileDragPreviewTime, setMobileDragPreviewTime] = useState(null);
+  const [mobileDragPreviewDate, setMobileDragPreviewDate] = useState(null);
+  const [mobileDragTaskIdState, setMobileDragTaskIdState] = useState(null);
+
   const autoScrollInterval = useRef(null); // For drag auto-scroll
   const frameResizingRef = useRef(false); // Suppress click-to-add-task after frame resize drag
   const stickyHeaderRef = useRef(null); // For measuring sticky header height during drag
+
+  // Mobile swipe gesture refs
+  const swipeTouchStartX = useRef(0);
+  const swipeTouchStartY = useRef(0);
+  const swipeCurrentOffset = useRef(0);
+  const swipedTaskId = useRef(null);
+  const swipeDirection = useRef(null); // 'left' | 'right' | null
+  const swipeLocked = useRef(false);
+  const swipeIsVertical = useRef(false);
+  const swipeTaskElement = useRef(null);
+  const swipeSchedulingInboxTaskId = useRef(null); // inbox task being scheduled via swipe
+
+  // Mobile long-press drag refs
+  const mobileDragActive = useRef(false);
+  const mobileDragTaskId = useRef(null);
+  const mobileDragTimer = useRef(null);
+  const mobileDragOriginalTask = useRef(null);
+  const mobileDragTouchStartPos = useRef({ x: 0, y: 0 });
+  const mobileDragAutoScrollInterval = useRef(null);
+  const mobileDragLastTouch = useRef({ clientX: 0, clientY: 0 });
+  const mobileDragScrollDir = useRef(null);
+  const mobileDragPreventScrollRef = useRef(null);
+  const mobileDragStartScrollTop = useRef(0);
+  const mobileDateHeaderRef = useRef(null);
+  const mobileAllDaySectionRef = useRef(null);
+  const mobileDragSourceType = useRef(null); // 'timeline' or 'allday'
+  // Refs that mirror mobileDragPreviewTime/Date state — read in handleMobileLongPressEnd
+  // to avoid stale-closure bugs when touchend fires before React commits the latest render.
+  const mobileDragPreviewTimeRef = useRef(null);
+  const mobileDragPreviewDateRef = useRef(null);
 
   // Measure actual hour row height from DOM (handles sub-pixel borders on high-DPI screens)
   const getHourHeight = () => {
@@ -929,5 +964,35 @@ export default function useDragDrop({
     handleRoutineResizeStart,
     handleTouchRoutineResizeStart,
     handleFrameResizeStart,
+    // mobile drag state
+    mobileDragPreviewTime, setMobileDragPreviewTime,
+    mobileDragPreviewDate, setMobileDragPreviewDate,
+    mobileDragTaskIdState, setMobileDragTaskIdState,
+    // mobile swipe refs
+    swipeTouchStartX,
+    swipeTouchStartY,
+    swipeCurrentOffset,
+    swipedTaskId,
+    swipeDirection,
+    swipeLocked,
+    swipeIsVertical,
+    swipeTaskElement,
+    swipeSchedulingInboxTaskId,
+    // mobile long-press drag refs
+    mobileDragActive,
+    mobileDragTaskId,
+    mobileDragTimer,
+    mobileDragOriginalTask,
+    mobileDragTouchStartPos,
+    mobileDragAutoScrollInterval,
+    mobileDragLastTouch,
+    mobileDragScrollDir,
+    mobileDragPreventScrollRef,
+    mobileDragStartScrollTop,
+    mobileDateHeaderRef,
+    mobileAllDaySectionRef,
+    mobileDragSourceType,
+    mobileDragPreviewTimeRef,
+    mobileDragPreviewDateRef,
   };
 }

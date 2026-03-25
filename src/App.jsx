@@ -334,10 +334,6 @@ const DayPlanner = () => {
   const [mobileEditingNativeEvent, setMobileEditingNativeEvent] = useState(null);
   const [nativeCalendarKey, setNativeCalendarKey] = useState(0);
   const [mobileSettingsView, setMobileSettingsView] = useState('main');
-  const [mobileDragPreviewTime, setMobileDragPreviewTime] = useState(null);
-  const [mobileDragPreviewDate, setMobileDragPreviewDate] = useState(null);
-  const [mobileDragTaskIdState, setMobileDragTaskIdState] = useState(null);
-
   const { showWelcome, setShowWelcome, gettingStartedDismissed, setGettingStartedDismissed, onboardingComplete, setOnboardingComplete, onboardingProgress, setOnboardingProgress } = useOnboarding();
   const [sectionInfoDismissed, setSectionInfoDismissed] = useState(() => {
     const saved = localStorage.getItem('sectionInfoDismissed');
@@ -349,37 +345,6 @@ const DayPlanner = () => {
   const suppressScrollAwayRef = useRef(false); // suppress scroll-away detection during programmatic scrolls
   const timeGridRef = useRef(null);
   const currentTimeRef = useRef(null);
-
-  // Mobile swipe gesture refs
-  const swipeTouchStartX = useRef(0);
-  const swipeTouchStartY = useRef(0);
-  const swipeCurrentOffset = useRef(0);
-  const swipedTaskId = useRef(null);
-  const swipeDirection = useRef(null); // 'left' | 'right' | null
-  const swipeLocked = useRef(false);
-  const swipeIsVertical = useRef(false);
-  const swipeTaskElement = useRef(null);
-  const swipeSchedulingInboxTaskId = useRef(null); // inbox task being scheduled via swipe
-
-  // Mobile long-press drag refs
-  const mobileDragActive = useRef(false);
-  const mobileDragTaskId = useRef(null);
-  const mobileDragTimer = useRef(null);
-  const mobileDragOriginalTask = useRef(null);
-  const mobileDragTouchStartPos = useRef({ x: 0, y: 0 });
-  const mobileDragAutoScrollInterval = useRef(null);
-  const mobileDragLastTouch = useRef({ clientX: 0, clientY: 0 });
-  const mobileDragScrollDir = useRef(null);
-  const mobileDragPreventScrollRef = useRef(null);
-  const mobileDragStartScrollTop = useRef(0);
-  const mobileDateHeaderRef = useRef(null);
-  const mobileAllDaySectionRef = useRef(null);
-  const mobileDragSourceType = useRef(null); // 'timeline' or 'allday'
-  // Refs that mirror mobileDragPreviewTime/Date state — read in handleMobileLongPressEnd
-  // to avoid stale-closure bugs when touchend fires before React commits the latest render.
-  const mobileDragPreviewTimeRef = useRef(null);
-  const mobileDragPreviewDateRef = useRef(null);
-
 
   // Keyboard shortcut cheat sheet
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
@@ -1978,6 +1943,36 @@ const DayPlanner = () => {
     handleRoutineResizeStart,
     handleTouchRoutineResizeStart,
     handleFrameResizeStart,
+    // mobile drag state
+    mobileDragPreviewTime, setMobileDragPreviewTime,
+    mobileDragPreviewDate, setMobileDragPreviewDate,
+    mobileDragTaskIdState, setMobileDragTaskIdState,
+    // mobile swipe refs
+    swipeTouchStartX,
+    swipeTouchStartY,
+    swipeCurrentOffset,
+    swipedTaskId,
+    swipeDirection,
+    swipeLocked,
+    swipeIsVertical,
+    swipeTaskElement,
+    swipeSchedulingInboxTaskId,
+    // mobile long-press drag refs
+    mobileDragActive,
+    mobileDragTaskId,
+    mobileDragTimer,
+    mobileDragOriginalTask,
+    mobileDragTouchStartPos,
+    mobileDragAutoScrollInterval,
+    mobileDragLastTouch,
+    mobileDragScrollDir,
+    mobileDragPreventScrollRef,
+    mobileDragStartScrollTop,
+    mobileDateHeaderRef,
+    mobileAllDaySectionRef,
+    mobileDragSourceType,
+    mobileDragPreviewTimeRef,
+    mobileDragPreviewDateRef,
   } = useDragDrop({
     calendarRef, timeGridRef,
     setNewTask, setShowAddTask, selectedDate, setExpandedNotesTaskId,

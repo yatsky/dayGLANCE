@@ -1,12 +1,19 @@
 import { useState, useRef } from 'react';
+import { dateToString } from '../utils/taskUtils.js';
 
-// Pure utility used by calculateTaskPosition
+// Pure utilities used by position helpers
 const timeToMinutes = (time) => {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
 };
 
-export default function useDragDrop({ calendarRef, timeGridRef }) {
+const minutesToTime = (minutes) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+};
+
+export default function useDragDrop({ calendarRef, timeGridRef, setNewTask, setShowAddTask, selectedDate }) {
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragSource, setDragSource] = useState(null);
   const [dragPreviewTime, setDragPreviewTime] = useState(null);
@@ -91,6 +98,54 @@ export default function useDragDrop({ calendarRef, timeGridRef }) {
     return { top, height };
   };
 
+  // Helper: convert cursor Y position (mouse event) to a rounded time string
+  const getTimeFromCursorPosition = (e, options = {}) => {
+    const { roundTo = 15, maxMinutes = 23 * 60 + 45, taskDuration = 0 } = options;
+    const rect = calendarRef.current.getBoundingClientRect();
+    const scrollTop = calendarRef.current.scrollTop;
+    const headerHeight = timeGridRef.current ? timeGridRef.current.offsetTop : 0;
+    const y = Math.max(0, e.clientY - rect.top + scrollTop - headerHeight);
+    const totalMinutesFromTop = positionToMinutes(y);
+    const totalMinutesRounded = Math.round(totalMinutesFromTop / roundTo) * roundTo;
+    // firstHour is always 0 (calendar always starts at midnight)
+    const hours = Math.floor(totalMinutesRounded / 60);
+    const minutes = totalMinutesRounded % 60;
+    const totalMinutes = Math.max(0, Math.min(maxMinutes - taskDuration, hours * 60 + minutes));
+    return minutesToTime(totalMinutes);
+  };
+
+  const openNewTaskAtTime = (e, targetDate = null, skipCalendarSlotCheck = false) => {
+    if (frameResizingRef.current) return;
+    if (skipCalendarSlotCheck || e.target.classList.contains('calendar-slot')) {
+      const clickedTime = getTimeFromCursorPosition(e);
+      setNewTask({
+        title: '',
+        startTime: clickedTime,
+        duration: 30,
+        date: dateToString(targetDate || selectedDate),
+        isAllDay: false
+      });
+      setShowAddTask(true);
+    }
+  };
+
+  const handleCalendarMouseMove = (e, targetDate, skipCalendarSlotCheck = false) => {
+    if (draggedTask) return;
+    if (!skipCalendarSlotCheck && !e.target.classList.contains('calendar-slot')) {
+      setHoverPreviewTime(null);
+      setHoverPreviewDate(null);
+      return;
+    }
+    const time = getTimeFromCursorPosition(e);
+    setHoverPreviewTime(time);
+    setHoverPreviewDate(targetDate);
+  };
+
+  const handleCalendarMouseLeave = () => {
+    setHoverPreviewTime(null);
+    setHoverPreviewDate(null);
+  };
+
   return {
     // state
     draggedTask, setDraggedTask,
@@ -113,5 +168,10 @@ export default function useDragDrop({ calendarRef, timeGridRef }) {
     positionToMinutes,
     durationToHeight,
     calculateTaskPosition,
+    // cursor + calendar hover/click handlers
+    getTimeFromCursorPosition,
+    openNewTaskAtTime,
+    handleCalendarMouseMove,
+    handleCalendarMouseLeave,
   };
 }

@@ -350,32 +350,6 @@ const DayPlanner = () => {
   const timeGridRef = useRef(null);
   const currentTimeRef = useRef(null);
 
-  // useDragDrop is called here — before any useEffect that references its state —
-  // to avoid TDZ errors in dependency arrays (e.g. hoverPreviewTime at line ~2632).
-  const {
-    // state
-    draggedTask, setDraggedTask,
-    dragSource, setDragSource,
-    dragPreviewTime, setDragPreviewTime,
-    dragPreviewDate, setDragPreviewDate,
-    dragOverAllDay, setDragOverAllDay,
-    dragOverInbox, setDragOverInbox,
-    dragOverRecycleBin, setDragOverRecycleBin,
-    hoverPreviewTime, setHoverPreviewTime,
-    hoverPreviewDate, setHoverPreviewDate,
-    isResizing, setIsResizing,
-    // refs
-    autoScrollInterval,
-    frameResizingRef,
-    stickyHeaderRef,
-    // position helpers
-    getHourHeight,
-    minutesToPosition,
-    positionToMinutes,
-    durationToHeight,
-    calculateTaskPosition,
-  } = useDragDrop({ calendarRef, timeGridRef });
-
   // Mobile swipe gesture refs
   const swipeTouchStartX = useRef(0);
   const swipeTouchStartY = useRef(0);
@@ -751,6 +725,37 @@ const DayPlanner = () => {
     applySuggestionForNewTask,
   } = useNewTaskInput({ allTags, showAddTask });
   voiceAllTagsRef.current = allTags;
+
+  // useDragDrop is placed here — after useNewTaskInput (so setNewTask is available) and
+  // before any useEffect that references its state — to avoid TDZ errors in dep arrays.
+  const {
+    // state
+    draggedTask, setDraggedTask,
+    dragSource, setDragSource,
+    dragPreviewTime, setDragPreviewTime,
+    dragPreviewDate, setDragPreviewDate,
+    dragOverAllDay, setDragOverAllDay,
+    dragOverInbox, setDragOverInbox,
+    dragOverRecycleBin, setDragOverRecycleBin,
+    hoverPreviewTime, setHoverPreviewTime,
+    hoverPreviewDate, setHoverPreviewDate,
+    isResizing, setIsResizing,
+    // refs
+    autoScrollInterval,
+    frameResizingRef,
+    stickyHeaderRef,
+    // position helpers
+    getHourHeight,
+    minutesToPosition,
+    positionToMinutes,
+    durationToHeight,
+    calculateTaskPosition,
+    // cursor + calendar hover/click handlers
+    getTimeFromCursorPosition,
+    openNewTaskAtTime,
+    handleCalendarMouseMove,
+    handleCalendarMouseLeave,
+  } = useDragDrop({ calendarRef, timeGridRef, setNewTask, setShowAddTask, selectedDate });
 
   // Show all 24 hours (full day) - scrollable
   const hours = Array.from({ length: 24 }, (_, i) => i);
@@ -3372,61 +3377,6 @@ const DayPlanner = () => {
 
     document.addEventListener('touchmove', handleTouchMove, { passive: false });
     document.addEventListener('touchend', handleTouchEnd);
-  };
-
-  // Helper function to convert cursor Y position to time
-  const getTimeFromCursorPosition = (e, options = {}) => {
-    const { roundTo = 15, maxMinutes = 23 * 60 + 45, taskDuration = 0 } = options;
-    const rect = calendarRef.current.getBoundingClientRect();
-    const scrollTop = calendarRef.current.scrollTop;
-    // Get header height (distance from container top to time grid top in content space)
-    const headerHeight = timeGridRef.current ? timeGridRef.current.offsetTop : 0;
-    // Calculate y position relative to the time grid content
-    const y = Math.max(0, e.clientY - rect.top + scrollTop - headerHeight);
-
-    const totalMinutesFromTop = positionToMinutes(y);
-
-    // Round to nearest interval
-    const totalMinutesRounded = Math.round(totalMinutesFromTop / roundTo) * roundTo;
-    const hours = Math.floor(totalMinutesRounded / 60) + firstHour;
-    const minutes = totalMinutesRounded % 60;
-
-    const totalMinutes = Math.max(0, Math.min(maxMinutes - taskDuration, hours * 60 + minutes));
-    return minutesToTime(totalMinutes);
-  };
-
-  const openNewTaskAtTime = (e, targetDate = null, skipCalendarSlotCheck = false) => {
-    if (frameResizingRef.current) return;
-    // Only trigger if clicking on the empty calendar area, not on tasks
-    if (skipCalendarSlotCheck || e.target.classList.contains('calendar-slot')) {
-      const clickedTime = getTimeFromCursorPosition(e);
-
-      setNewTask({
-        title: '',
-        startTime: clickedTime,
-        duration: 30,
-        date: dateToString(targetDate || selectedDate),
-        isAllDay: false
-      });
-      setShowAddTask(true);
-    }
-  };
-
-  const handleCalendarMouseMove = (e, targetDate, skipCalendarSlotCheck = false) => {
-    if (draggedTask) return; // Don't show hover preview while dragging
-    if (!skipCalendarSlotCheck && !e.target.classList.contains('calendar-slot')) {
-      setHoverPreviewTime(null);
-      setHoverPreviewDate(null);
-      return;
-    }
-    const time = getTimeFromCursorPosition(e);
-    setHoverPreviewTime(time);
-    setHoverPreviewDate(targetDate);
-  };
-
-  const handleCalendarMouseLeave = () => {
-    setHoverPreviewTime(null);
-    setHoverPreviewDate(null);
   };
 
   const handleDragStart = (task, source, e) => {

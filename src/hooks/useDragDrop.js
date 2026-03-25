@@ -21,6 +21,7 @@ export default function useDragDrop({
   pushUndo, parseRecurringId, getAdjustedTimeForImportedConflicts, wouldExceedMaxColumns,
   playUISound, setSyncNotification, onboardingProgress, setOnboardingProgress,
   moveToRecycleBinRef, clearDeadlineRef,
+  gtdFrames, setGtdFrames,
 }) {
   const [draggedTask, setDraggedTask] = useState(null);
   const [dragSource, setDragSource] = useState(null);
@@ -770,6 +771,116 @@ export default function useDragDrop({
     document.addEventListener('touchend', handleTouchEnd);
   };
 
+  const handleRoutineResizeStart = (routine, e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsResizing(true);
+
+    const startY = e.clientY;
+    const startDuration = routine.duration;
+
+    // Prevent the browser from initiating a native drag on the parent draggable element
+    const preventDrag = (de) => de.preventDefault();
+    document.addEventListener('dragstart', preventDrag);
+
+    const handleMouseMove = (moveEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      const deltaMinutes = Math.round((deltaY / 80) * 60 / 15) * 15;
+      const newDuration = Math.max(15, startDuration + deltaMinutes);
+      setTodayRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, duration: newDuration, lastModified: new Date().toISOString() } : r));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('dragstart', preventDrag);
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleTouchRoutineResizeStart = (routine, e) => {
+    e.stopPropagation();
+    setIsResizing(true);
+
+    const startY = e.touches[0].clientY;
+    const startDuration = routine.duration;
+
+    const handleTouchMove = (moveEvent) => {
+      moveEvent.preventDefault();
+      const deltaY = moveEvent.touches[0].clientY - startY;
+      const deltaMinutes = Math.round((deltaY / 80) * 60 / 15) * 15;
+      const newDuration = Math.max(15, startDuration + deltaMinutes);
+      setTodayRoutines(prev => prev.map(r => r.id === routine.id ? { ...r, duration: newDuration, lastModified: new Date().toISOString() } : r));
+    };
+
+    const handleTouchEnd = () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      setIsResizing(false);
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+  };
+
+  const handleFrameResizeStart = (frameId, dateStr, edge, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    pushUndo();
+    const frame = gtdFrames.find(f => f.id === frameId);
+    if (!frame) return;
+    const exception = frame.exceptions?.[dateStr];
+    const origStart = timeToMinutes(exception?.start || frame.start);
+    const origEnd = timeToMinutes(exception?.end || frame.end);
+    const startY = e.clientY;
+
+    const handleMouseMove = (moveEvent) => {
+      frameResizingRef.current = true;
+      const deltaY = moveEvent.clientY - startY;
+      // Use approximate 80px per hour for desktop
+      const deltaMinutes = Math.round((deltaY / 80) * 60 / 15) * 15;
+      let newStart = origStart;
+      let newEnd = origEnd;
+      if (edge === 'top') {
+        newStart = Math.max(0, Math.min(origEnd - 15, origStart + deltaMinutes));
+      } else {
+        newEnd = Math.max(newStart + 15, Math.min(1440, origEnd + deltaMinutes));
+      }
+      setGtdFrames(prev => prev.map(f => {
+        if (f.id !== frameId) return f;
+        return {
+          ...f,
+          lastModified: new Date().toISOString(),
+          exceptions: {
+            ...(f.exceptions || {}),
+            [dateStr]: {
+              ...(f.exceptions?.[dateStr] || {}),
+              start: minutesToTime(newStart),
+              end: minutesToTime(newEnd),
+              deleted: false,
+            },
+          },
+        };
+      }));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      if (frameResizingRef.current) {
+        playUISound('tick');
+        // Clear after click event has fired so openNewTaskAtTime can check it
+        setTimeout(() => { frameResizingRef.current = false; }, 0);
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   return {
     // state
     draggedTask, setDraggedTask,
@@ -814,5 +925,9 @@ export default function useDragDrop({
     // task resize handlers
     handleResizeStart,
     handleTouchResizeStart,
+    // routine + frame resize handlers
+    handleRoutineResizeStart,
+    handleTouchRoutineResizeStart,
+    handleFrameResizeStart,
   };
 }

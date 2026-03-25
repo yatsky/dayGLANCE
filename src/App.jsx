@@ -63,6 +63,7 @@ import useMobileEdit from './hooks/useMobileEdit.js';
 import useDragDrop from './hooks/useDragDrop.js';
 import useDataPersistence from './hooks/useDataPersistence.js';
 import useLocalStoragePersist from './hooks/useLocalStoragePersist.js';
+import useAppInit from './hooks/useAppInit.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
@@ -783,20 +784,6 @@ const DayPlanner = () => {
     cloudSyncConfig, cloudSyncInitialDoneRef, suppressTimestampRef,
     setUndoToast,
   });
-
-  useEffect(() => {
-    loadData();
-    fetchAllDailyContent();
-
-    // Rotate content every 15 minutes
-    const rotationInterval = setInterval(() => {
-      setContentRotation(prev => (prev + 1) % 4);
-    }, 15 * 60 * 1000);
-
-    return () => {
-      clearInterval(rotationInterval);
-    };
-  }, []);
 
   // Close month view when clicking outside
   useEffect(() => {
@@ -5283,26 +5270,12 @@ const DayPlanner = () => {
   // Getting Started checklist — show until dismissed or all items complete
   const showGettingStarted = dataLoaded && !gettingStartedDismissed && !allGettingStartedComplete;
 
-  // Persist welcome dismissal only when user has real tasks
-  useEffect(() => {
-    if (!showWelcome && !hasZeroRealTasks) {
-      localStorage.setItem('welcomeDismissed', 'true');
-    }
-  }, [showWelcome, hasZeroRealTasks]);
-
-  // Show welcome only on initial load with zero tasks (not when zeroing out during session)
-  useEffect(() => {
-    if (dataLoaded && !hasCheckedInitialWelcome.current) {
-      hasCheckedInitialWelcome.current = true;
-      if (hasZeroRealTasks) {
-        setShowWelcome(true);
-        localStorage.removeItem('welcomeDismissed');
-      } else {
-        setShowWelcome(false);
-      }
-    }
-  }, [dataLoaded, hasZeroRealTasks]);
-
+  useAppInit({
+    loadData, fetchAllDailyContent, setContentRotation,
+    dataLoaded, hasZeroRealTasks,
+    hasCheckedInitialWelcome,
+    showWelcome, setShowWelcome,
+  });
 
   // Compute array of visible dates based on selectedDate and visibleDays
   const visibleDates = useMemo(() => {

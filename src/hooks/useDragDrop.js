@@ -41,6 +41,7 @@ export default function useDragDrop({
   const [mobileDragPreviewTime, setMobileDragPreviewTime] = useState(null);
   const [mobileDragPreviewDate, setMobileDragPreviewDate] = useState(null);
   const [mobileDragTaskIdState, setMobileDragTaskIdState] = useState(null);
+  const [mobileDragOverTrash, setMobileDragOverTrash] = useState(false);
 
   const autoScrollInterval = useRef(null); // For drag auto-scroll
   const frameResizingRef = useRef(false); // Suppress click-to-add-task after frame resize drag
@@ -75,6 +76,8 @@ export default function useDragDrop({
   // to avoid stale-closure bugs when touchend fires before React commits the latest render.
   const mobileDragPreviewTimeRef = useRef(null);
   const mobileDragPreviewDateRef = useRef(null);
+  const mobileDragOverTrashRef = useRef(false);
+  const trashFabRef = useRef(null);
 
   const getNextQuarterHour = () => {
     const now = new Date();
@@ -936,6 +939,31 @@ export default function useDragDrop({
   const updateMobileDragPreview = () => {
     if (!calendarRef.current || !mobileDragOriginalTask.current) return;
     const touch = mobileDragLastTouch.current;
+
+    // If finger is over the trash FAB zone, freeze the time preview and mark for deletion.
+    // Compute bounds from known CSS values so this works regardless of ref timing.
+    // FAB: left-4 (1rem), w-16 h-16 (4rem each), bottom-[4.5rem] — plus padding for safe-area.
+    {
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const HIT_PADDING = 24; // extra slack for safe-area-inset and fat fingers
+      const fabLeft   = 1 * rem;
+      const fabRight  = 5 * rem;       // left + width
+      const fabHeight = 4 * rem;
+      const fabBottomGap = 4.5 * rem;  // distance from bottom of viewport to bottom of FAB
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      const overTrash =
+        touch.clientX >= fabLeft - HIT_PADDING &&
+        touch.clientX <= fabRight + HIT_PADDING &&
+        touch.clientY >= vh - fabBottomGap - fabHeight - HIT_PADDING &&
+        touch.clientY <= vh - fabBottomGap + HIT_PADDING;
+      if (overTrash !== mobileDragOverTrashRef.current) {
+        mobileDragOverTrashRef.current = overTrash;
+        setMobileDragOverTrash(overTrash);
+        if (overTrash && navigator.vibrate) navigator.vibrate(30);
+      }
+      if (overTrash) return; // freeze preview time — don't update while over trash
+    }
+
     const calendarRect = calendarRef.current.getBoundingClientRect();
     const scrollTop = calendarRef.current.scrollTop;
     // Detect which date column the finger is over
@@ -991,6 +1019,8 @@ export default function useDragDrop({
     if (!calendarRef.current) return;
     mobileDragLastTouch.current = { clientX: touch.clientX, clientY: touch.clientY };
     updateMobileDragPreview();
+
+    if (mobileDragOverTrashRef.current) return; // suppress auto-scroll while over trash
 
     // Auto-scroll near edges
     const allDayZoneBottom = mobileAllDaySectionRef.current?.getBoundingClientRect().bottom || mobileDateHeaderRef.current?.getBoundingClientRect().bottom || 0;
@@ -1150,7 +1180,7 @@ export default function useDragDrop({
   };
 
   // --- Mobile long-press drag end ---
-  const handleMobileLongPressEnd = () => {
+  const handleMobileLongPressEnd = (e) => {
     if (mobileDragAutoScrollInterval.current) {
       clearInterval(mobileDragAutoScrollInterval.current);
       mobileDragAutoScrollInterval.current = null;
@@ -1171,6 +1201,39 @@ export default function useDragDrop({
     // before React has committed the latest setMobileDragPreviewTime render.
     const _previewTime = mobileDragPreviewTimeRef.current;
     const _previewDate = mobileDragPreviewDateRef.current;
+
+    // Fallback: check release position using CSS-computed bounds (same as touchmove check).
+    const releasedTouch = e?.changedTouches?.[0];
+    if (mobileDragActive.current && releasedTouch) {
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const HIT_PADDING = 24;
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      const overTrashAtRelease =
+        releasedTouch.clientX >= 1 * rem - HIT_PADDING &&
+        releasedTouch.clientX <= 5 * rem + HIT_PADDING &&
+        releasedTouch.clientY >= vh - 4.5 * rem - 4 * rem - HIT_PADDING &&
+        releasedTouch.clientY <= vh - 4.5 * rem + HIT_PADDING;
+      if (overTrashAtRelease) mobileDragOverTrashRef.current = true;
+    }
+
+    // Drop on trash FAB: delete the task
+    if (mobileDragActive.current && mobileDragOverTrashRef.current && mobileDragOriginalTask.current) {
+      moveToRecycleBinRef.current(mobileDragOriginalTask.current.id);
+      playUISound('delete');
+      mobileDragActive.current = false;
+      mobileDragTaskId.current = null;
+      mobileDragOriginalTask.current = null;
+      mobileDragSourceType.current = null;
+      mobileDragPreviewTimeRef.current = null;
+      mobileDragPreviewDateRef.current = null;
+      mobileDragOverTrashRef.current = false;
+      setMobileDragPreviewTime(null);
+      setMobileDragPreviewDate(null);
+      setMobileDragTaskIdState(null);
+      setMobileDragOverTrash(false);
+      return;
+    }
+
     if (mobileDragActive.current && _previewTime && mobileDragOriginalTask.current) {
       const task = mobileDragOriginalTask.current;
       const droppingToAllDay = _previewTime === 'all-day';
@@ -1313,9 +1376,11 @@ export default function useDragDrop({
     mobileDragSourceType.current = null;
     mobileDragPreviewTimeRef.current = null;
     mobileDragPreviewDateRef.current = null;
+    mobileDragOverTrashRef.current = false;
     setMobileDragPreviewTime(null);
     setMobileDragPreviewDate(null);
     setMobileDragTaskIdState(null);
+    setMobileDragOverTrash(false);
   };
 
   // --- Mobile touch end (swipe actions) ---
@@ -1510,6 +1575,8 @@ export default function useDragDrop({
     mobileDragPreviewTime, setMobileDragPreviewTime,
     mobileDragPreviewDate, setMobileDragPreviewDate,
     mobileDragTaskIdState, setMobileDragTaskIdState,
+    mobileDragOverTrash,
+    trashFabRef,
     // mobile swipe refs
     swipeTouchStartX,
     swipeTouchStartY,

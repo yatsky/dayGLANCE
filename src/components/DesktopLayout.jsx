@@ -4599,6 +4599,18 @@ const DesktopLayout = () => {
           </div>
         </div>
       </div>
+
+      {/* Trash FAB — visible during desktop drag */}
+      {draggedTask && dragSource !== 'routine' && (
+        <div
+          onDragOver={handleDragOverRecycleBin}
+          onDragLeave={() => setDragOverRecycleBin(false)}
+          onDrop={handleDropOnRecycleBin}
+          className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-16 h-16 rounded-full shadow-xl flex items-center justify-center transition-all duration-150 pointer-events-auto ${dragOverRecycleBin ? 'bg-red-600 scale-110' : 'bg-red-500'}`}
+        >
+          <Trash2 size={26} className="text-white" />
+        </div>
+      )}
       </>
 );
 };

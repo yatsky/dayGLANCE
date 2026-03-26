@@ -305,6 +305,8 @@ const MobileLayout = () => {
     mobileDragTaskIdState, setMobileDragTaskIdState,
     mobileDragPreviewTime, setMobileDragPreviewTime,
     mobileDragPreviewDate, setMobileDragPreviewDate,
+    mobileDragOverTrash,
+    trashFabRef,
     timelineScrolledAway, setTimelineScrolledAway,
     isToday, currentTimeMinutes, currentHour, currentTimeTop, showCurrentTimeLine,
     bgClass, cardBg, borderClass, textPrimary, textSecondary, hoverBg,
@@ -3130,6 +3132,17 @@ const MobileLayout = () => {
                 </button>
               )}
             </>
+          )}
+
+          {/* Trash FAB — visible during mobile long-press drag */}
+          {mobileDragTaskIdState !== null && (
+            <div
+              ref={trashFabRef}
+              className={`fixed left-4 z-50 w-16 h-16 rounded-full shadow-xl flex items-center justify-center transition-all duration-150 ${mobileDragOverTrash ? 'bg-red-600 scale-110' : 'bg-red-500'}`}
+              style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
+            >
+              <Trash2 size={26} className="text-white" />
+            </div>
           )}
 
           {/* Mobile Recycle Bin Bottom Sheet */}

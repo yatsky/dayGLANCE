@@ -41,6 +41,7 @@ export default function useDragDrop({
   const [mobileDragPreviewTime, setMobileDragPreviewTime] = useState(null);
   const [mobileDragPreviewDate, setMobileDragPreviewDate] = useState(null);
   const [mobileDragTaskIdState, setMobileDragTaskIdState] = useState(null);
+  const [mobileDragOverTrash, setMobileDragOverTrash] = useState(false);
 
   const autoScrollInterval = useRef(null); // For drag auto-scroll
   const frameResizingRef = useRef(false); // Suppress click-to-add-task after frame resize drag
@@ -75,6 +76,8 @@ export default function useDragDrop({
   // to avoid stale-closure bugs when touchend fires before React commits the latest render.
   const mobileDragPreviewTimeRef = useRef(null);
   const mobileDragPreviewDateRef = useRef(null);
+  const mobileDragOverTrashRef = useRef(false);
+  const trashFabRef = useRef(null);
 
   const getNextQuarterHour = () => {
     const now = new Date();
@@ -992,6 +995,18 @@ export default function useDragDrop({
     mobileDragLastTouch.current = { clientX: touch.clientX, clientY: touch.clientY };
     updateMobileDragPreview();
 
+    // Check if touch is over the trash FAB
+    if (trashFabRef.current) {
+      const fabRect = trashFabRef.current.getBoundingClientRect();
+      const overTrash = touch.clientX >= fabRect.left && touch.clientX <= fabRect.right &&
+                        touch.clientY >= fabRect.top && touch.clientY <= fabRect.bottom;
+      if (overTrash !== mobileDragOverTrashRef.current) {
+        mobileDragOverTrashRef.current = overTrash;
+        setMobileDragOverTrash(overTrash);
+        if (overTrash && navigator.vibrate) navigator.vibrate(30);
+      }
+    }
+
     // Auto-scroll near edges
     const allDayZoneBottom = mobileAllDaySectionRef.current?.getBoundingClientRect().bottom || mobileDateHeaderRef.current?.getBoundingClientRect().bottom || 0;
     const inAllDayZone = touch.clientY < allDayZoneBottom;
@@ -1171,6 +1186,25 @@ export default function useDragDrop({
     // before React has committed the latest setMobileDragPreviewTime render.
     const _previewTime = mobileDragPreviewTimeRef.current;
     const _previewDate = mobileDragPreviewDateRef.current;
+
+    // Drop on trash FAB: delete the task
+    if (mobileDragActive.current && mobileDragOverTrashRef.current && mobileDragOriginalTask.current) {
+      moveToRecycleBinRef.current(mobileDragOriginalTask.current.id);
+      playUISound('delete');
+      mobileDragActive.current = false;
+      mobileDragTaskId.current = null;
+      mobileDragOriginalTask.current = null;
+      mobileDragSourceType.current = null;
+      mobileDragPreviewTimeRef.current = null;
+      mobileDragPreviewDateRef.current = null;
+      mobileDragOverTrashRef.current = false;
+      setMobileDragPreviewTime(null);
+      setMobileDragPreviewDate(null);
+      setMobileDragTaskIdState(null);
+      setMobileDragOverTrash(false);
+      return;
+    }
+
     if (mobileDragActive.current && _previewTime && mobileDragOriginalTask.current) {
       const task = mobileDragOriginalTask.current;
       const droppingToAllDay = _previewTime === 'all-day';
@@ -1313,9 +1347,11 @@ export default function useDragDrop({
     mobileDragSourceType.current = null;
     mobileDragPreviewTimeRef.current = null;
     mobileDragPreviewDateRef.current = null;
+    mobileDragOverTrashRef.current = false;
     setMobileDragPreviewTime(null);
     setMobileDragPreviewDate(null);
     setMobileDragTaskIdState(null);
+    setMobileDragOverTrash(false);
   };
 
   // --- Mobile touch end (swipe actions) ---
@@ -1510,6 +1546,8 @@ export default function useDragDrop({
     mobileDragPreviewTime, setMobileDragPreviewTime,
     mobileDragPreviewDate, setMobileDragPreviewDate,
     mobileDragTaskIdState, setMobileDragTaskIdState,
+    mobileDragOverTrash,
+    trashFabRef,
     // mobile swipe refs
     swipeTouchStartX,
     swipeTouchStartY,

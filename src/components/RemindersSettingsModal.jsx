@@ -19,6 +19,7 @@ const RemindersSettingsModal = () => {
 
   return (
     <>
+      {showRemindersSettings && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowRemindersSettings(false)}>
           <div
             className={`${cardBg} rounded-lg shadow-xl p-6 ${borderClass} border max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto`}
@@ -239,6 +240,7 @@ const RemindersSettingsModal = () => {
             </button>
           </div>
         </div>
+      )}
 
       {showMorningTimePicker && (
         <ClockTimePicker

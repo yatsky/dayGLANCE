@@ -826,6 +826,11 @@ const MobileSettingsPanel = () => {
                   onChange={(e) => setAiConfig(prev => ({ ...prev, baseUrl: e.target.value }))}
                   className={`w-full px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm`}
                 />
+                {aiConfig.provider === 'custom' && (
+                  <p className={`text-xs ${textSecondary} mt-1`}>
+                    Common providers: OpenRouter → <code className="font-mono">https://openrouter.ai/api/v1</code> · Groq → <code className="font-mono">https://api.groq.com/openai/v1</code> · Together AI → <code className="font-mono">https://api.together.xyz/v1</code> · LM Studio → <code className="font-mono">http://localhost:1234/v1</code>
+                  </p>
+                )}
               </div>
             )}
 

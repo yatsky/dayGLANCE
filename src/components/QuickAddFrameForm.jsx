@@ -81,14 +81,14 @@ const QuickAddFrameForm = ({ dateStr, dateDisplay, defaultStart, defaultEnd, def
           <label className={`text-xs font-medium ${textSecondary} block mb-1`}>Start</label>
           <button type="button" onClick={() => setTimePickerField('start')}
             className={`w-full px-3 py-2 rounded-lg border ${borderClass} ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-stone-900'} text-sm text-left`}>
-            {start}
+            {formatTime(start)}
           </button>
         </div>
         <div className="flex-1">
           <label className={`text-xs font-medium ${textSecondary} block mb-1`}>End</label>
           <button type="button" onClick={() => setTimePickerField('end')}
             className={`w-full px-3 py-2 rounded-lg border ${borderClass} ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-stone-900'} text-sm text-left`}>
-            {end}
+            {formatTime(end)}
           </button>
         </div>
       </div>

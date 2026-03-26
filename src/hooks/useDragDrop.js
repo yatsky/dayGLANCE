@@ -995,18 +995,6 @@ export default function useDragDrop({
     mobileDragLastTouch.current = { clientX: touch.clientX, clientY: touch.clientY };
     updateMobileDragPreview();
 
-    // Check if touch is over the trash FAB
-    if (trashFabRef.current) {
-      const fabRect = trashFabRef.current.getBoundingClientRect();
-      const overTrash = touch.clientX >= fabRect.left && touch.clientX <= fabRect.right &&
-                        touch.clientY >= fabRect.top && touch.clientY <= fabRect.bottom;
-      if (overTrash !== mobileDragOverTrashRef.current) {
-        mobileDragOverTrashRef.current = overTrash;
-        setMobileDragOverTrash(overTrash);
-        if (overTrash && navigator.vibrate) navigator.vibrate(30);
-      }
-    }
-
     // Auto-scroll near edges
     const allDayZoneBottom = mobileAllDaySectionRef.current?.getBoundingClientRect().bottom || mobileDateHeaderRef.current?.getBoundingClientRect().bottom || 0;
     const inAllDayZone = touch.clientY < allDayZoneBottom;
@@ -1094,7 +1082,21 @@ export default function useDragDrop({
         setMobileDragPreviewDate(_initDate);
         // Add native non-passive touchmove listener to prevent browser scroll
         // (React 18 registers touchmove as passive, so e.preventDefault() in onTouchMove is a no-op)
-        const preventScroll = (e) => e.preventDefault();
+        // Also handle trash FAB detection here — guaranteed to fire regardless of which element the touch started on.
+        const preventScroll = (e) => {
+          e.preventDefault();
+          if (mobileDragActive.current && trashFabRef.current && e.touches[0]) {
+            const touch = e.touches[0];
+            const fabRect = trashFabRef.current.getBoundingClientRect();
+            const overTrash = touch.clientX >= fabRect.left && touch.clientX <= fabRect.right &&
+                              touch.clientY >= fabRect.top && touch.clientY <= fabRect.bottom;
+            if (overTrash !== mobileDragOverTrashRef.current) {
+              mobileDragOverTrashRef.current = overTrash;
+              setMobileDragOverTrash(overTrash);
+              if (overTrash && navigator.vibrate) navigator.vibrate(30);
+            }
+          }
+        };
         document.addEventListener('touchmove', preventScroll, { passive: false });
         mobileDragPreventScrollRef.current = preventScroll;
         // Suppress iOS text selection / magnifier during drag

@@ -854,6 +854,7 @@ const DayPlanner = () => {
   useEffect(() => {
     localStorage.setItem('day-planner-darkmode', JSON.stringify(darkMode));
     document.documentElement.classList.toggle('dark', darkMode);
+    document.documentElement.style.colorScheme = darkMode ? 'dark' : 'light';
     document.documentElement.style.backgroundColor = darkMode ? '#1f2937' : '#ffffff';
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (themeColorMeta) themeColorMeta.setAttribute('content', darkMode ? '#1f2937' : '#ffffff');

@@ -884,7 +884,7 @@ const MobileLayout = () => {
                                     {/* Protruding drag tab */}
                                     <div
                                       data-drag-handle
-                                      className={`relative flex-shrink-0 ${task.color} rounded-l-lg flex items-center pl-px cursor-grab active:opacity-70 text-white/70`}
+                                      className={`relative flex-shrink-0 ${task.color} rounded-l-lg flex items-center pl-px cursor-grab active:opacity-70 text-white/70 ${task.completed ? 'opacity-50' : 'opacity-90'}`}
                                       style={{ marginLeft: '-12px', marginRight: '-8px', marginTop: '3px', width: '20px', height: '24px', touchAction: 'none', zIndex: 10 }}
                                       onTouchStart={(e) => handleMobileTaskTouchStart(e, { ...task, isDeadlineDrag: true }, 'deadline')}
                                       onTouchMove={(e) => handleMobileTaskTouchMove(e)}

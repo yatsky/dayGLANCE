@@ -761,7 +761,7 @@ const MobileLayout = () => {
                                       {(!isImported || !!task.nativeEventId) && (
                                         <div
                                           data-drag-handle
-                                          className={`flex-shrink-0 ${task.nativeCalendarColor ? '' : task.color} rounded-l-lg flex items-center pl-px cursor-grab active:opacity-70 text-white/70`}
+                                          className={`relative flex-shrink-0 ${task.nativeCalendarColor ? '' : task.color} rounded-l-lg flex items-center pl-px cursor-grab active:opacity-70 text-white/70`}
                                           style={{ marginLeft: '-12px', marginRight: '-8px', marginTop: '3px', width: '20px', height: '24px', touchAction: 'none', zIndex: 10, ...(task.nativeCalendarColor ? { backgroundColor: task.nativeCalendarColor } : {}) }}
                                           onTouchStart={(e) => handleMobileTaskTouchStart(e, task, 'allday')}
                                           onTouchMove={(e) => handleMobileTaskTouchMove(e)}
@@ -884,7 +884,7 @@ const MobileLayout = () => {
                                     {/* Protruding drag tab */}
                                     <div
                                       data-drag-handle
-                                      className={`flex-shrink-0 ${task.color} rounded-l-lg flex items-center pl-px cursor-grab active:opacity-70 text-white/70`}
+                                      className={`relative flex-shrink-0 ${task.color} rounded-l-lg flex items-center pl-px cursor-grab active:opacity-70 text-white/70`}
                                       style={{ marginLeft: '-12px', marginRight: '-8px', marginTop: '3px', width: '20px', height: '24px', touchAction: 'none', zIndex: 10 }}
                                       onTouchStart={(e) => handleMobileTaskTouchStart(e, { ...task, isDeadlineDrag: true }, 'deadline')}
                                       onTouchMove={(e) => handleMobileTaskTouchMove(e)}

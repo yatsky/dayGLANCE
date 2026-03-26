@@ -9,7 +9,7 @@ import {
   SkipForward, Sparkles, Sun, Target, Trash2, Upload, X,
 } from 'lucide-react';
 import { isNativeAndroid, nativeUpdateEvent } from '../native.js';
-import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks } from '../utils/textFormatting.jsx';
+import { renderTitle, renderTitleWithoutTags, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks } from '../utils/textFormatting.jsx';
 import { dateToString, extractTags, extractWikilinks, formatDate, formatDateRange, formatDeadlineDate, formatShortDate, stripWikilinks } from '../utils/taskUtils.js';
 import { HABIT_COLORS, HABIT_ICONS } from '../constants/habits.js';
 import { HabitRing, MiniHabitRing } from './HabitRing.jsx';
@@ -4228,7 +4228,7 @@ const DesktopLayout = () => {
                                                 } : undefined}
                                                 title={task.title}
                                               >
-                                                {stripWikilinks(task.title)}
+                                                {renderTitleWithoutTags(task.title)}
                                               </div>
                                               {isNativeAndroid() && extractWikilinks(task.title).map((note, i) => (
                                                 <button key={i} className="flex-shrink-0 text-purple-200 active:text-purple-100" onClick={(e) => { e.stopPropagation(); window.DayGlanceObsidian?.openNote(note); }} title={`Open "${note}" in Obsidian`}><NotebookPen size={14} /></button>
@@ -4302,7 +4302,7 @@ const DesktopLayout = () => {
                                                 } : undefined}
                                                 title={!isImported && !isTablet ? "Double-click to edit" : undefined}
                                               >
-                                                {stripWikilinks(task.title)}
+                                                {renderTitleWithoutTags(task.title)}
                                               </div>
                                               {isNativeAndroid() && extractWikilinks(task.title).map((note, i) => (
                                                 <button key={i} className="flex-shrink-0 text-purple-200 active:text-purple-100" onClick={(e) => { e.stopPropagation(); window.DayGlanceObsidian?.openNote(note); }} title={`Open "${note}" in Obsidian`}><NotebookPen size={14} /></button>

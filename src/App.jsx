@@ -3141,6 +3141,8 @@ const DayPlanner = () => {
       reminderSettings: JSON.parse(localStorage.getItem('day-planner-reminder-settings') || 'null'),
       habits: JSON.parse(localStorage.getItem('day-planner-habits') || '[]'),
       habitLogs: JSON.parse(localStorage.getItem('day-planner-habit-logs') || '{}'),
+      aiConfig: JSON.parse(localStorage.getItem('day-planner-ai-config') || 'null'),
+      obsidianConfig: JSON.parse(localStorage.getItem('day-planner-obsidian-config') || 'null'),
       calendarFilter: JSON.parse(localStorage.getItem('day-planner-calendar-filter') || '[]')
     }
   });
@@ -3199,7 +3201,10 @@ const DayPlanner = () => {
     try {
       const record = await autoBackupDB.getBackup(backupId);
       if (!record?.data?.data) throw new Error('Invalid backup record');
-      applyRemoteData(record.data.data);
+      const { data } = record.data;
+      if (data.aiConfig) localStorage.setItem('day-planner-ai-config', JSON.stringify(data.aiConfig));
+      if (data.obsidianConfig) localStorage.setItem('day-planner-obsidian-config', JSON.stringify(data.obsidianConfig));
+      applyRemoteData(data);
       window.location.reload();
     } catch (err) {
       alert('Failed to restore backup: ' + err.message);
@@ -3212,6 +3217,8 @@ const DayPlanner = () => {
       if (!provider) throw new Error('No provider configured');
       const backup = await provider.downloadBackup(autoBackupConfig.remote, filename);
       if (!backup?.data) throw new Error('Invalid backup file');
+      if (backup.data.aiConfig) localStorage.setItem('day-planner-ai-config', JSON.stringify(backup.data.aiConfig));
+      if (backup.data.obsidianConfig) localStorage.setItem('day-planner-obsidian-config', JSON.stringify(backup.data.obsidianConfig));
       applyRemoteData(backup.data);
       window.location.reload();
     } catch (err) {
@@ -3304,6 +3311,7 @@ const DayPlanner = () => {
         const routinesEnabledVal = hasRoutineDefs ? true : (data.routinesEnabled ?? false);
         localStorage.setItem('day-planner-routines-enabled', JSON.stringify(routinesEnabledVal));
         if (data.aiConfig) localStorage.setItem('day-planner-ai-config', JSON.stringify(data.aiConfig));
+        if (data.obsidianConfig) localStorage.setItem('day-planner-obsidian-config', JSON.stringify(data.obsidianConfig));
         if (data.calendarFilter) localStorage.setItem('day-planner-calendar-filter', JSON.stringify(data.calendarFilter));
 
         // Reload app to reflect changes

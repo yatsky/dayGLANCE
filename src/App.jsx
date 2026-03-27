@@ -3996,6 +3996,13 @@ const DayPlanner = () => {
       const localData = buildSyncPayload().data;
       const { data: mergedData, localChanged, remoteChanged } = mergeSyncData(localData, remote.data, syncRetentionDays);
 
+      // TEMP DIAG — remove after sync investigation
+      console.log('[CloudSync] merge:', {
+        localChanged, remoteChanged,
+        localTasks: localData.tasks?.length, remoteTasks: remote.data?.tasks?.length, mergedTasks: mergedData.tasks?.length,
+        localUnsched: localData.unscheduledTasks?.length, remoteUnsched: remote.data?.unscheduledTasks?.length, mergedUnsched: mergedData.unscheduledTasks?.length,
+      });
+
       if (localChanged) {
         applyRemoteData(mergedData);
         localStorage.setItem('day-planner-cloud-sync-local-modified', new Date().toISOString());

@@ -35,6 +35,20 @@ export const webdavFetch = async (method, targetUrl, authHeaders, body, extraHea
   });
 };
 
+// Creates a WebDAV collection and any missing intermediate collections.
+// MKCOL returns 409 when the parent directory doesn't exist; in that case
+// we walk up the path, create the parent first, then retry.
+const mkcolWithParents = async (dirUrl, authHeaders) => {
+  const res = await webdavFetch('MKCOL', dirUrl, authHeaders);
+  if (res.status === 409) {
+    const parent = dirUrl.replace(/\/+$/, '').replace(/\/[^/]+$/, '/');
+    if (parent && parent !== dirUrl) {
+      await mkcolWithParents(parent, authHeaders);
+      await webdavFetch('MKCOL', dirUrl, authHeaders);
+    }
+  }
+};
+
 export const cloudSyncProviders = {
   nextcloud: {
     name: 'Nextcloud / WebDAV',
@@ -56,8 +70,7 @@ export const cloudSyncProviders = {
 
       let res = await doUpload();
       if (res.status === 404 || res.status === 409) {
-        // Directory doesn't exist, create it
-        await webdavFetch('MKCOL', dirUrl, authHeaders);
+        await mkcolWithParents(dirUrl, authHeaders);
         res = await doUpload();
       }
       if (res.status === 403) throw new Error('FORBIDDEN');
@@ -111,7 +124,7 @@ export const cloudSyncProviders = {
         webdavFetch('PUT', fileUrl, authHeaders, body, { 'Content-Type': 'application/json' });
       let res = await doUpload();
       if (res.status === 404 || res.status === 409) {
-        await webdavFetch('MKCOL', dirUrl, authHeaders);
+        await mkcolWithParents(dirUrl, authHeaders);
         res = await doUpload();
       }
       if (res.status === 403) throw new Error('FORBIDDEN');

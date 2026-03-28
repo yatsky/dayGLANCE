@@ -2,6 +2,10 @@ import { cleanTitle } from '../utils/suggestionParser.js';
 import { dateToString, extractTags, formatDeadlineDate } from '../utils/taskUtils.js';
 import { TASK_COLORS } from '../utils/colorUtils.js';
 
+// Strip a specific tag (e.g. "#obsidian") from a title string.
+const stripTag = (title, tag) =>
+  title.replace(new RegExp(`#${tag}\\b`, 'gi'), '').replace(/\s+/g, ' ').trim();
+
 // Pure local helpers (no state dependencies)
 const getNextQuarterHour = () => {
   const now = new Date();
@@ -64,6 +68,12 @@ export default function useTaskActions({
   focusCompletedTasks, setFocusCompletedTasks,
   exitFocusMode,
   playFocusSound,
+  // Obsidian integration.
+  // getObsidianTaskMeta(rawTitle) → { id, importSource, obsidianRawTitle, obsidianFileDate }
+  // Used synchronously at task-creation time so the task gets the obsidian-format
+  // ID from the start, letting the next periodic sync de-duplicate instead of cloning.
+  getObsidianTaskMeta,
+  onWriteObsidianTask,
 }) {
   const colors = TASK_COLORS;
 
@@ -115,7 +125,24 @@ export default function useTaskActions({
   const addTask = (toInbox = false) => {
     if (newTask.title.trim()) {
       pushUndo();
-      const taskId = crypto.randomUUID();
+
+      // Determine whether this task should be linked to an Obsidian daily note.
+      // Recurring and swipe-scheduling paths are excluded: recurring tasks use
+      // their own ID scheme; swipe-scheduling preserves an existing task's ID.
+      const tags = extractTags(newTask.title);
+      const hasObsidianTag = tags.includes('obsidian');
+      const isRecurring = !!newTask.recurrence;
+      const isSwipeSchedule = !!swipeSchedulingInboxTaskId.current;
+      const rawObsidianTitle = hasObsidianTag ? stripTag(cleanTitle(newTask.title), 'obsidian') : null;
+      // Skip if stripping the tag leaves an empty title (e.g. task titled only "#obsidian")
+      const obsidianMeta = (hasObsidianTag && rawObsidianTitle && !isRecurring && !isSwipeSchedule && getObsidianTaskMeta)
+        ? getObsidianTaskMeta(rawObsidianTitle)
+        : null;
+
+      const taskId = obsidianMeta?.id ?? crypto.randomUUID();
+      // Tracks the conflict-adjusted start time set by the scheduled branch so the
+      // vault write uses the same time that ends up in DG state, not the raw input.
+      let scheduledAdjustedStartTime = newTask.startTime || null;
       const task = {
         id: taskId,
         title: cleanTitle(newTask.title),
@@ -124,7 +151,8 @@ export default function useTaskActions({
         completed: false,
         isAllDay: newTask.isAllDay || false,
         notes: '',
-        subtasks: []
+        subtasks: [],
+        ...(obsidianMeta ?? {}),
       };
 
       if (toInbox) {
@@ -194,6 +222,7 @@ export default function useTaskActions({
           ? { conflicted: false, adjustedStartTime: requestedStartTime, conflictingEvent: null }
           : getAdjustedTimeForImportedConflicts(taskId, requestedStartTime, newTask.duration, taskDate);
 
+        scheduledAdjustedStartTime = adjustedStartTime;
         setTasks(prev => [...prev, {
           ...task,
           startTime: adjustedStartTime,
@@ -207,6 +236,17 @@ export default function useTaskActions({
             message: `Task moved to ${adjustedStartTime} to avoid conflict with "${conflictingEvent.title}"`
           });
         }
+      }
+
+      // If the task is tagged #obsidian, write it to today's daily note
+      if (obsidianMeta && onWriteObsidianTask) {
+        onWriteObsidianTask({
+          title: rawObsidianTitle,
+          startTime: toInbox || newTask.isAllDay ? null : scheduledAdjustedStartTime,
+          duration: toInbox ? null : (newTask.duration || null),
+          isAllDay: !toInbox && (newTask.isAllDay || false),
+          date: toInbox ? null : (newTask.date || dateToString(selectedDate)),
+        });
       }
 
       setNewTask({ title: '', startTime: getNextQuarterHour(), duration: 30, date: dateToString(selectedDate), isAllDay: false, recurrence: null });

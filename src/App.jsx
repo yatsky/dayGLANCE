@@ -5315,6 +5315,17 @@ const DayPlanner = () => {
     focusCompletedTasks, setFocusCompletedTasks,
     exitFocusMode,
     playFocusSound,
+    getObsidianTaskMeta: obsidianConfig?.enabled && obsidianVaultHandleRef.current
+      ? (rawTitle) => {
+          const todayStr = new Date().toISOString().split('T')[0];
+          return {
+            id: `obsidian-${todayStr}-${obsidianSimpleHash(rawTitle)}`,
+            importSource: 'obsidian',
+            obsidianRawTitle: rawTitle,
+            obsidianFileDate: todayStr,
+          };
+        }
+      : null,
     onWriteObsidianTask: obsidianConfig?.enabled && obsidianVaultHandleRef.current
       ? (task) => {
           const todayStr = new Date().toISOString().split('T')[0];

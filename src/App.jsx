@@ -3357,10 +3357,41 @@ const DayPlanner = () => {
       const response = await fetch(proxyUrl, { headers: calProxyHeaders });
       if (!response.ok) throw new Error('Failed to fetch calendar');
 
-      const icsContent = await response.text();
+      let icsContent = await response.text();
+      let effectiveUrl = syncUrl;
+
+      if (!icsContent.includes('BEGIN:VCALENDAR')) {
+        // CalDAV collection URLs (Baikal, Nextcloud, etc.) return HTML or WebDAV XML
+        // unless ?export is appended. Auto-retry once before giving up.
+        console.log('[calendar-sync] Response is not ICS. Content-Type:', response.headers.get('content-type'), '— First 300 chars:', icsContent.slice(0, 300));
+        if (!syncUrl.includes('export')) {
+          const exportUrl = syncUrl.includes('?') ? `${syncUrl}&export` : `${syncUrl}?export`;
+          console.log('[calendar-sync] Retrying with ?export:', exportUrl);
+          try {
+            const exportResponse = await fetch(`/api/calendar-proxy/?url=${exportUrl}`, { headers: calProxyHeaders });
+            if (exportResponse.ok) {
+              const exportContent = await exportResponse.text();
+              if (exportContent.includes('BEGIN:VCALENDAR')) {
+                icsContent = exportContent;
+                effectiveUrl = exportUrl;
+              } else {
+                console.log('[calendar-sync] ?export retry also returned non-ICS. Content-Type:', exportResponse.headers.get('content-type'), '— First 300 chars:', exportContent.slice(0, 300));
+              }
+            }
+          } catch { /* fall through to not-ical error below */ }
+        }
+      }
+
       if (!icsContent.includes('BEGIN:VCALENDAR')) {
         throw new Error('not-ical');
       }
+
+      // Persist the corrected URL so future syncs use it directly
+      if (effectiveUrl !== syncUrl) {
+        setSyncUrl(effectiveUrl);
+        localStorage.setItem('day-planner-sync-url', effectiveUrl);
+      }
+
       const events = parseICS(icsContent);
 
       const allImported = events.flatMap(event =>
@@ -3374,7 +3405,7 @@ const DayPlanner = () => {
         const kept = prevTasks.filter(t => !(t.imported && !t.isTaskCalendar && t.importSource !== 'file'));
         return [...kept, ...importedTasks];
       });
-      return { success: true, count: importedTasks.length };
+      return { success: true, count: importedTasks.length, urlUpdated: effectiveUrl !== syncUrl };
     } catch (error) {
       console.error('Sync error:', error);
       return { success: false, error: error.message === 'not-ical' ? 'not-ical' : 'calendar' };
@@ -3393,6 +3424,7 @@ const DayPlanner = () => {
       if (taskCalendarAuth.username && taskCalendarAuth.appPassword) {
         taskAuthHeaders['Authorization'] = 'Basic ' + toBase64(taskCalendarAuth.username + ':' + taskCalendarAuth.appPassword);
       }
+      let effectiveTaskUrl = taskCalendarUrl;
       if (isNativeAndroid()) {
         // On Android: fetch directly — no CORS restrictions, no proxy server available
         const result = nativeHttpRequest('GET', taskCalendarUrl, taskAuthHeaders, '');
@@ -3407,7 +3439,31 @@ const DayPlanner = () => {
         const response = await fetch(proxyUrl, { headers: taskProxyHeaders });
         if (!response.ok) throw new Error('Failed to fetch task calendar');
         icsContent = await response.text();
+
+        if (!icsContent.includes('BEGIN:VCALENDAR') && !taskCalendarUrl.includes('export')) {
+          // Auto-retry with ?export for CalDAV collection URLs (Baikal, Nextcloud, etc.)
+          console.log('[task-calendar-sync] Response is not ICS. Content-Type:', response.headers.get('content-type'), '— First 300 chars:', icsContent.slice(0, 300));
+          const exportUrl = taskCalendarUrl.includes('?') ? `${taskCalendarUrl}&export` : `${taskCalendarUrl}?export`;
+          console.log('[task-calendar-sync] Retrying with ?export:', exportUrl);
+          try {
+            const exportResponse = await fetch(`/api/calendar-proxy/?url=${exportUrl}`, { headers: taskProxyHeaders });
+            if (exportResponse.ok) {
+              const exportContent = await exportResponse.text();
+              if (exportContent.includes('BEGIN:VCALENDAR')) {
+                icsContent = exportContent;
+                effectiveTaskUrl = exportUrl;
+              }
+            }
+          } catch { /* fall through, parseICS will handle gracefully */ }
+        }
       }
+
+      // Persist the corrected URL so future syncs use it directly
+      if (effectiveTaskUrl !== taskCalendarUrl) {
+        setTaskCalendarUrl(effectiveTaskUrl);
+        localStorage.setItem('day-planner-task-calendar-url', effectiveTaskUrl);
+      }
+
       const events = parseICS(icsContent);
 
       // Read fresh completedTaskUids from localStorage to avoid stale closure
@@ -3426,7 +3482,7 @@ const DayPlanner = () => {
         const kept = prevTasks.filter(t => !(t.isTaskCalendar && t.importSource !== 'file'));
         return [...kept, ...taskCalendarItems];
       });
-      return { success: true, count: taskCalendarItems.length };
+      return { success: true, count: taskCalendarItems.length, urlUpdated: effectiveTaskUrl !== taskCalendarUrl };
     } catch (error) {
       console.error('Task calendar sync error:', error);
       return { success: false, error: 'task-calendar' };
@@ -3722,7 +3778,7 @@ const DayPlanner = () => {
       if (calendarResult.success) {
         successes.push(`${calendarResult.count} event${calendarResult.count !== 1 ? 's' : ''}`);
       } else if (calendarResult.error === 'not-ical') {
-        if (!silent) setSyncNotification({ type: 'error', title: 'Calendar Sync', message: 'The URL did not return a calendar file. For Nextcloud private calendars, append ?export to the URL (e.g. …/personal/?export).' });
+        if (!silent) setSyncNotification({ type: 'error', title: 'Calendar Sync', message: 'The URL did not return a calendar file. For CalDAV servers (Nextcloud, Baikal, etc.), append ?export to the URL (e.g. …/default/?export).' });
         setIsSyncing(false);
         return;
       } else if (calendarResult.error === 'calendar') {
@@ -3735,12 +3791,14 @@ const DayPlanner = () => {
         errors.push('task calendar');
       }
 
+      const urlUpdated = calendarResult.urlUpdated || taskResult.urlUpdated;
       if (errors.length > 0 && successes.length === 0) {
         setSyncNotification({ type: 'error', message: `Failed to sync with ${errors.join(' and ')}. Make sure the URL is correct and publicly accessible.` });
       } else if (errors.length > 0) {
         setSyncNotification({ type: 'error', message: `Synced ${successes.join(' and ')}, but failed to sync ${errors.join(' and ')}` });
       } else if (successes.length > 0) {
-        setSyncNotification({ type: 'success', message: `Synced ${successes.join(' and ')}` });
+        const urlNote = urlUpdated ? ' (?export appended to your calendar URL automatically)' : '';
+        setSyncNotification({ type: 'success', message: `Synced ${successes.join(' and ')}${urlNote}` });
       }
     } finally {
       setIsSyncing(false);

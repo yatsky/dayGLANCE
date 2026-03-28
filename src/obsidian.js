@@ -183,18 +183,37 @@ export async function readDailyNoteFresh(vaultHandle, dailyNotesPath, dateStr) {
 }
 
 /**
+ * Build the formatted markdown task line for a dayGLANCE task, mirroring the
+ * format that parseTasksFromMarkdown recognises:
+ *   - [ ] Title                         (inbox / all-day today)
+ *   - [ ] 2026-03-29 Title              (all-day on another date)
+ *   - [ ] 08:00-09:00 Title             (timed task on note's own date)
+ *   - [ ] 2026-03-29 08:00-09:00 Title  (timed task on a different date)
+ *
+ * @param {{ title, startTime, duration, isAllDay, date }} task
+ * @param {string} noteDate  The YYYY-MM-DD date of the note being written to
+ */
+function buildObsidianTaskLine(task, noteDate) {
+  const datePrefix = task.date && task.date !== noteDate ? `${task.date} ` : '';
+  const timePrefix = (!task.isAllDay && task.startTime) ? buildTimePrefix(task.startTime, task.duration || null) : '';
+  return `- [ ] ${datePrefix}${timePrefix}${task.title}`;
+}
+
+/**
  * Append a task line to a daily note under the specified heading.
  * Creates the note from the template if it doesn't exist.
  * Creates the heading section if it doesn't already exist in the note.
+ *
+ * @param task {{ title, startTime, duration, isAllDay, date }}
  */
-export async function appendTaskToDailyNote(vaultHandle, dailyNotesPath, dateStr, taskTitle, heading, template) {
+export async function appendTaskToDailyNote(vaultHandle, dailyNotesPath, dateStr, task, heading, template) {
   assertSafeDateStr(dateStr);
   const dirHandle = await getDailyNotesDir(vaultHandle, dailyNotesPath);
 
   const existing = await readDailyNoteFile(dirHandle, dateStr);
   let content = existing ? existing.text : (template || '');
 
-  const taskLine = `- [ ] ${taskTitle}`;
+  const taskLine = buildObsidianTaskLine(task, dateStr);
   const lines = content.split('\n');
 
   if (heading && heading.trim()) {
@@ -766,15 +785,17 @@ export async function syncObsidianVault(
 /**
  * Append a task line to a daily note via the native bridge (Android).
  * Uses the same heading-insertion logic as appendTaskToDailyNote.
+ *
+ * @param task {{ title, startTime, duration, isAllDay, date }}
  */
-export function appendTaskToDailyNoteNative(dateStr, taskTitle, heading, template) {
+export function appendTaskToDailyNoteNative(dateStr, task, heading, template) {
   const bridge = typeof window !== 'undefined' ? window.DayGlanceObsidian : null;
   if (!bridge?.getDailyNote || !bridge?.writeDailyNote) return;
 
   const existing = bridge.getDailyNote(dateStr);
   let content = (existing !== null && existing !== undefined) ? existing : (template || '');
 
-  const taskLine = `- [ ] ${taskTitle}`;
+  const taskLine = buildObsidianTaskLine(task, dateStr);
   const lines = content.split('\n');
 
   if (heading && heading.trim()) {

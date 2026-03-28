@@ -218,7 +218,13 @@ export default function useTaskActions({
       const tags = extractTags(newTask.title);
       if (tags.includes('obsidian') && onWriteObsidianTask) {
         const obsidianTitle = stripTag(cleanTitle(newTask.title), 'obsidian');
-        onWriteObsidianTask(obsidianTitle);
+        onWriteObsidianTask({
+          title: obsidianTitle,
+          startTime: toInbox || newTask.isAllDay ? null : (newTask.startTime || null),
+          duration: toInbox ? null : (newTask.duration || null),
+          isAllDay: !toInbox && (newTask.isAllDay || false),
+          date: toInbox ? null : (newTask.date || dateToString(selectedDate)),
+        });
       }
 
       setNewTask({ title: '', startTime: getNextQuarterHour(), duration: 30, date: dateToString(selectedDate), isAllDay: false, recurrence: null });

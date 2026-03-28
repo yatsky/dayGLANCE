@@ -5316,17 +5316,17 @@ const DayPlanner = () => {
     exitFocusMode,
     playFocusSound,
     onWriteObsidianTask: obsidianConfig?.enabled && obsidianVaultHandleRef.current
-      ? (taskTitle) => {
+      ? (task) => {
           const todayStr = new Date().toISOString().split('T')[0];
           const heading = obsidianConfig.taskHeading || '## Tasks';
           if (obsidianVaultHandleRef.current === 'native') {
-            appendTaskToDailyNoteNative(todayStr, taskTitle, heading, dailyNoteTemplate);
+            appendTaskToDailyNoteNative(todayStr, task, heading, dailyNoteTemplate);
           } else {
             appendTaskToDailyNote(
               obsidianVaultHandleRef.current,
               obsidianConfig.dailyNotesPath || '',
               todayStr,
-              taskTitle,
+              task,
               heading,
               dailyNoteTemplate,
             ).catch(err => console.error('[Obsidian] Failed to write task to daily note:', err));

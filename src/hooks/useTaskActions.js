@@ -134,11 +134,15 @@ export default function useTaskActions({
       const isRecurring = !!newTask.recurrence;
       const isSwipeSchedule = !!swipeSchedulingInboxTaskId.current;
       const rawObsidianTitle = hasObsidianTag ? stripTag(cleanTitle(newTask.title), 'obsidian') : null;
-      const obsidianMeta = (hasObsidianTag && !isRecurring && !isSwipeSchedule && getObsidianTaskMeta)
+      // Skip if stripping the tag leaves an empty title (e.g. task titled only "#obsidian")
+      const obsidianMeta = (hasObsidianTag && rawObsidianTitle && !isRecurring && !isSwipeSchedule && getObsidianTaskMeta)
         ? getObsidianTaskMeta(rawObsidianTitle)
         : null;
 
       const taskId = obsidianMeta?.id ?? crypto.randomUUID();
+      // Tracks the conflict-adjusted start time set by the scheduled branch so the
+      // vault write uses the same time that ends up in DG state, not the raw input.
+      let scheduledAdjustedStartTime = newTask.startTime || null;
       const task = {
         id: taskId,
         title: cleanTitle(newTask.title),
@@ -218,6 +222,7 @@ export default function useTaskActions({
           ? { conflicted: false, adjustedStartTime: requestedStartTime, conflictingEvent: null }
           : getAdjustedTimeForImportedConflicts(taskId, requestedStartTime, newTask.duration, taskDate);
 
+        scheduledAdjustedStartTime = adjustedStartTime;
         setTasks(prev => [...prev, {
           ...task,
           startTime: adjustedStartTime,
@@ -237,7 +242,7 @@ export default function useTaskActions({
       if (obsidianMeta && onWriteObsidianTask) {
         onWriteObsidianTask({
           title: rawObsidianTitle,
-          startTime: toInbox || newTask.isAllDay ? null : (newTask.startTime || null),
+          startTime: toInbox || newTask.isAllDay ? null : scheduledAdjustedStartTime,
           duration: toInbox ? null : (newTask.duration || null),
           isAllDay: !toInbox && (newTask.isAllDay || false),
           date: toInbox ? null : (newTask.date || dateToString(selectedDate)),

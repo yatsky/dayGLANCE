@@ -2,6 +2,10 @@ import { cleanTitle } from '../utils/suggestionParser.js';
 import { dateToString, extractTags, formatDeadlineDate } from '../utils/taskUtils.js';
 import { TASK_COLORS } from '../utils/colorUtils.js';
 
+// Strip a specific tag (e.g. "#obsidian") from a title string.
+const stripTag = (title, tag) =>
+  title.replace(new RegExp(`#${tag}\\b`, 'gi'), '').replace(/\s+/g, ' ').trim();
+
 // Pure local helpers (no state dependencies)
 const getNextQuarterHour = () => {
   const now = new Date();
@@ -64,6 +68,7 @@ export default function useTaskActions({
   focusCompletedTasks, setFocusCompletedTasks,
   exitFocusMode,
   playFocusSound,
+  onWriteObsidianTask,
 }) {
   const colors = TASK_COLORS;
 
@@ -207,6 +212,13 @@ export default function useTaskActions({
             message: `Task moved to ${adjustedStartTime} to avoid conflict with "${conflictingEvent.title}"`
           });
         }
+      }
+
+      // If the task is tagged #obsidian, write it to today's daily note
+      const tags = extractTags(newTask.title);
+      if (tags.includes('obsidian') && onWriteObsidianTask) {
+        const obsidianTitle = stripTag(cleanTitle(newTask.title), 'obsidian');
+        onWriteObsidianTask(obsidianTitle);
       }
 
       setNewTask({ title: '', startTime: getNextQuarterHour(), duration: 30, date: dateToString(selectedDate), isAllDay: false, recurrence: null });

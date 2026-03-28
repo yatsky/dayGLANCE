@@ -183,6 +183,45 @@ export async function readDailyNoteFresh(vaultHandle, dailyNotesPath, dateStr) {
 }
 
 /**
+ * Append a task line to a daily note under the specified heading.
+ * Creates the note from the template if it doesn't exist.
+ * Creates the heading section if it doesn't already exist in the note.
+ */
+export async function appendTaskToDailyNote(vaultHandle, dailyNotesPath, dateStr, taskTitle, heading, template) {
+  assertSafeDateStr(dateStr);
+  const dirHandle = await getDailyNotesDir(vaultHandle, dailyNotesPath);
+
+  const existing = await readDailyNoteFile(dirHandle, dateStr);
+  let content = existing ? existing.text : (template || '');
+
+  const taskLine = `- [ ] ${taskTitle}`;
+  const lines = content.split('\n');
+
+  if (heading && heading.trim()) {
+    const headingStr = heading.trim();
+    const headingLineIdx = lines.findIndex(l => l === headingStr);
+
+    if (headingLineIdx !== -1) {
+      // Insert the task right after the heading line
+      lines.splice(headingLineIdx + 1, 0, taskLine);
+    } else {
+      // Heading not found — append it along with the task
+      if (lines[lines.length - 1] !== '') lines.push('');
+      lines.push(headingStr, taskLine, '');
+    }
+  } else {
+    // No heading — append at end
+    if (lines[lines.length - 1] !== '') lines.push('');
+    lines.push(taskLine);
+  }
+
+  const fileHandle = await dirHandle.getFileHandle(`${dateStr}.md`, { create: true });
+  const writable = await fileHandle.createWritable();
+  await writable.write(lines.join('\n'));
+  await writable.close();
+}
+
+/**
  * Recursively search a directory for `{fileName}.md`, skipping hidden dirs.
  * Returns the FileSystemFileHandle or null. Capped at depth 8 to avoid
  * runaway traversal of unusually deep vaults.

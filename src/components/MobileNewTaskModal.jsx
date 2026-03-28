@@ -1,7 +1,7 @@
 import React from 'react';
 import { Calendar, Check, Loader, Sparkles, X } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
-import { dateToString, getRecurrenceLabel } from '../utils/taskUtils.js';
+import { dateToString, extractTags, getRecurrenceLabel } from '../utils/taskUtils.js';
 import { getRecurrencePresets } from '../utils/recurrenceEngine.js';
 
 const MobileNewTaskModal = () => {

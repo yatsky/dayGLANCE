@@ -1141,43 +1141,65 @@ const GoalDashboard = () => {
                 </button>
 
                 {showArchived && (
-                  <div className="mt-2 flex flex-col gap-1">
-                    {archivedGoals.map(g => (
-                      <div
-                        key={g.id}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${hoverBg} group`}
-                      >
-                        <Flag size={12} className="text-blue-400 flex-shrink-0" />
-                        <span className={`text-sm ${textSecondary} flex-1 min-w-0 truncate`}>{g.title}</span>
-                        <span className={`text-xs ${textSecondary} opacity-50 flex-shrink-0`}>Goal</span>
-                        <button
-                          onClick={() => updateGoal(g.id, { status: 'active' })}
-                          className={`flex-shrink-0 flex items-center gap-1 text-xs px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity ${
-                            darkMode ? 'text-blue-400 hover:bg-blue-900/30' : 'text-blue-600 hover:bg-blue-50'
-                          }`}
-                        >
-                          <RotateCcw size={10} /> Restore
-                        </button>
-                      </div>
-                    ))}
-                    {archivedProjects.map(p => (
-                      <div
-                        key={p.id}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${hoverBg} group`}
-                      >
-                        <Layers size={12} className="text-emerald-400 flex-shrink-0" />
-                        <span className={`text-sm ${textSecondary} flex-1 min-w-0 truncate`}>{p.title}</span>
-                        <span className={`text-xs ${textSecondary} opacity-50 flex-shrink-0`}>Project</span>
-                        <button
-                          onClick={() => updateProject(p.id, { status: 'active' })}
-                          className={`flex-shrink-0 flex items-center gap-1 text-xs px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity ${
-                            darkMode ? 'text-blue-400 hover:bg-blue-900/30' : 'text-blue-600 hover:bg-blue-50'
-                          }`}
-                        >
-                          <RotateCcw size={10} /> Restore
-                        </button>
-                      </div>
-                    ))}
+                  <div className="mt-2 flex gap-4">
+                    {/* Goals column */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-medium ${textSecondary} opacity-60 uppercase tracking-wider mb-1.5 px-2`}>Goals</p>
+                      {archivedGoals.length === 0 ? (
+                        <p className={`text-xs ${textSecondary} opacity-40 px-2 py-1`}>No archived goals</p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-1">
+                          {archivedGoals.map(g => (
+                            <div
+                              key={g.id}
+                              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg ${hoverBg} group min-w-0`}
+                            >
+                              <Flag size={11} className="text-blue-400 flex-shrink-0" />
+                              <span className={`text-xs ${textSecondary} flex-1 min-w-0 truncate`}>{g.title}</span>
+                              <button
+                                onClick={() => updateGoal(g.id, { status: 'active' })}
+                                className={`flex-shrink-0 flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                                  darkMode ? 'text-blue-400 hover:bg-blue-900/30' : 'text-blue-600 hover:bg-blue-50'
+                                }`}
+                              >
+                                <RotateCcw size={9} /> Restore
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Divider */}
+                    <div className={`w-px self-stretch ${darkMode ? 'bg-gray-700' : 'bg-stone-200'}`} />
+
+                    {/* Projects column */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-medium ${textSecondary} opacity-60 uppercase tracking-wider mb-1.5 px-2`}>Projects</p>
+                      {archivedProjects.length === 0 ? (
+                        <p className={`text-xs ${textSecondary} opacity-40 px-2 py-1`}>No archived projects</p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-1">
+                          {archivedProjects.map(p => (
+                            <div
+                              key={p.id}
+                              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg ${hoverBg} group min-w-0`}
+                            >
+                              <Layers size={11} className="text-emerald-400 flex-shrink-0" />
+                              <span className={`text-xs ${textSecondary} flex-1 min-w-0 truncate`}>{p.title}</span>
+                              <button
+                                onClick={() => updateProject(p.id, { status: 'active' })}
+                                className={`flex-shrink-0 flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                                  darkMode ? 'text-blue-400 hover:bg-blue-900/30' : 'text-blue-600 hover:bg-blue-50'
+                                }`}
+                              >
+                                <RotateCcw size={9} /> Restore
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

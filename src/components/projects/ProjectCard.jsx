@@ -228,7 +228,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
                 onDragOver={e => handleDragOver(e, idx)}
                 onDrop={e => handleDrop(e, idx)}
                 onDragEnd={handleDragEnd}
-                className={`flex items-center rounded-lg select-none transition-colors ${
+                className={`flex items-center rounded-lg select-none transition-colors ${hoverBg} ${
                   dragIdx === idx ? 'opacity-40' : ''
                 } ${
                   dragOverIdx === idx && dragIdx !== idx
@@ -240,7 +240,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
                 {/* Toggle completion — wide hit area */}
                 <button
                   onClick={() => toggleTaskComplete(t.id)}
-                  className={`flex items-center justify-center flex-shrink-0 pl-1.5 pr-2 py-1.5 rounded-l-lg transition-colors ${hoverBg}`}
+                  className="flex items-center justify-center flex-shrink-0 pl-1.5 pr-2 py-1.5"
                   aria-label={t.completed ? 'Mark incomplete' : 'Mark complete'}
                 >
                   {t.completed
@@ -251,7 +251,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
                 {/* Edit task — rest of the row */}
                 <button
                   onClick={() => openMobileEditTask?.(t, false)}
-                  className={`flex items-center gap-1.5 flex-1 min-w-0 pr-1.5 py-1.5 rounded-r-lg transition-colors ${hoverBg}`}
+                  className="flex items-center gap-1.5 flex-1 min-w-0 pr-1.5 py-1.5"
                 >
                   <TitleWithTags
                     title={t.title}

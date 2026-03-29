@@ -34,7 +34,7 @@ const DesktopNewTaskModal = () => {
   if (!showAddTask || isMobile) return null;
 
   return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowAddTask(false); setShowNewTaskDeadlinePicker(false); setMobileEditingTask(null); }}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80]" onClick={() => { setShowAddTask(false); setShowNewTaskDeadlinePicker(false); setMobileEditingTask(null); }}>
           <form
             className={`${cardBg} rounded-lg shadow-xl p-6 ${borderClass} border max-w-lg w-full mx-4`}
             onClick={(e) => e.stopPropagation()}

@@ -1208,9 +1208,9 @@ const GoalDashboard = () => {
                 </button>
 
                 {showArchived && (
-                  <div className={`mt-2 ${isMobile ? 'flex flex-col gap-3' : 'flex gap-4'}`}>
+                  <div className="flex gap-4 mt-2">
                     {/* Goals column */}
-                    <div className={isMobile ? 'w-full' : 'flex-1 min-w-0'}>
+                    <div className="flex-1 min-w-0">
                       <p className={`text-xs font-medium ${textSecondary} opacity-60 uppercase tracking-wider mb-1.5 px-2`}>Goals</p>
                       {archivedGoals.length === 0 ? (
                         <p className={`text-xs ${textSecondary} opacity-40 px-2 py-1`}>No archived goals</p>
@@ -1238,13 +1238,10 @@ const GoalDashboard = () => {
                     </div>
 
                     {/* Divider */}
-                    {isMobile
-                      ? <div className={`border-t ${borderClass}`} />
-                      : <div className={`w-px self-stretch ${darkMode ? 'bg-gray-700' : 'bg-stone-200'}`} />
-                    }
+                    <div className={`w-px self-stretch ${darkMode ? 'bg-gray-700' : 'bg-stone-200'}`} />
 
                     {/* Projects column */}
-                    <div className={isMobile ? 'w-full' : 'flex-1 min-w-0'}>
+                    <div className="flex-1 min-w-0">
                       <p className={`text-xs font-medium ${textSecondary} opacity-60 uppercase tracking-wider mb-1.5 px-2`}>Projects</p>
                       {archivedProjects.length === 0 ? (
                         <p className={`text-xs ${textSecondary} opacity-40 px-2 py-1`}>No archived projects</p>

@@ -29,6 +29,7 @@ const DesktopNewTaskModal = () => {
     addTask, saveMobileEditTask, moveToRecycleBin,
     applySuggestionForNewTask,
     handleNewTaskInputChange, handleNewTaskInputKeyDown,
+    goals, projects, goalsProjectsEnabled,
   } = useDayPlannerCtx();
 
   if (!showAddTask || isMobile) return null;
@@ -140,6 +141,45 @@ const DesktopNewTaskModal = () => {
                   ) : null
                 )}
               </div>
+              {/* Project assignment (only when Goals & Projects is enabled) */}
+              {goalsProjectsEnabled && (
+                <div>
+                  <label className={`block text-sm ${textSecondary} mb-1`}>Project</label>
+                  <select
+                    value={newTask.projectId || ''}
+                    onChange={(e) => setNewTask({ ...newTask, projectId: e.target.value || null, keepUnscheduled: false })}
+                    className={`w-full px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'}`}
+                  >
+                    <option value="">No project</option>
+                    {(() => {
+                      const activeProjects = projects.filter(p => p.status !== 'archived');
+                      const withGoal = activeProjects.filter(p => p.goalId);
+                      const standalone = activeProjects.filter(p => !p.goalId);
+                      const goalGroups = goals
+                        .filter(g => g.status !== 'archived' && withGoal.some(p => p.goalId === g.id))
+                        .map(g => ({ goal: g, projs: withGoal.filter(p => p.goalId === g.id) }));
+                      return (
+                        <>
+                          {goalGroups.map(({ goal, projs }) => (
+                            <optgroup key={goal.id} label={goal.title}>
+                              {projs.map(p => (
+                                <option key={p.id} value={p.id}>{p.title}</option>
+                              ))}
+                            </optgroup>
+                          ))}
+                          {standalone.length > 0 && (
+                            <optgroup label="Standalone">
+                              {standalone.map(p => (
+                                <option key={p.id} value={p.id}>{p.title}</option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </select>
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-3">
                 {newTask.openInInbox ? (
                   <>
@@ -456,6 +496,21 @@ const DesktopNewTaskModal = () => {
                         <span className={`ml-2 text-sm ${textPrimary}`}>Full day</span>
                       </div>
                     </div>
+                    {/* Keep unscheduled — only shown when a project is selected */}
+                    {newTask.projectId && (
+                      <div className="col-span-full">
+                        <div
+                          className="flex items-center gap-2 cursor-pointer"
+                          onClick={() => setNewTask(prev => ({ ...prev, keepUnscheduled: !prev.keepUnscheduled }))}
+                        >
+                          <div className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-colors flex-shrink-0 ${newTask.keepUnscheduled ? 'bg-blue-600 border-blue-600' : darkMode ? 'border-gray-500' : 'border-stone-300'}`}>
+                            {newTask.keepUnscheduled && <Check size={14} className="text-white" strokeWidth={3} />}
+                          </div>
+                          <span className={`text-sm ${textPrimary}`}>Keep unscheduled</span>
+                          <span className={`text-xs ${textSecondary}`}>(add to project card, no date/time)</span>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

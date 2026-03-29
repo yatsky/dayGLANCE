@@ -408,6 +408,8 @@ const DesktopLayout = () => {
     saveMobileEditTask, saveMobileEditNativeEvent,
     pushUndo, performUndo, performRedo,
     confirmEmptyBin, emptyRecycleBin,
+    goals, projects, goalsProjectsEnabled,
+    projectFilter, setProjectFilter,
   } = useDayPlannerCtx();
 
   return (
@@ -1110,7 +1112,7 @@ const DesktopLayout = () => {
 
                       {/* Today's agenda — grouped by frames */}
                       {(() => {
-                        const filteredAgenda = filterByTags(todayAgenda);
+                        const filteredAgenda = filterByTags(projectFilter ? todayAgenda.filter(t => t.projectId === projectFilter) : todayAgenda);
                         const today = new Date(getTodayStr() + 'T12:00:00');
                         const nowMinGlance = currentTime.getHours() * 60 + currentTime.getMinutes();
                         const todayFrames = getFrameInstancesForDate(today).filter(f => timeToMinutes(f.end) > nowMinGlance);
@@ -1349,6 +1351,19 @@ const DesktopLayout = () => {
                                       <Target size={16} className="animate-pulse" />
                                     </button>
                                   )}
+                                  {goalsProjectsEnabled && task.projectId && (() => {
+                                    const proj = projects.find(p => p.id === task.projectId);
+                                    if (!proj) return null;
+                                    return (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                        className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 hover:bg-blue-800/70' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
+                                        title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                      >
+                                        {proj.title}
+                                      </button>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                               {(relativeLabel === 'Overdue' || (task._agendaType === 'allday' && !task.imported)) && !task.completed && (
@@ -4260,6 +4275,19 @@ const DesktopLayout = () => {
                                               {extractTags(task.title).map(tag => `#${tag}`).join(' ')}
                                             </div>
                                           )}
+                                          {goalsProjectsEnabled && task.projectId && (() => {
+                                            const proj = projects.find(p => p.id === task.projectId);
+                                            if (!proj) return null;
+                                            return (
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                                className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors mt-0.5`}
+                                                title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                              >
+                                                {proj.title}
+                                              </button>
+                                            );
+                                          })()}
                                         </div>
                                       </div>
                                     </div>
@@ -4334,6 +4362,19 @@ const DesktopLayout = () => {
                                               {extractTags(task.title).map(tag => `#${tag}`).join(' ')}
                                             </div>
                                           )}
+                                          {goalsProjectsEnabled && task.projectId && (() => {
+                                            const proj = projects.find(p => p.id === task.projectId);
+                                            if (!proj) return null;
+                                            return (
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                                className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors mt-0.5`}
+                                                title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                              >
+                                                {proj.title}
+                                              </button>
+                                            );
+                                          })()}
                                         </div>
                                       </div>
                                       {!isImported && (

@@ -469,7 +469,7 @@ const DesktopDashboard = ({
           )}
 
           {/* Row: [←] [prev mini] [main GoalCard] [next mini] [→] */}
-          <div className="relative z-10 flex items-center gap-3 mb-10">
+          <div className="relative z-10 flex items-center justify-center gap-3 mb-10">
             {/* Prev arrow */}
             {sortedGoals.length > 1 && (
               <button
@@ -496,7 +496,7 @@ const DesktopDashboard = ({
             )}
 
             {/* Main goal card */}
-            <div className="relative z-10 flex-1 min-w-0">
+            <div className="relative z-10 w-72 flex-shrink-0">
               <GoalCard
                 ref={el => { goalCardRefs.current[activeGoal.id] = el; }}
                 goal={activeGoal}
@@ -535,7 +535,7 @@ const DesktopDashboard = ({
 
           {/* Projects for the active goal */}
           {goalProjects.length > 0 ? (
-            <div className="relative z-10 flex flex-wrap gap-4 mb-8">
+            <div className="relative z-10 flex flex-wrap gap-4 mb-8 justify-center">
               {goalProjects.map(proj => (
                 <ProjectCard
                   key={proj.id}

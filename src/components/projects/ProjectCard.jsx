@@ -128,8 +128,8 @@ const ProjectCard = forwardRef(({ project, onFocusClick }, ref) => {
         onClick={() => onFocusClick?.(project)}
         className={`flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-medium transition-colors ${
           darkMode
-            ? 'bg-amber-900/40 hover:bg-amber-900/70 text-amber-400'
-            : 'bg-amber-50 hover:bg-amber-100 text-amber-700'
+            ? 'bg-purple-900/40 hover:bg-purple-900/70 text-purple-400'
+            : 'bg-purple-50 hover:bg-purple-100 text-purple-700'
         }`}
       >
         <Target size={12} />

@@ -47,6 +47,12 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
     borderClass, textPrimary, textSecondary, hoverBg,
   } = useDayPlannerCtx();
 
+  const toggleTaskComplete = (taskId) => {
+    setUnscheduledTasks(prev =>
+      prev.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t)
+    );
+  };
+
   const [quickAddTitle, setQuickAddTitle] = useState('');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -222,27 +228,39 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
                 onDragOver={e => handleDragOver(e, idx)}
                 onDrop={e => handleDrop(e, idx)}
                 onDragEnd={handleDragEnd}
-                onClick={() => openMobileEditTask?.(t, false)}
-                className={`flex items-center gap-1.5 px-1.5 py-1.5 rounded-lg cursor-pointer select-none transition-colors ${
-                  hoverBg
-                } ${dragIdx === idx ? 'opacity-40' : ''} ${
+                className={`flex items-center rounded-lg select-none transition-colors ${
+                  dragIdx === idx ? 'opacity-40' : ''
+                } ${
                   dragOverIdx === idx && dragIdx !== idx
                     ? darkMode ? 'border-t-2 border-blue-400' : 'border-t-2 border-blue-500'
                     : ''
                 }`}
                 style={goalHex ? { borderLeft: `2px solid ${goalHex}99` } : {}}
               >
-                {t.completed
-                  ? <CheckSquare size={11} className="text-green-500 flex-shrink-0" />
-                  : <Square size={11} className={`${textSecondary} opacity-60 flex-shrink-0`} />
-                }
-                <TitleWithTags
-                  title={t.title}
-                  className={`text-xs flex-1 min-w-0 truncate ${
-                    t.completed ? `line-through opacity-40 ${textSecondary}` : textSecondary
-                  }`}
-                />
-                <GripVertical size={10} className={`${textSecondary} opacity-20 flex-shrink-0`} />
+                {/* Toggle completion — wide hit area */}
+                <button
+                  onClick={() => toggleTaskComplete(t.id)}
+                  className={`flex items-center justify-center flex-shrink-0 pl-1.5 pr-2 py-1.5 rounded-l-lg transition-colors ${hoverBg}`}
+                  aria-label={t.completed ? 'Mark incomplete' : 'Mark complete'}
+                >
+                  {t.completed
+                    ? <CheckSquare size={12} className="text-green-500" />
+                    : <Square size={12} className={`${textSecondary} opacity-60`} />
+                  }
+                </button>
+                {/* Edit task — rest of the row */}
+                <button
+                  onClick={() => openMobileEditTask?.(t, false)}
+                  className={`flex items-center gap-1.5 flex-1 min-w-0 pr-1.5 py-1.5 rounded-r-lg transition-colors ${hoverBg}`}
+                >
+                  <TitleWithTags
+                    title={t.title}
+                    className={`text-xs flex-1 min-w-0 truncate text-left ${
+                      t.completed ? `line-through opacity-40 ${textSecondary}` : textSecondary
+                    }`}
+                  />
+                  <GripVertical size={10} className={`${textSecondary} opacity-20 flex-shrink-0`} />
+                </button>
               </div>
             ))}
 

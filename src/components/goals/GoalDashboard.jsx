@@ -966,7 +966,6 @@ const GoalDashboard = () => {
     addGoal, updateGoal, deleteGoal,
     addProject, updateProject,
     setShowFocusMode,
-    showAddTask,
     isMobile,
     darkMode,
     cardBg, borderClass, textPrimary, textSecondary, hoverBg,
@@ -1025,20 +1024,18 @@ const GoalDashboard = () => {
     setShowFocusMode(true);
   }, [setShowGoalsDashboard, setShowFocusMode]);
 
-  // Escape key closes dashboard
+  // Escape key: sub-forms close first; dashboard close is handled by useModalClose in App.jsx
   useEffect(() => {
     if (!showGoalsDashboard) return;
     const handler = (e) => {
       if (e.key === 'Escape') {
-        if (showAddTask) return; // let task modal handle it
-        if (goalForm) { setGoalForm(null); return; }
-        if (projectForm) { setProjectForm(null); return; }
-        setShowGoalsDashboard(false);
+        if (goalForm) { e.stopImmediatePropagation(); setGoalForm(null); return; }
+        if (projectForm) { e.stopImmediatePropagation(); setProjectForm(null); return; }
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [showGoalsDashboard, goalForm, projectForm, showAddTask, setShowGoalsDashboard]);
+  }, [showGoalsDashboard, goalForm, projectForm]);
 
   if (!showGoalsDashboard) return null;
 

@@ -2031,6 +2031,7 @@ const DayPlanner = () => {
     showMobileDailySummary, setShowMobileDailySummary,
     showAddTask, setShowAddTask, setShowNewTaskDeadlinePicker,
     showRecurrencePicker, setShowRecurrencePicker,
+    showGoalsDashboard, setShowGoalsDashboard,
   });
 
   useKeyboardShortcuts({

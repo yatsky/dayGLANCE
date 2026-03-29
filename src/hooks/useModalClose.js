@@ -22,6 +22,7 @@ export default function useModalClose({
   showMobileDailySummary, setShowMobileDailySummary,
   showAddTask, setShowAddTask, setShowNewTaskDeadlinePicker,
   showRecurrencePicker, setShowRecurrencePicker,
+  showGoalsDashboard, setShowGoalsDashboard,
 }) {
   useEffect(() => {
     const handleEscape = (e) => {
@@ -135,9 +136,14 @@ export default function useModalClose({
         }
         return;
       }
+      if (showGoalsDashboard) {
+        e.preventDefault();
+        setShowGoalsDashboard(false);
+        return;
+      }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [taskContextMenu, timelineContextMenu, quickAddFrameModal, frameContextMenu, frameAdjustModal, frameScheduleModal, showFramesModal, showSpotlight, showHelpModal, showShortcutHelp, editingRecurrenceTaskId, showMonthView, showAutoBackupManager, showBackupMenu, showVoiceInput, showSettings, showRemindersSettings, showWeeklyReview, showMobileDailySummary, showAddTask, showRecurrencePicker]);
+  }, [taskContextMenu, timelineContextMenu, quickAddFrameModal, frameContextMenu, frameAdjustModal, frameScheduleModal, showFramesModal, showSpotlight, showHelpModal, showShortcutHelp, editingRecurrenceTaskId, showMonthView, showAutoBackupManager, showBackupMenu, showVoiceInput, showSettings, showRemindersSettings, showWeeklyReview, showMobileDailySummary, showAddTask, showRecurrencePicker, showGoalsDashboard]);
 }

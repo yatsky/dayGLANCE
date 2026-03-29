@@ -43,7 +43,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
     goals,
     deleteProject,
     openMobileEditTask,
-    darkMode,
+    darkMode, isMobile,
     borderClass, textPrimary, textSecondary, hoverBg,
   } = useDayPlannerCtx();
 
@@ -214,7 +214,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
       ref={ref}
       className={`flex flex-col rounded-xl border overflow-hidden ${
         darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-stone-200'
-      } w-full`}
+      } ${isMobile ? 'w-full' : 'min-w-[180px] max-w-[240px] w-full'}`}
     >
       {/* Goal color bar */}
       {goalHex && (

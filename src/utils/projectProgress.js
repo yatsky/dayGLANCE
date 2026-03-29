@@ -52,14 +52,22 @@ export function getProjectTotalDuration(projectId, allTasks) {
 
 /**
  * Returns whether a project is stalled:
+ *   - project is at least 7 days old (grace period for new projects), AND
  *   - has at least one incomplete task, AND
  *   - no task has completedAt within the last 7 days
  *
  * @param {string} projectId
  * @param {Array} allTasks
+ * @param {Object} project - the project object (needs createdAt)
  * @returns {boolean}
  */
-export function isProjectStalled(projectId, allTasks) {
+export function isProjectStalled(projectId, allTasks, project) {
+  // Grace period: don't flag projects created within the last 7 days
+  if (project?.createdAt) {
+    const ageMs = Date.now() - new Date(project.createdAt).getTime();
+    if (ageMs < 7 * 24 * 60 * 60 * 1000) return false;
+  }
+
   const projectTasks = allTasks.filter(
     t => t.projectId === projectId && !t.archived
   );

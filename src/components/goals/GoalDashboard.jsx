@@ -1,0 +1,844 @@
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  FolderOpen,
+  Plus,
+  Target,
+  X,
+} from 'lucide-react';
+import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
+import { TASK_COLORS, TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
+import GoalCard from './GoalCard.jsx';
+import ProjectCard from '../projects/ProjectCard.jsx';
+
+// ─── Tiny helpers ─────────────────────────────────────────────────────────────
+
+/** Returns the hex value for a Tailwind bg-* class, falling back to blue. */
+const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
+
+/** Returns a light background for a Tailwind bg-* class. */
+const toLightBg = (bgClass, dark) => {
+  const hex = toHex(bgClass);
+  return dark
+    ? `${hex}22` // ~13% opacity
+    : `${hex}18`; // ~9% opacity
+};
+
+// ─── Goal form (create / edit) ────────────────────────────────────────────────
+
+const GoalForm = ({ initial, onSave, onCancel }) => {
+  const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg } =
+    useDayPlannerCtx();
+
+  const [title, setTitle] = useState(initial?.title || '');
+  const [description, setDescription] = useState(initial?.description || '');
+  const [targetDate, setTargetDate] = useState(initial?.targetDate || '');
+  const [color, setColor] = useState(initial?.color || TASK_COLORS[0].class);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    onSave({ title: title.trim(), description: description.trim(), targetDate: targetDate || undefined, color });
+  };
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={`${cardBg} rounded-2xl shadow-2xl p-5 w-full max-w-sm flex flex-col gap-4`}
+      onClick={e => e.stopPropagation()}
+    >
+      <h3 className={`text-base font-semibold ${textPrimary}`}>
+        {initial ? 'Edit Goal' : 'New Goal'}
+      </h3>
+
+      {/* Title */}
+      <div className="flex flex-col gap-1">
+        <label className={`text-xs font-medium ${textSecondary}`}>Title *</label>
+        <input
+          autoFocus
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="e.g. Launch v2.0"
+          className={`px-3 py-2 text-sm rounded-lg border ${borderClass} focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            darkMode ? 'bg-gray-700 text-gray-100 placeholder-gray-500' : 'bg-white text-stone-900 placeholder-stone-400'
+          }`}
+        />
+      </div>
+
+      {/* Description */}
+      <div className="flex flex-col gap-1">
+        <label className={`text-xs font-medium ${textSecondary}`}>Description</label>
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Optional description…"
+          rows={2}
+          className={`px-3 py-2 text-sm rounded-lg border ${borderClass} focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
+            darkMode ? 'bg-gray-700 text-gray-100 placeholder-gray-500' : 'bg-white text-stone-900 placeholder-stone-400'
+          }`}
+        />
+      </div>
+
+      {/* Target date */}
+      <div className="flex flex-col gap-1">
+        <label className={`text-xs font-medium ${textSecondary}`}>Target date</label>
+        <input
+          type="date"
+          value={targetDate}
+          onChange={e => setTargetDate(e.target.value)}
+          className={`px-3 py-2 text-sm rounded-lg border ${borderClass} focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            darkMode ? 'bg-gray-700 text-gray-100' : 'bg-white text-stone-900'
+          }`}
+        />
+      </div>
+
+      {/* Color */}
+      <div className="flex flex-col gap-1.5">
+        <label className={`text-xs font-medium ${textSecondary}`}>Color</label>
+        <div className="flex gap-2 flex-wrap">
+          {TASK_COLORS.map(c => (
+            <button
+              key={c.class}
+              type="button"
+              onClick={() => setColor(c.class)}
+              className={`w-7 h-7 rounded-full ${c.class} transition-transform ${
+                color === c.class ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : 'hover:scale-110'
+              }`}
+              aria-label={c.name}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Preview */}
+      <div
+        className="h-1.5 rounded-full w-full"
+        style={{ background: toHex(color) }}
+      />
+
+      {/* Actions */}
+      <div className="flex gap-2 justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`px-3 py-1.5 text-sm rounded-lg ${hoverBg} ${textSecondary} transition-colors`}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!title.trim()}
+          className="px-4 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {initial ? 'Save' : 'Create Goal'}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// ─── Project form (create / edit) ─────────────────────────────────────────────
+
+const ProjectForm = ({ initial, goals, onSave, onCancel }) => {
+  const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg } =
+    useDayPlannerCtx();
+
+  const [title, setTitle] = useState(initial?.title || '');
+  const [description, setDescription] = useState(initial?.description || '');
+  const [goalId, setGoalId] = useState(initial?.goalId || '');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    onSave({ title: title.trim(), description: description.trim(), goalId: goalId || undefined });
+  };
+
+  const activeGoals = goals.filter(g => g.status !== 'archived');
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className={`${cardBg} rounded-2xl shadow-2xl p-5 w-full max-w-sm flex flex-col gap-4`}
+      onClick={e => e.stopPropagation()}
+    >
+      <h3 className={`text-base font-semibold ${textPrimary}`}>
+        {initial ? 'Edit Project' : 'New Project'}
+      </h3>
+
+      {/* Title */}
+      <div className="flex flex-col gap-1">
+        <label className={`text-xs font-medium ${textSecondary}`}>Title *</label>
+        <input
+          autoFocus
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="e.g. Cloud Sync"
+          className={`px-3 py-2 text-sm rounded-lg border ${borderClass} focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            darkMode ? 'bg-gray-700 text-gray-100 placeholder-gray-500' : 'bg-white text-stone-900 placeholder-stone-400'
+          }`}
+        />
+      </div>
+
+      {/* Description */}
+      <div className="flex flex-col gap-1">
+        <label className={`text-xs font-medium ${textSecondary}`}>Description</label>
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Optional description…"
+          rows={2}
+          className={`px-3 py-2 text-sm rounded-lg border ${borderClass} focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
+            darkMode ? 'bg-gray-700 text-gray-100 placeholder-gray-500' : 'bg-white text-stone-900 placeholder-stone-400'
+          }`}
+        />
+      </div>
+
+      {/* Goal */}
+      <div className="flex flex-col gap-1">
+        <label className={`text-xs font-medium ${textSecondary}`}>Goal (optional)</label>
+        <select
+          value={goalId}
+          onChange={e => setGoalId(e.target.value)}
+          className={`px-3 py-2 text-sm rounded-lg border ${borderClass} focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            darkMode ? 'bg-gray-700 text-gray-100' : 'bg-white text-stone-900'
+          }`}
+        >
+          <option value="">— No goal (standalone) —</option>
+          {activeGoals.map(g => (
+            <option key={g.id} value={g.id}>{g.title}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2 justify-end">
+        <button
+          type="button"
+          onClick={onCancel}
+          className={`px-3 py-1.5 text-sm rounded-lg ${hoverBg} ${textSecondary} transition-colors`}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={!title.trim()}
+          className="px-4 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {initial ? 'Save' : 'Create Project'}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+// ─── Overlay backdrop for inline forms ────────────────────────────────────────
+
+const FormOverlay = ({ children, onClose }) => (
+  <div
+    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+    onClick={onClose}
+  >
+    {children}
+  </div>
+);
+
+// ─── Desktop flowchart layout ─────────────────────────────────────────────────
+
+const DesktopDashboard = ({
+  activeGoals,
+  activeProjects,
+  collapsedGoals,
+  onToggleCollapse,
+  onEditGoal,
+  onEditProject,
+  onFocusClick,
+  onNewProject,
+  goalCardRefs,
+  projectCardRefs,
+}) => {
+  const { darkMode, textPrimary, textSecondary, borderClass, hoverBg } =
+    useDayPlannerCtx();
+
+  const containerRef = useRef(null);
+  const [svgLines, setSvgLines] = useState([]);
+  const [svgSize, setSvgSize] = useState({ w: 0, h: 0 });
+
+  const recalc = useCallback(() => {
+    if (!containerRef.current) return;
+    const base = containerRef.current.getBoundingClientRect();
+    const lines = [];
+
+    for (const goal of activeGoals) {
+      if (collapsedGoals.has(goal.id)) continue;
+      const goalEl = goalCardRefs.current[goal.id];
+      if (!goalEl) continue;
+      const gr = goalEl.getBoundingClientRect();
+      const gx = gr.left - base.left + gr.width / 2;
+      const gy = gr.top - base.top + gr.height;
+
+      const children = activeProjects.filter(p => p.goalId === goal.id);
+      for (const proj of children) {
+        const projEl = projectCardRefs.current[proj.id];
+        if (!projEl) continue;
+        const pr = projEl.getBoundingClientRect();
+        const px = pr.left - base.left + pr.width / 2;
+        const py = pr.top - base.top;
+        const midY = gy + (py - gy) * 0.5;
+        lines.push({
+          d: `M ${gx} ${gy} C ${gx} ${midY} ${px} ${midY} ${px} ${py}`,
+          color: toHex(goal.color || 'bg-blue-500'),
+        });
+      }
+    }
+
+    setSvgLines(lines);
+    setSvgSize({ w: base.width, h: base.height });
+  }, [activeGoals, activeProjects, collapsedGoals, goalCardRefs, projectCardRefs]);
+
+  useLayoutEffect(() => {
+    recalc();
+  }, [recalc]);
+
+  useEffect(() => {
+    const ro = new ResizeObserver(recalc);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [recalc]);
+
+  const standaloneProjects = activeProjects.filter(p => !p.goalId);
+
+  return (
+    <div ref={containerRef} className="relative min-h-[200px]">
+      {/* SVG overlay — behind cards (z-0), non-interactive */}
+      <svg
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: svgSize.w,
+          height: svgSize.h,
+          pointerEvents: 'none',
+          zIndex: 0,
+          overflow: 'visible',
+        }}
+      >
+        {svgLines.map((line, i) => (
+          <path
+            key={i}
+            d={line.d}
+            stroke={line.color}
+            strokeWidth={2}
+            strokeOpacity={0.55}
+            fill="none"
+            strokeDasharray="6 4"
+          />
+        ))}
+      </svg>
+
+      {/* Goals row */}
+      <div className="relative z-10 flex flex-wrap gap-5 mb-14">
+        {activeGoals.map(goal => {
+          const children = activeProjects.filter(p => p.goalId === goal.id);
+          return (
+            <GoalCard
+              key={goal.id}
+              ref={el => { goalCardRefs.current[goal.id] = el; }}
+              goal={goal}
+              projects={children}
+              isCollapsed={collapsedGoals.has(goal.id)}
+              onToggleCollapse={() => onToggleCollapse(goal.id)}
+              onEdit={() => onEditGoal(goal)}
+            />
+          );
+        })}
+      </div>
+
+      {/* Projects row (goal-linked) */}
+      {activeProjects.some(p => p.goalId) && (
+        <div className="relative z-10 flex flex-wrap gap-4 mb-8">
+          {activeGoals.flatMap(goal => {
+            if (collapsedGoals.has(goal.id)) return [];
+            return activeProjects
+              .filter(p => p.goalId === goal.id)
+              .map(proj => (
+                <ProjectCard
+                  key={proj.id}
+                  ref={el => { projectCardRefs.current[proj.id] = el; }}
+                  project={proj}
+                  onFocusClick={onFocusClick}
+                />
+              ));
+          })}
+        </div>
+      )}
+
+      {/* Standalone projects */}
+      {standaloneProjects.length > 0 && (
+        <div className={`relative z-10 pt-6 border-t ${borderClass}`}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className={`text-sm font-semibold ${textSecondary} uppercase tracking-wider`}>
+              Standalone Projects
+            </h3>
+            <button
+              onClick={() => onNewProject(null)}
+              className={`flex items-center gap-1 text-xs ${textSecondary} ${hoverBg} rounded-lg px-2 py-1 transition-colors`}
+            >
+              <Plus size={12} /> New
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            {standaloneProjects.map(proj => (
+              <ProjectCard
+                key={proj.id}
+                ref={el => { projectCardRefs.current[proj.id] = el; }}
+                project={proj}
+                onFocusClick={onFocusClick}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {activeGoals.length === 0 && standaloneProjects.length === 0 && (
+        <div className="relative z-10 flex flex-col items-center justify-center py-16 gap-3">
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
+            darkMode ? 'bg-gray-700' : 'bg-stone-100'
+          }`}>
+            <Target size={28} className={textSecondary} />
+          </div>
+          <p className={`text-sm font-medium ${textPrimary}`}>No goals or projects yet</p>
+          <p className={`text-xs ${textSecondary} text-center max-w-xs`}>
+            Create a goal to track long-term progress, or add a standalone project to organise tasks without a goal.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Mobile carousel layout ───────────────────────────────────────────────────
+
+const MobileDashboard = ({
+  activeGoals,
+  activeProjects,
+  onEditGoal,
+  onFocusClick,
+  onNewProject,
+}) => {
+  const {
+    darkMode, textPrimary, textSecondary, hoverBg,
+  } = useDayPlannerCtx();
+
+  const scrollRef = useRef(null);
+  const [page, setPage] = useState(0);
+
+  // Pages: one per goal + one for standalone projects (always shown if any, or if no goals)
+  const standaloneProjects = activeProjects.filter(p => !p.goalId);
+  const pages = [
+    ...activeGoals.map(g => ({ type: 'goal', goal: g })),
+    { type: 'standalone' },
+  ];
+  const totalPages = pages.length;
+
+  const goToPage = (idx) => {
+    scrollRef.current?.scrollTo({
+      left: idx * scrollRef.current.clientWidth,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Carousel */}
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 flex overflow-x-auto overflow-y-hidden"
+        style={{
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+        }}
+        onScroll={e => {
+          const p = Math.round(e.target.scrollLeft / e.target.clientWidth);
+          if (p !== page) setPage(p);
+        }}
+      >
+        {pages.map((pg, idx) => {
+          if (pg.type === 'goal') {
+            const goal = pg.goal;
+            const goalColor = goal.color || 'bg-blue-500';
+            const goalHex = toHex(goalColor);
+            const children = activeProjects.filter(p => p.goalId === goal.id);
+            return (
+              <div
+                key={goal.id}
+                className="flex-shrink-0 w-full h-full overflow-y-auto px-4 pb-4"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                {/* Goal header card */}
+                <div
+                  className="rounded-xl p-4 mb-4 mt-2"
+                  style={{ background: toLightBg(goalColor, darkMode), borderLeft: `4px solid ${goalHex}` }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex flex-col gap-1 flex-1 min-w-0">
+                      <span
+                        className="text-base font-bold leading-tight"
+                        style={{ color: goalHex }}
+                      >
+                        {goal.title}
+                      </span>
+                      {goal.description && (
+                        <p className={`text-xs ${textSecondary} leading-snug`}>
+                          {goal.description}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => onEditGoal(goal)}
+                      className={`flex-shrink-0 text-xs ${textSecondary} ${hoverBg} px-2 py-1 rounded-lg`}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                  {/* Days remaining */}
+                  {goal.targetDate && (() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const diff = Math.ceil(
+                      (new Date(goal.targetDate + 'T00:00:00') - today) / 86400000
+                    );
+                    const label = diff === 0 ? 'Due today' : diff < 0 ? `${Math.abs(diff)}d overdue` : `${diff}d left`;
+                    const urgent = diff <= 7;
+                    return (
+                      <p className={`text-xs mt-2 font-medium ${urgent ? 'text-amber-500' : textSecondary}`}>
+                        {label}
+                      </p>
+                    );
+                  })()}
+                  {/* Progress bar */}
+                  <div className={`mt-3 w-full h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-white/60'} overflow-hidden`}>
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `0%`, background: goalHex }}
+                    />
+                  </div>
+                </div>
+
+                {/* Child project cards */}
+                {children.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 py-8">
+                    <FolderOpen size={24} className={textSecondary} />
+                    <p className={`text-sm ${textSecondary}`}>No projects yet</p>
+                    <button
+                      onClick={() => onNewProject(goal.id)}
+                      className="flex items-center gap-1.5 text-sm text-blue-500 hover:text-blue-600"
+                    >
+                      <Plus size={14} /> Add project
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {children.map(proj => (
+                      <ProjectCard
+                        key={proj.id}
+                        project={proj}
+                        onFocusClick={onFocusClick}
+                      />
+                    ))}
+                    <button
+                      onClick={() => onNewProject(goal.id)}
+                      className={`flex items-center gap-1.5 text-sm ${textSecondary} ${hoverBg} rounded-xl px-3 py-2.5 transition-colors`}
+                    >
+                      <Plus size={14} /> Add project to this goal
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          // Standalone page
+          return (
+            <div
+              key="standalone"
+              className="flex-shrink-0 w-full h-full overflow-y-auto px-4 pb-4"
+              style={{ scrollSnapAlign: 'start' }}
+            >
+              <div className="mt-2 mb-4">
+                <span className={`text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>
+                  Standalone Projects
+                </span>
+              </div>
+
+              {standaloneProjects.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-8">
+                  <FolderOpen size={24} className={textSecondary} />
+                  <p className={`text-sm ${textSecondary}`}>No standalone projects</p>
+                  <button
+                    onClick={() => onNewProject(null)}
+                    className="flex items-center gap-1.5 text-sm text-blue-500 hover:text-blue-600"
+                  >
+                    <Plus size={14} /> Add project
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {standaloneProjects.map(proj => (
+                    <ProjectCard
+                      key={proj.id}
+                      project={proj}
+                      onFocusClick={onFocusClick}
+                    />
+                  ))}
+                  <button
+                    onClick={() => onNewProject(null)}
+                    className={`flex items-center gap-1.5 text-sm ${textSecondary} ${hoverBg} rounded-xl px-3 py-2.5 transition-colors`}
+                  >
+                    <Plus size={14} /> Add standalone project
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Dot indicators + page navigation */}
+      <div className="flex items-center justify-center gap-3 py-3 flex-shrink-0">
+        <button
+          onClick={() => goToPage(Math.max(0, page - 1))}
+          disabled={page === 0}
+          className={`p-1 rounded-full ${hoverBg} disabled:opacity-30 transition-colors`}
+        >
+          <ChevronLeft size={16} className={textSecondary} />
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          {pages.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goToPage(i)}
+              className={`rounded-full transition-all ${
+                i === page
+                  ? 'w-4 h-2.5 bg-blue-500'
+                  : `w-2.5 h-2.5 ${darkMode ? 'bg-gray-600' : 'bg-stone-300'}`
+              }`}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={() => goToPage(Math.min(totalPages - 1, page + 1))}
+          disabled={page === totalPages - 1}
+          className={`p-1 rounded-full ${hoverBg} disabled:opacity-30 transition-colors`}
+        >
+          <ChevronRight size={16} className={textSecondary} />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── GoalDashboard modal ──────────────────────────────────────────────────────
+
+const GoalDashboard = () => {
+  const {
+    showGoalsDashboard, setShowGoalsDashboard,
+    goals, projects,
+    addGoal, updateGoal,
+    addProject, updateProject,
+    setShowFocusMode,
+    isMobile,
+    darkMode,
+    cardBg, borderClass, textPrimary, textSecondary, hoverBg,
+  } = useDayPlannerCtx();
+
+  const [collapsedGoals, setCollapsedGoals] = useState(new Set());
+  const [goalForm, setGoalForm] = useState(null); // null | { editing: Goal|null, defaultGoalId: string|null }
+  const [projectForm, setProjectForm] = useState(null); // null | { editing: Project|null, defaultGoalId: string|null }
+
+  // Refs for SVG line calculation (desktop only)
+  const goalCardRefs = useRef({});
+  const projectCardRefs = useRef({});
+
+  const activeGoals = goals.filter(g => g.status !== 'archived');
+  const activeProjects = projects.filter(p => p.status !== 'archived');
+
+  const handleToggleCollapse = (goalId) => {
+    setCollapsedGoals(prev => {
+      const next = new Set(prev);
+      next.has(goalId) ? next.delete(goalId) : next.add(goalId);
+      return next;
+    });
+  };
+
+  const handleSaveGoal = (fields) => {
+    if (goalForm.editing) {
+      updateGoal(goalForm.editing.id, fields);
+    } else {
+      addGoal(fields);
+    }
+    setGoalForm(null);
+  };
+
+  const handleSaveProject = (fields) => {
+    if (projectForm.editing) {
+      updateProject(projectForm.editing.id, fields);
+    } else {
+      addProject(fields);
+    }
+    setProjectForm(null);
+  };
+
+  const handleFocusClick = useCallback(() => {
+    // PR 5 will add project-scoped pre-population; for now just open focus mode
+    setShowGoalsDashboard(false);
+    setShowFocusMode(true);
+  }, [setShowGoalsDashboard, setShowFocusMode]);
+
+  // Escape key closes dashboard
+  useEffect(() => {
+    if (!showGoalsDashboard) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (goalForm) { setGoalForm(null); return; }
+        if (projectForm) { setProjectForm(null); return; }
+        setShowGoalsDashboard(false);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [showGoalsDashboard, goalForm, projectForm, setShowGoalsDashboard]);
+
+  if (!showGoalsDashboard) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto"
+        style={isMobile ? { padding: 0 } : { padding: '24px 16px' }}
+        onClick={() => setShowGoalsDashboard(false)}
+      >
+        <div className="absolute inset-0 bg-black/50" />
+
+        {/* Panel */}
+        <div
+          className={`relative ${cardBg} w-full flex flex-col ${
+            isMobile
+              ? 'min-h-screen'
+              : 'rounded-2xl shadow-2xl max-w-5xl max-h-[85vh]'
+          }`}
+          style={isMobile ? undefined : { overflow: 'hidden' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div
+            className={`flex-shrink-0 flex items-center justify-between px-5 py-4 border-b ${borderClass} ${
+              isMobile ? 'sticky top-0 z-10' : ''
+            } ${cardBg}`}
+          >
+            <div className="flex items-center gap-3">
+              <Target size={20} className="text-blue-500" />
+              <h2 className={`text-base font-semibold ${textPrimary}`}>
+                Goals &amp; Projects
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setGoalForm({ editing: null })}
+                className="flex items-center gap-1.5 text-sm text-blue-500 hover:text-blue-600 font-medium px-2 py-1 rounded-lg transition-colors"
+              >
+                <Plus size={15} /> Goal
+              </button>
+              <button
+                onClick={() => setProjectForm({ editing: null, defaultGoalId: null })}
+                className={`flex items-center gap-1.5 text-sm ${textSecondary} ${hoverBg} font-medium px-2 py-1 rounded-lg transition-colors`}
+              >
+                <Plus size={15} /> Project
+              </button>
+              <button
+                onClick={() => setShowGoalsDashboard(false)}
+                className={`p-1.5 rounded-lg ${
+                  darkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-stone-100 hover:bg-stone-200'
+                } transition-colors`}
+                aria-label="Close"
+              >
+                <X size={16} className={textSecondary} />
+              </button>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div
+            className={`flex-1 ${isMobile ? 'overflow-y-auto' : 'overflow-y-auto'} ${
+              isMobile ? '' : 'overflow-x-hidden'
+            }`}
+          >
+            {isMobile ? (
+              <div className="h-full" style={{ minHeight: 'calc(100vh - 64px)' }}>
+                <MobileDashboard
+                  activeGoals={activeGoals}
+                  activeProjects={activeProjects}
+                  onEditGoal={goal => setGoalForm({ editing: goal })}
+                  onFocusClick={handleFocusClick}
+                  onNewProject={defaultGoalId => setProjectForm({ editing: null, defaultGoalId })}
+                />
+              </div>
+            ) : (
+              <div className="p-6">
+                <DesktopDashboard
+                  activeGoals={activeGoals}
+                  activeProjects={activeProjects}
+                  collapsedGoals={collapsedGoals}
+                  onToggleCollapse={handleToggleCollapse}
+                  onEditGoal={goal => setGoalForm({ editing: goal })}
+                  onEditProject={proj => setProjectForm({ editing: proj, defaultGoalId: null })}
+                  onFocusClick={handleFocusClick}
+                  onNewProject={defaultGoalId => setProjectForm({ editing: null, defaultGoalId })}
+                  goalCardRefs={goalCardRefs}
+                  projectCardRefs={projectCardRefs}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Goal create/edit form overlay */}
+      {goalForm && (
+        <FormOverlay onClose={() => setGoalForm(null)}>
+          <GoalForm
+            initial={goalForm.editing}
+            onSave={handleSaveGoal}
+            onCancel={() => setGoalForm(null)}
+          />
+        </FormOverlay>
+      )}
+
+      {/* Project create/edit form overlay */}
+      {projectForm && (
+        <FormOverlay onClose={() => setProjectForm(null)}>
+          <ProjectForm
+            initial={projectForm.editing}
+            goals={goals}
+            onSave={handleSaveProject}
+            onCancel={() => setProjectForm(null)}
+          />
+        </FormOverlay>
+      )}
+    </>
+  );
+};
+
+export default GoalDashboard;

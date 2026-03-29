@@ -32,6 +32,7 @@ import SettingsModal from './components/SettingsModal.jsx';
 import RemindersSettingsModal from './components/RemindersSettingsModal.jsx';
 import VoiceInputModal from './components/VoiceInputModal.jsx';
 import WeeklyReviewModal from './components/WeeklyReviewModal.jsx';
+import GoalDashboard from './components/goals/GoalDashboard.jsx';
 import WeeklyReviewReminderCard from './components/WeeklyReviewReminderCard.jsx';
 import IncompleteTasksModal from './components/IncompleteTasksModal.jsx';
 import BackupMenuModal from './components/BackupMenuModal.jsx';
@@ -7871,6 +7872,9 @@ const DayPlanner = () => {
 
       {/* Frame Manually Schedule Modal */}
       {frameScheduleModal && <FrameScheduleModal />}
+
+      {/* Goals & Projects Dashboard */}
+      <GoalDashboard />
 
       {/* Weekly Review Modal */}
       <WeeklyReviewModal />

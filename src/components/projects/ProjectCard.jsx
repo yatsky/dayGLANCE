@@ -123,8 +123,8 @@ const ProjectCard = forwardRef(({ project, onFocusClick }, ref) => {
       {/* Progress bar */}
       <ProjectProgress progress={progress} compact />
 
-      {/* Project Focus button */}
-      <button
+      {/* Project Focus button — only when there are incomplete tasks */}
+      {projectTasks.some(t => !t.completed) && <button
         onClick={() => onFocusClick?.(project)}
         className={`flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-medium transition-colors ${
           darkMode
@@ -134,7 +134,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick }, ref) => {
       >
         <Target size={12} />
         Project Focus
-      </button>
+      </button>}
 
       {/* Unscheduled tasks for this project */}
       {projectUnscheduled.length > 0 && (

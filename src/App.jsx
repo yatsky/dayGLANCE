@@ -657,6 +657,7 @@ const DayPlanner = () => {
     selectedTags,
     inboxPriorityFilter,
     hideCompletedInbox,
+    goalsProjectsEnabled,
   });
   const { taskWidths, setTaskRef, getConflictingTasks, calculateConflictPosition, wouldExceedMaxColumns } = useTaskDerived({
     tasks,

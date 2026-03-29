@@ -1,5 +1,5 @@
 import React, { forwardRef, useState } from 'react';
-import { AlertTriangle, CheckSquare, Plus, X, Zap } from 'lucide-react';
+import { AlertTriangle, CheckSquare, Plus, Trash2, X, Zap } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { calculateProjectProgress, isProjectStalled } from '../../utils/projectProgress.js';
 import { TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
@@ -23,9 +23,15 @@ const ProjectCard = forwardRef(({ project, onFocusClick }, ref) => {
     tasks,
     unscheduledTasks, setUnscheduledTasks,
     goals,
+    deleteProject,
     darkMode,
     borderClass, textPrimary, textSecondary, hoverBg,
   } = useDayPlannerCtx();
+
+  const handleDelete = () => {
+    if (!window.confirm(`Delete "${project.title}"? Tasks linked to this project will remain but won't be grouped.`)) return;
+    deleteProject(project.id);
+  };
 
   const parentGoal = project.goalId ? goals.find(g => g.id === project.goalId) : null;
   const goalHex = parentGoal ? toHex(parentGoal.color || 'bg-blue-500') : null;
@@ -78,23 +84,34 @@ const ProjectCard = forwardRef(({ project, onFocusClick }, ref) => {
       )}
       {/* Card body */}
       <div className="flex flex-col gap-2 p-3">
-      {/* Header: title + stalled badge */}
+      {/* Header: title + stalled badge + delete */}
       <div className="flex items-start justify-between gap-2">
-        <span className={`text-sm font-semibold ${textPrimary} leading-tight`}>
+        <span className={`text-sm font-semibold ${textPrimary} leading-tight flex-1 min-w-0`}>
           {project.title}
         </span>
-        {stalled && (
-          <span
-            className={`flex-shrink-0 flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
-              darkMode
-                ? 'bg-yellow-900/50 text-yellow-400'
-                : 'bg-yellow-50 text-yellow-600'
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {stalled && (
+            <span
+              className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
+                darkMode
+                  ? 'bg-yellow-900/50 text-yellow-400'
+                  : 'bg-yellow-50 text-yellow-600'
+              }`}
+            >
+              <AlertTriangle size={10} />
+              Stalled
+            </span>
+          )}
+          <button
+            onClick={handleDelete}
+            className={`p-1 rounded-lg transition-colors ${
+              darkMode ? 'text-gray-600 hover:text-red-400 hover:bg-red-900/20' : 'text-stone-300 hover:text-red-500 hover:bg-red-50'
             }`}
+            aria-label="Delete project"
           >
-            <AlertTriangle size={10} />
-            Stalled
-          </span>
-        )}
+            <Trash2 size={12} />
+          </button>
+        </div>
       </div>
 
       {/* Task count */}

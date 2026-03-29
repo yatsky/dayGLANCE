@@ -13,7 +13,6 @@ import {
   FolderOpen,
   GitBranch,
   Layers,
-  Plus,
   X,
 } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
@@ -70,7 +69,7 @@ function findDefaultActiveIdx(sortedGoals) {
 
 // ─── Goal form (create / edit) ────────────────────────────────────────────────
 
-const GoalForm = ({ initial, onSave, onCancel }) => {
+const GoalForm = ({ initial, onSave, onCancel, onDelete }) => {
   const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg } =
     useDayPlannerCtx();
 
@@ -161,21 +160,36 @@ const GoalForm = ({ initial, onSave, onCancel }) => {
       />
 
       {/* Actions */}
-      <div className="flex gap-2 justify-end">
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`px-3 py-1.5 text-sm rounded-lg ${hoverBg} ${textSecondary} transition-colors`}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={!title.trim()}
-          className="px-4 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {initial ? 'Save' : 'Create Goal'}
-        </button>
+      <div className="flex gap-2 items-center">
+        {initial && onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
+              darkMode
+                ? 'text-red-400 hover:bg-red-900/20'
+                : 'text-red-500 hover:bg-red-50'
+            }`}
+          >
+            Delete Goal
+          </button>
+        )}
+        <div className="flex gap-2 ml-auto">
+          <button
+            type="button"
+            onClick={onCancel}
+            className={`px-3 py-1.5 text-sm rounded-lg ${hoverBg} ${textSecondary} transition-colors`}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!title.trim()}
+            className="px-4 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {initial ? 'Save' : 'Create Goal'}
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -501,8 +515,6 @@ const DesktopDashboard = ({
                 ref={el => { goalCardRefs.current[activeGoal.id] = el; }}
                 goal={activeGoal}
                 projects={goalProjects}
-                isCollapsed={false}
-                onToggleCollapse={() => {}}
                 onEdit={() => onEditGoal(activeGoal)}
               />
             </div>
@@ -617,15 +629,27 @@ const MobileDashboard = ({
   } = useDayPlannerCtx();
 
   const scrollRef = useRef(null);
-  const [page, setPage] = useState(0);
 
-  // Pages: one per goal + one for standalone projects (always shown if any, or if no goals)
+  // Same sort order as desktop: completed/overdue → left, active/upcoming → right
+  const sortedGoals = useMemo(() => sortGoalsForCarousel(activeGoals), [activeGoals]);
+  const defaultPageIdx = useMemo(() => findDefaultActiveIdx(sortedGoals), [sortedGoals]);
+  const [page, setPage] = useState(defaultPageIdx);
+
   const standaloneProjects = activeProjects.filter(p => !p.goalId);
   const pages = [
-    ...activeGoals.map(g => ({ type: 'goal', goal: g })),
+    ...sortedGoals.map(g => ({ type: 'goal', goal: g })),
     { type: 'standalone' },
   ];
   const totalPages = pages.length;
+
+  // Scroll to the main goal on mount (instant, no animation)
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || defaultPageIdx === 0) return;
+    requestAnimationFrame(() => {
+      el.scrollLeft = defaultPageIdx * el.clientWidth;
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const goToPage = (idx) => {
     scrollRef.current?.scrollTo({
@@ -636,6 +660,39 @@ const MobileDashboard = ({
 
   return (
     <div className="flex flex-col h-full">
+      {/* Dot indicators + page navigation — at top */}
+      <div className="flex items-center justify-center gap-3 py-3 flex-shrink-0">
+        <button
+          onClick={() => goToPage(Math.max(0, page - 1))}
+          disabled={page === 0}
+          className={`p-1 rounded-full ${hoverBg} disabled:opacity-30 transition-colors`}
+        >
+          <ChevronLeft size={16} className={textSecondary} />
+        </button>
+
+        <div className="flex items-center gap-1.5">
+          {pages.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => goToPage(i)}
+              className={`rounded-full transition-all ${
+                i === page
+                  ? 'w-4 h-2.5 bg-blue-500'
+                  : `w-2.5 h-2.5 ${darkMode ? 'bg-gray-600' : 'bg-stone-300'}`
+              }`}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={() => goToPage(Math.min(totalPages - 1, page + 1))}
+          disabled={page === totalPages - 1}
+          className={`p-1 rounded-full ${hoverBg} disabled:opacity-30 transition-colors`}
+        >
+          <ChevronRight size={16} className={textSecondary} />
+        </button>
+      </div>
+
       {/* Carousel */}
       <div
         ref={scrollRef}
@@ -651,7 +708,7 @@ const MobileDashboard = ({
           if (p !== page) setPage(p);
         }}
       >
-        {pages.map((pg, idx) => {
+        {pages.map((pg) => {
           if (pg.type === 'goal') {
             const goal = pg.goal;
             const goalColor = goal.color || 'bg-blue-500';
@@ -720,9 +777,9 @@ const MobileDashboard = ({
                     <p className={`text-sm ${textSecondary}`}>No projects yet</p>
                     <button
                       onClick={() => onNewProject(goal.id)}
-                      className="flex items-center gap-1.5 text-sm text-blue-500 hover:text-blue-600"
+                      className="flex items-center gap-1.5 text-sm text-emerald-500 hover:text-emerald-600"
                     >
-                      <Plus size={14} /> Add project
+                      <Layers size={14} /> Add project
                     </button>
                   </div>
                 ) : (
@@ -738,7 +795,7 @@ const MobileDashboard = ({
                       onClick={() => onNewProject(goal.id)}
                       className={`flex items-center gap-1.5 text-sm ${textSecondary} ${hoverBg} rounded-xl px-3 py-2.5 transition-colors`}
                     >
-                      <Plus size={14} /> Add project to this goal
+                      <Layers size={14} /> Add project to this goal
                     </button>
                   </div>
                 )}
@@ -765,9 +822,9 @@ const MobileDashboard = ({
                   <p className={`text-sm ${textSecondary}`}>No standalone projects</p>
                   <button
                     onClick={() => onNewProject(null)}
-                    className="flex items-center gap-1.5 text-sm text-blue-500 hover:text-blue-600"
+                    className="flex items-center gap-1.5 text-sm text-emerald-500 hover:text-emerald-600"
                   >
-                    <Plus size={14} /> Add project
+                    <Layers size={14} /> Add Standalone Project
                   </button>
                 </div>
               ) : (
@@ -783,46 +840,13 @@ const MobileDashboard = ({
                     onClick={() => onNewProject(null)}
                     className={`flex items-center gap-1.5 text-sm ${textSecondary} ${hoverBg} rounded-xl px-3 py-2.5 transition-colors`}
                   >
-                    <Plus size={14} /> Add standalone project
+                    <Layers size={14} /> Add Standalone Project
                   </button>
                 </div>
               )}
             </div>
           );
         })}
-      </div>
-
-      {/* Dot indicators + page navigation */}
-      <div className="flex items-center justify-center gap-3 py-3 flex-shrink-0">
-        <button
-          onClick={() => goToPage(Math.max(0, page - 1))}
-          disabled={page === 0}
-          className={`p-1 rounded-full ${hoverBg} disabled:opacity-30 transition-colors`}
-        >
-          <ChevronLeft size={16} className={textSecondary} />
-        </button>
-
-        <div className="flex items-center gap-1.5">
-          {pages.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goToPage(i)}
-              className={`rounded-full transition-all ${
-                i === page
-                  ? 'w-4 h-2.5 bg-blue-500'
-                  : `w-2.5 h-2.5 ${darkMode ? 'bg-gray-600' : 'bg-stone-300'}`
-              }`}
-            />
-          ))}
-        </div>
-
-        <button
-          onClick={() => goToPage(Math.min(totalPages - 1, page + 1))}
-          disabled={page === totalPages - 1}
-          className={`p-1 rounded-full ${hoverBg} disabled:opacity-30 transition-colors`}
-        >
-          <ChevronRight size={16} className={textSecondary} />
-        </button>
       </div>
     </div>
   );
@@ -834,7 +858,7 @@ const GoalDashboard = () => {
   const {
     showGoalsDashboard, setShowGoalsDashboard,
     goals, projects,
-    addGoal, updateGoal,
+    addGoal, updateGoal, deleteGoal,
     addProject, updateProject,
     setShowFocusMode,
     isMobile,
@@ -858,6 +882,16 @@ const GoalDashboard = () => {
     } else {
       addGoal(fields);
     }
+    setGoalForm(null);
+  };
+
+  const handleDeleteGoal = (goalId) => {
+    if (!window.confirm('Delete this goal? Its projects will become standalone.')) return;
+    // Detach child projects so they become standalone instead of orphaned
+    projects
+      .filter(p => p.goalId === goalId)
+      .forEach(p => updateProject(p.id, { goalId: undefined }));
+    deleteGoal(goalId);
     setGoalForm(null);
   };
 
@@ -992,6 +1026,7 @@ const GoalDashboard = () => {
             initial={goalForm.editing}
             onSave={handleSaveGoal}
             onCancel={() => setGoalForm(null)}
+            onDelete={goalForm.editing ? () => handleDeleteGoal(goalForm.editing.id) : undefined}
           />
         </FormOverlay>
       )}

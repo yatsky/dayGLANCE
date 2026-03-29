@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { Calendar, ChevronDown, ChevronRight, Edit2 } from 'lucide-react';
+import { Calendar, Edit2 } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { calculateGoalProgress } from '../../utils/goalProgress.js';
 import GoalProgress from './GoalProgress.jsx';
@@ -21,7 +21,7 @@ import GoalProgress from './GoalProgress.jsx';
  *   onEdit           — called when the edit button is clicked
  */
 const GoalCard = forwardRef(
-  ({ goal, projects, isCollapsed, onToggleCollapse, onEdit }, ref) => {
+  ({ goal, projects, onEdit }, ref) => {
     const {
       tasks, unscheduledTasks,
       darkMode,
@@ -65,13 +65,6 @@ const GoalCard = forwardRef(
             aria-label="Edit goal"
           >
             <Edit2 size={13} />
-          </button>
-          <button
-            onClick={onToggleCollapse}
-            className="flex-shrink-0 text-white/80 hover:text-white transition-colors"
-            aria-label={isCollapsed ? 'Expand projects' : 'Collapse projects'}
-          >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
           </button>
         </div>
 

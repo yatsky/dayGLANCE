@@ -451,6 +451,23 @@ const DesktopDashboard = ({
       {/* Goal carousel */}
       {sortedGoals.length > 0 && (
         <>
+          {/* Dot indicators */}
+          {sortedGoals.length > 1 && (
+            <div className="relative z-10 flex items-center justify-center gap-1.5 mb-4">
+              {sortedGoals.map((g, i) => (
+                <button
+                  key={g.id}
+                  onClick={() => setActiveGoalIdx(i)}
+                  className={`rounded-full transition-all ${
+                    i === safeIdx
+                      ? 'w-4 h-2.5 bg-blue-500'
+                      : `w-2.5 h-2.5 ${darkMode ? 'bg-gray-600' : 'bg-stone-300'}`
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Row: [←] [prev mini] [main GoalCard] [next mini] [→] */}
           <div className="relative z-10 flex items-center gap-3 mb-10">
             {/* Prev arrow */}
@@ -515,23 +532,6 @@ const DesktopDashboard = ({
               </button>
             )}
           </div>
-
-          {/* Dot indicators */}
-          {sortedGoals.length > 1 && (
-            <div className="relative z-10 flex items-center justify-center gap-1.5 mb-8">
-              {sortedGoals.map((g, i) => (
-                <button
-                  key={g.id}
-                  onClick={() => setActiveGoalIdx(i)}
-                  className={`rounded-full transition-all ${
-                    i === safeIdx
-                      ? 'w-4 h-2.5 bg-blue-500'
-                      : `w-2.5 h-2.5 ${darkMode ? 'bg-gray-600' : 'bg-stone-300'}`
-                  }`}
-                />
-              ))}
-            </div>
-          )}
 
           {/* Projects for the active goal */}
           {goalProjects.length > 0 ? (

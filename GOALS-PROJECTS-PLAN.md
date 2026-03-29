@@ -27,7 +27,7 @@ Goal {
   description?
   targetDate?
   status          // active | completed | archived
-  color?          // for visual grouping in dashboard and focus mode
+  color?          // Tailwind bg-* class (same system as tasks)
   createdAt
   updatedAt
 }
@@ -85,28 +85,44 @@ goal progress =
 
 Goals show overall completion direction. Projects show the detailed breakdown.
 
+### Stalled indicator
+
+A project is considered stalled when:
+- It has at least one incomplete task, AND
+- No task has `completedAt` within the last 7 days
+
+---
+
+## Unscheduled Tasks & the Inbox
+
+**Unscheduled tasks with a `projectId` do NOT go to the inbox.** They live in the project card on the Goals & Projects dashboard. The inbox is for loose, unaffiliated tasks. A project-tied task already has a home.
+
+- Unscheduled task + no `projectId` → inbox (existing behavior)
+- Unscheduled task + `projectId` → project card on dashboard
+- When the feature is toggled off, the inbox exclusion is lifted — project-tied unscheduled tasks reappear in the inbox so nothing is hidden from the user
+
 ---
 
 ## File Structure
 
-Goals and projects are distinct enough in data shape, progress logic, and UI surface to live in separate directories. Progress utilities are self-contained and referenced from multiple places (dashboard, focus mode, weekly review), so they live in `/utils` rather than inside any component.
-
 ```
-/components/goals/
-  GoalCard.jsx          // collapsible card with color, target date, days remaining, progress bar
-  GoalDashboard.jsx     // parent composer — renders goal cards with nested project cards
-  GoalProgress.jsx      // progress bar UI for a single goal
+src/components/goals/
+  GoalCard.jsx          // Flowchart node: color, title, target date, days remaining,
+                        // progress bar, collapse toggle, SVG line anchor points
+  GoalDashboard.jsx     // Top-level composer: flowchart (desktop) + carousel (mobile)
+  GoalProgress.jsx      // Progress bar UI for a single goal
 
-/components/projects/
-  ProjectCard.jsx       // mini progress bar, task counts, stalled indicator, quick-add
-  ProjectProgress.jsx   // progress bar UI for a single project
+src/components/projects/
+  ProjectCard.jsx       // Flowchart node: progress bar, task counts, stalled badge,
+                        // Project Focus button, quick-add task inline
+  ProjectProgress.jsx   // Progress bar UI for a single project
 
-/utils/
-  goalProgress.js       // weighted average of progress across child projects
-  projectProgress.js    // duration-weighted task completion for a single project
+src/utils/
+  goalProgress.js       // Weighted average of progress across child projects
+  projectProgress.js    // Duration-weighted task completion for a single project
 ```
 
-`GoalDashboard.jsx` is the single entry point rendered from the nav. It composes both goal and project components but owns no progress logic itself — that stays in the utils.
+`GoalDashboard.jsx` owns layout only. All progress logic lives in utils, referenced by cards and eventually by Weekly Review.
 
 ---
 
@@ -114,28 +130,50 @@ Goals and projects are distinct enough in data shape, progress logic, and UI sur
 
 ### Day view
 
-Unchanged. Tasks still show on the timeline. A small project dot/chip appears next to the task title so the user knows what it belongs to. Tapping the chip filters to that project (effectively triggering focus mode for that project).
+Unchanged. Tasks still show on the timeline. A small project chip appears next to the task title so the user knows what it belongs to. Tapping the chip filters the day view to show only tasks with that `projectId`. Tapping again (or changing date) clears the filter. Chips are hidden when the feature is toggled off.
 
 ### Task creation / inbox
 
-Tasks can optionally be assigned to a project via a dropdown when created. Unassigned tasks stay in the inbox as today.
+Tasks can optionally be assigned to a project via a dropdown in both the desktop and mobile new task modals. The dropdown shows only active projects, grouped by goal where applicable. Unassigned tasks stay in the inbox as today. Project-assigned unscheduled tasks go to the dashboard, not the inbox.
 
 ### Goals & Projects dashboard
 
-Accessible from the nav. On desktop it opens as a modal; on mobile it is a dedicated tab.
+**Entry points:**
+- **Desktop:** Floating button in the bottom-left of the GLANCE panel
+- **Mobile:** Dedicated "Goals" tab in the tab bar (only rendered when the feature is enabled)
+- Both entry points disappear when the feature is toggled off
 
-The dashboard shows:
+**Desktop layout — Flowchart:**
+- Goals rendered as top-row cards, horizontally laid out
+- SVG overlay drawn on the dashboard container; lines connect each Goal card to its child Project cards below
+- Lines inherit the goal's color
+- Collapsing a Goal card animates its project nodes out and retracts the SVG lines
+- Standalone Projects section below the flowchart, visually separated, no connecting lines
 
-- Each goal as a collapsible card with its color, target date, and days remaining
-- Overall goal progress bar (duration-weighted, derived from child projects)
-- Nested projects with their own mini progress bars
-- Per-project task counts (completed / total)
-- Stalled project indicator (no tasks completed in 7+ days)
-- Quick-add task to project inline
+**Mobile layout — Swipe Carousel:**
+- Each Goal is a full-width "page"
+- Goal card at top: color, title, target date, days remaining, overall progress bar
+- Project cards stacked below it, scrollable vertically within the page
+- Final page: "Standalone Projects"
+- Dot indicators at the bottom showing current page
+- CSS scroll-snap for smooth swipe behavior (same pattern as Weekly Review carousel)
+
+**Each Project card shows:**
+- Title
+- Mini progress bar
+- Completed / total task count
+- Stalled badge (if applicable)
+- Project Focus button
+- Inline quick-add task
+- Unscheduled tasks tied to this project
 
 ### Focus Mode integration
 
-When starting a focus session, optionally scope it to a single project. The day view filters to show only tasks with that `projectId`. Session stats roll up to the project level and feed into the dashboard progress calculations. This makes Focus Mode aware of _why_ you're working, not just _what_ you're working on.
+**Existing entry point unchanged:** Focus Mode still activates when the current time is within a task and 45+ minutes of task time remain.
+
+**New "Project Focus" entry point:** Each Project card on the dashboard has a Project Focus button. Tapping it launches Focus Mode with `focusBlockTasks` pre-populated with that project's incomplete tasks for today. If no tasks are scheduled today for that project, the user is prompted: "No tasks scheduled today for this project — add one or pick a date."
+
+Focus session logs are tagged with `projectId` so future enhancements can surface per-project focus time.
 
 ### Weekly Review / AI summary integration
 
@@ -146,9 +184,24 @@ The AI summary gains goal and project context:
 - Nudges for stalled projects (no tasks completed in 7+ days)
 - Progress trend: is a goal accelerating or stalling compared to last week?
 
+### Mobile navigation
+
+The tab bar currently supports up to six tabs when all features are enabled: `dayglance | timeline | inbox | routines | frames | settings`. Adding Goals would exceed a reasonable limit.
+
+**Resolution:** Frames is moved from the tab bar into the Settings modal on mobile. Desktop is unaffected (Frames remains accessible via its timeline FAB). The tab bar becomes: `dayglance | timeline | inbox | routines | goals | settings` — with Goals and Routines tabs only appearing when their respective features are enabled.
+
+### Feature toggle
+
+Located in Settings alongside Habits and Routines. When toggled off:
+- Goals tab hidden from mobile tab bar
+- GLANCE panel button hidden on desktop
+- Project chips hidden from day view tasks
+- Project-assigned unscheduled tasks reappear in inbox
+- All data is preserved exactly as-is — toggling back on restores full state
+
 ### Existing stats
 
-Weekly and all-time stats can be sliced by project or goal, showing duration logged and tasks completed within each context.
+Weekly and all-time stats can be sliced by project or goal in a future enhancement. Phase 1 ensures the data (`projectId` on tasks, focus log tagging) is in place to support this.
 
 ---
 
@@ -178,11 +231,12 @@ If a user wants TaskNotes (Obsidian plugin) or CalDAV as the source of truth for
 ## UX Flow Example
 
 1. User creates Goal: "Launch dayGLANCE v2.0" with a June target date
-2. Adds Projects: "Cloud Sync", "iOS App", "Docs Rewrite" (no goalId required on any of them, but in this case all three are linked to the goal)
+2. Adds Projects: "Cloud Sync", "iOS App", "Docs Rewrite" (all linked to the goal)
 3. When adding daily tasks, they optionally pick a project from a dropdown
-4. Goals dashboard shows bird's-eye progress across all three projects
-5. User triggers Focus Mode for "Cloud Sync" — day view filters to only those tasks
-6. Weekly Review says "Cloud Sync is 70% done, 'iOS App' project has stalled — no tasks completed in 8 days"
+4. Unscheduled tasks tied to a project appear in that project's card on the dashboard, not the inbox
+5. Goals dashboard shows bird's-eye progress across all three projects in a flowchart layout
+6. User hits "Project Focus" on "Cloud Sync" — Focus Mode launches with that project's tasks
+7. Weekly Review says "Cloud Sync is 70% done, 'iOS App' has stalled — no tasks completed in 8 days"
 
 ---
 
@@ -195,3 +249,121 @@ This feature is targeted for **v1.4.0** — the first feature release on the ref
 ## Why It Works for dayGLANCE
 
 The app's strength is the _daily_ view — this feature adds a _why_ layer without changing the daily workflow. You still plan your day the same way; you just optionally tag tasks with a project so the app can tell you whether you're making progress on bigger goals over weeks and months. The toggle means it's invisible to users who don't want it and powerful for those who do.
+
+---
+
+---
+
+# Build Plan
+
+## State Additions (App.jsx)
+
+Following the existing pattern exactly:
+
+```javascript
+const [goals, setGoals] = useState([])
+const [projects, setProjects] = useState([])
+const [showGoalsDashboard, setShowGoalsDashboard] = useState(false)
+const [goalsProjectsEnabled, setGoalsProjectsEnabled] = useState(false)
+```
+
+New localStorage keys:
+- `day-planner-goals`
+- `day-planner-projects`
+- `day-planner-goals-projects-enabled`
+
+All three included in WebDAV sync payload and backup/restore from day one.
+
+CRUD functions for goals and projects follow the same pattern as task CRUD already in `App.jsx`.
+
+---
+
+## PR Breakdown
+
+All PRs branch from `goals-projects` and merge back into `goals-projects`. Once all PRs are merged and the feature is stable, `goals-projects` merges into `main` as v1.4.0.
+
+---
+
+### PR 1 — Data & Logic Foundation
+*Everything behind the scenes. No UI. Independently testable.*
+
+- [ ] Add `goals` and `projects` state to `App.jsx`
+- [ ] localStorage read/write for `day-planner-goals` and `day-planner-projects`
+- [ ] Add `goalsProjectsEnabled` setting + `day-planner-goals-projects-enabled` persistence
+- [ ] Include goals and projects in WebDAV sync payload (`mergeSync.js`)
+- [ ] Include goals and projects in backup/restore payload
+- [ ] Add `projectId?` to task shape (no migration — undefined on existing tasks)
+- [ ] Implement `projectProgress.js` — duration-weighted completion per project
+- [ ] Implement `goalProgress.js` — weighted average across child projects
+- [ ] Wire goals and projects into `DayPlannerContext`
+
+---
+
+### PR 2 — Dashboard UI
+*All visual components and modal wiring. Depends on PR 1.*
+
+- [ ] `GoalProgress.jsx` — progress bar UI for a single goal
+- [ ] `ProjectProgress.jsx` — progress bar UI for a single project
+- [ ] `ProjectCard.jsx` — progress bar, task counts, stalled badge, Project Focus button (button wired; scoping built in PR 5), quick-add task inline, unscheduled project tasks list
+- [ ] `GoalCard.jsx` — collapsible, color-coded, target date, days remaining, child ProjectCards, SVG line anchor points
+- [ ] `GoalDashboard.jsx`:
+  - Desktop: flowchart layout with SVG overlay connecting Goal cards to Project cards; lines inherit goal color; collapse animates nodes and retracts lines; Standalone Projects section below
+  - Mobile: CSS scroll-snap carousel, one goal per page, dot indicators, final page for Standalone Projects
+- [ ] Wire `showGoalsDashboard` boolean flag in `App.jsx`
+- [ ] Pass all required state/functions via context
+
+---
+
+### PR 3 — Navigation & Settings Toggle
+*All entry points and feature gating. Depends on PR 2.*
+
+- [ ] Desktop: floating button in bottom-left of GLANCE panel → opens `GoalDashboard`; hidden when `goalsProjectsEnabled` is false
+- [ ] Mobile: add "Goals" tab to tab bar; only rendered when `goalsProjectsEnabled` is true
+- [ ] Mobile: move Frames out of tab bar into Settings modal (desktop unaffected)
+- [ ] Settings modal: add Goals & Projects toggle, grouped with Habits and Routines
+- [ ] When toggled off: Goals tab hidden, GLANCE button hidden, project chips hidden, project-assigned unscheduled tasks reappear in inbox — data untouched
+
+---
+
+### PR 4 — Task Integration
+*Connects tasks to projects. Depends on PR 1.*
+
+- [ ] Project dropdown in `DesktopNewTaskModal` — active projects grouped by goal
+- [ ] Project dropdown in `MobileNewTaskModal` — same
+- [ ] Project chip rendered on task cards in day view (hidden when feature off)
+- [ ] Tapping chip filters day view to tasks with that `projectId`; tapping again or changing date clears filter
+- [ ] Inbox excludes tasks with a `projectId` when feature is enabled
+
+---
+
+### PR 5 — Focus Mode Integration
+*Project-scoped focus sessions. Depends on PRs 1 and 2.*
+
+- [ ] "Project Focus" button on each `ProjectCard` fully wired
+- [ ] Launches Focus Mode with `focusBlockTasks` pre-populated with that project's incomplete tasks for today
+- [ ] If no tasks today for that project: prompt user to add one or schedule from the project's unscheduled task list
+- [ ] Focus session log entries tagged with `projectId`
+
+---
+
+### PR 6 — Weekly Review Integration
+*AI summary gains goals/projects context. Depends on PR 1.*
+
+- [ ] Pass active goals and projects into weekly review AI prompt in `ai-prompts.js`
+- [ ] Summary can reference per-project task completion, goal progress %, days to target, stalled projects, week-over-week trend
+- [ ] No new UI — leverages existing `WeeklyReviewModal` and AI summary flow
+
+---
+
+## Build Order
+
+```
+PR 1 (Foundation)
+  └─→ PR 2 (Dashboard UI)
+        └─→ PR 3 (Nav & Toggle)
+  └─→ PR 4 (Task Integration)       [parallel with PR 2]
+  └─→ PR 5 (Focus Mode)             [needs PR 1 + PR 2]
+  └─→ PR 6 (Weekly Review)          [parallel with PR 2]
+```
+
+PRs 4 and 6 can begin as soon as PR 1 is merged. PR 5 needs both PR 1 and PR 2. PR 3 needs PR 2.

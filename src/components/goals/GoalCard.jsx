@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { AlertTriangle, Calendar, CircleCheckBig, Edit2 } from 'lucide-react';
+import { AlertTriangle, Calendar, CircleCheckBig, Edit2, FolderOpen, Layers } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { calculateGoalProgress } from '../../utils/goalProgress.js';
 import { isProjectStalled } from '../../utils/projectProgress.js';
@@ -22,7 +22,7 @@ import GoalProgress from './GoalProgress.jsx';
  *   onEdit           — called when the edit button is clicked
  */
 const GoalCard = forwardRef(
-  ({ goal, projects, onEdit }, ref) => {
+  ({ goal, projects, onEdit, onNewProject }, ref) => {
     const {
       tasks, unscheduledTasks,
       updateGoal,
@@ -120,10 +120,26 @@ const GoalCard = forwardRef(
           {/* Progress */}
           <GoalProgress progress={progress} color={goalColor} />
 
-          {/* Project count */}
-          <span className={`text-xs ${textSecondary}`}>
-            {projects.length} project{projects.length !== 1 ? 's' : ''}
-          </span>
+          {/* Project count or empty state */}
+          {projects.length === 0 ? (
+            <div className="flex flex-col items-center gap-1.5 py-2">
+              <FolderOpen size={18} className={`${textSecondary} opacity-50`} />
+              <span className={`text-xs ${textSecondary} opacity-60`}>No projects yet</span>
+              {onNewProject && (
+                <button
+                  type="button"
+                  onClick={onNewProject}
+                  className="flex items-center gap-1 text-xs text-emerald-500 hover:text-emerald-600 transition-colors"
+                >
+                  <Layers size={11} /> Add project
+                </button>
+              )}
+            </div>
+          ) : (
+            <span className={`text-xs ${textSecondary}`}>
+              {projects.length} project{projects.length !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
       </div>
     );

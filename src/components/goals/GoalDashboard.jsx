@@ -80,7 +80,7 @@ function findDefaultActiveIdx(sortedGoals) {
 
 // ─── Goal form (create / edit) ────────────────────────────────────────────────
 
-const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete }) => {
+const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mobile }) => {
   const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg } =
     useDayPlannerCtx();
 
@@ -103,7 +103,7 @@ const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete }) =
   return (
     <form
       onSubmit={handleSubmit}
-      className={`${cardBg} rounded-2xl shadow-2xl p-5 w-full max-w-sm flex flex-col gap-4`}
+      className={`${mobile ? '' : `${cardBg} rounded-2xl shadow-2xl max-w-sm`} p-5 w-full flex flex-col gap-4`}
       onClick={e => e.stopPropagation()}
     >
       <h3 className={`text-base font-semibold ${textPrimary}`}>
@@ -248,7 +248,7 @@ const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete }) =
 
 // ─── Project form (create / edit) ─────────────────────────────────────────────
 
-const ProjectForm = ({ initial, goals, onSave, onCancel }) => {
+const ProjectForm = ({ initial, goals, onSave, onCancel, mobile }) => {
   const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg, tasks, unscheduledTasks } =
     useDayPlannerCtx();
 
@@ -274,7 +274,7 @@ const ProjectForm = ({ initial, goals, onSave, onCancel }) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className={`${cardBg} rounded-2xl shadow-2xl p-5 w-full max-w-sm flex flex-col gap-4`}
+      className={`${mobile ? '' : `${cardBg} rounded-2xl shadow-2xl max-w-sm`} p-5 w-full flex flex-col gap-4`}
       onClick={e => e.stopPropagation()}
     >
       <h3 className={`text-base font-semibold ${textPrimary}`}>
@@ -384,14 +384,33 @@ const ProjectForm = ({ initial, goals, onSave, onCancel }) => {
 
 // ─── Overlay backdrop for inline forms ────────────────────────────────────────
 
-const FormOverlay = ({ children, onClose }) => (
-  <div
-    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
-    onClick={onClose}
-  >
-    {children}
-  </div>
-);
+const FormOverlay = ({ children, onClose, mobile, cardBg }) => {
+  if (mobile) {
+    return (
+      <div
+        className="fixed inset-0 z-[60] flex flex-col justify-end"
+        onClick={onClose}
+      >
+        <div className="bg-black/50 absolute inset-0" />
+        <div
+          className={`relative ${cardBg} rounded-t-2xl shadow-xl max-h-[85vh] overflow-y-auto`}
+          style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      {children}
+    </div>
+  );
+};
 
 // ─── Goal mini card (carousel side slots) ────────────────────────────────────
 
@@ -632,6 +651,7 @@ const DesktopDashboard = ({
                 goal={activeGoal}
                 projects={goalProjects}
                 onEdit={() => onEditGoal(activeGoal)}
+                onNewProject={() => onNewProject(activeGoal.id)}
               />
             </div>
 
@@ -662,7 +682,7 @@ const DesktopDashboard = ({
           </div>
 
           {/* Projects for the active goal */}
-          {goalProjects.length > 0 ? (
+          {goalProjects.length > 0 && (
             <div className="relative z-10 flex flex-wrap gap-4 mb-8 justify-center">
               {goalProjects.map(proj => (
                 <ProjectCard
@@ -673,15 +693,6 @@ const DesktopDashboard = ({
                   onEditClick={() => onEditProject?.(proj)}
                 />
               ))}
-            </div>
-          ) : (
-            <div className="relative z-10 mb-8">
-              <button
-                onClick={() => onNewProject(activeGoal.id)}
-                className={`flex items-center gap-1.5 text-sm ${textSecondary} ${hoverBg} rounded-xl px-3 py-2 transition-colors`}
-              >
-                <Layers size={14} /> Add project to this goal
-              </button>
             </div>
           )}
         </>
@@ -1227,7 +1238,10 @@ const GoalDashboard = () => {
                     </div>
 
                     {/* Divider */}
-                    {!isMobile && <div className={`w-px self-stretch ${darkMode ? 'bg-gray-700' : 'bg-stone-200'}`} />}
+                    {isMobile
+                      ? <div className={`border-t ${borderClass}`} />
+                      : <div className={`w-px self-stretch ${darkMode ? 'bg-gray-700' : 'bg-stone-200'}`} />
+                    }
 
                     {/* Projects column */}
                     <div className={isMobile ? 'w-full' : 'flex-1 min-w-0'}>
@@ -1266,25 +1280,27 @@ const GoalDashboard = () => {
 
       {/* Goal create/edit form overlay */}
       {goalForm && (
-        <FormOverlay onClose={() => setGoalForm(null)}>
+        <FormOverlay onClose={() => setGoalForm(null)} mobile={isMobile} cardBg={cardBg}>
           <GoalForm
             initial={goalForm.editing}
             childProjects={goalForm.editing ? projects.filter(p => p.goalId === goalForm.editing.id) : []}
             onSave={handleSaveGoal}
             onCancel={() => setGoalForm(null)}
             onDelete={goalForm.editing ? () => handleDeleteGoal(goalForm.editing.id) : undefined}
+            mobile={isMobile}
           />
         </FormOverlay>
       )}
 
       {/* Project create/edit form overlay */}
       {projectForm && (
-        <FormOverlay onClose={() => setProjectForm(null)}>
+        <FormOverlay onClose={() => setProjectForm(null)} mobile={isMobile} cardBg={cardBg}>
           <ProjectForm
             initial={projectForm.editing}
             goals={goals}
             onSave={handleSaveProject}
             onCancel={() => setProjectForm(null)}
+            mobile={isMobile}
           />
         </FormOverlay>
       )}

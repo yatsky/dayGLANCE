@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { AlertTriangle, Calendar, Edit2 } from 'lucide-react';
+import { AlertTriangle, Calendar, CircleCheckBig, Edit2 } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { calculateGoalProgress } from '../../utils/goalProgress.js';
 import { isProjectStalled } from '../../utils/projectProgress.js';
@@ -25,6 +25,7 @@ const GoalCard = forwardRef(
   ({ goal, projects, onEdit }, ref) => {
     const {
       tasks, unscheduledTasks,
+      updateGoal,
       darkMode,
       borderClass, textPrimary, textSecondary, hoverBg,
     } = useDayPlannerCtx();
@@ -51,6 +52,9 @@ const GoalCard = forwardRef(
     // Caution: goal is overdue or has at least one stalled child project
     const hasStalledProject = projects.some(p => isProjectStalled(p.id, allTasks, p));
     const showCaution = isOverdue || hasStalledProject;
+    // All non-archived projects complete → offer one-click completion
+    const nonArchivedProjects = projects.filter(p => p.status !== 'archived');
+    const allProjectsDone = nonArchivedProjects.length > 0 && progress >= 1;
 
     return (
       <div
@@ -91,8 +95,17 @@ const GoalCard = forwardRef(
                   </span>
                 </>
               )}
-              {showCaution && (
+              {showCaution && !allProjectsDone && (
                 <AlertTriangle size={12} className="text-amber-500 ml-auto flex-shrink-0" />
+              )}
+              {allProjectsDone && (
+                <button
+                  onClick={() => updateGoal(goal.id, { status: 'completed' })}
+                  className="ml-auto flex-shrink-0 text-emerald-500 hover:text-emerald-400 transition-colors"
+                  aria-label="Mark goal complete"
+                >
+                  <CircleCheckBig size={13} />
+                </button>
               )}
             </div>
           )}

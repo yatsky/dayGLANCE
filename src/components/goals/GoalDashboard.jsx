@@ -11,6 +11,7 @@ import {
   Archive,
   CheckCircle2,
   ChevronDown,
+  CircleCheckBig,
   ChevronLeft,
   ChevronRight,
   Edit2,
@@ -23,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { TASK_COLORS, TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
+import { calculateGoalProgress } from '../../utils/goalProgress.js';
 import { isProjectStalled } from '../../utils/projectProgress.js';
 import GoalCard from './GoalCard.jsx';
 import ProjectCard from '../projects/ProjectCard.jsx';
@@ -393,7 +395,7 @@ const FormOverlay = ({ children, onClose }) => (
 // ─── Goal mini card (carousel side slots) ────────────────────────────────────
 
 const GoalMiniCard = ({ goal, onClick }) => {
-  const { darkMode, textPrimary, textSecondary, tasks, unscheduledTasks, projects } = useDayPlannerCtx();
+  const { darkMode, textPrimary, textSecondary, tasks, unscheduledTasks, projects, updateGoal } = useDayPlannerCtx();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const hex = toHex(goal.color || 'bg-blue-500');
@@ -416,6 +418,8 @@ const GoalMiniCard = ({ goal, onClick }) => {
   const childProjects = projects.filter(p => p.goalId === goal.id && p.status !== 'archived');
   const hasStalledProject = childProjects.some(p => isProjectStalled(p.id, allTasks, p));
   const showCaution = isOverdue || hasStalledProject;
+  const goalProgress = calculateGoalProgress(goal.id, childProjects, allTasks);
+  const allProjectsDone = childProjects.length > 0 && goalProgress >= 1;
 
   return (
     <div
@@ -428,10 +432,21 @@ const GoalMiniCard = ({ goal, onClick }) => {
       <p className={`text-sm font-semibold ${textPrimary} leading-tight truncate`}>
         {goal.title}
       </p>
-      {(daysLabel || showCaution) ? (
+      {(daysLabel || showCaution || allProjectsDone) ? (
         <div className="flex items-center gap-1 mt-0.5">
           {daysLabel && <span className={`text-xs ${labelColor}`}>{daysLabel}</span>}
-          {showCaution && <AlertTriangle size={11} className="text-amber-500 ml-auto flex-shrink-0" />}
+          {showCaution && !allProjectsDone && (
+            <AlertTriangle size={11} className="text-amber-500 ml-auto flex-shrink-0" />
+          )}
+          {allProjectsDone && (
+            <button
+              onClick={e => { e.stopPropagation(); updateGoal(goal.id, { status: 'completed' }); }}
+              className="ml-auto flex-shrink-0 text-emerald-500 hover:text-emerald-400 transition-colors"
+              aria-label="Mark goal complete"
+            >
+              <CircleCheckBig size={12} />
+            </button>
+          )}
         </div>
       ) : isCompleted ? (
         <p className="text-xs mt-0.5 text-emerald-500">Completed</p>

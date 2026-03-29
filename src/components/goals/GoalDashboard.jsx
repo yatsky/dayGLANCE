@@ -27,6 +27,7 @@ import { TASK_COLORS, TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
 import { calculateGoalProgress } from '../../utils/goalProgress.js';
 import { isProjectStalled } from '../../utils/projectProgress.js';
 import GoalCard from './GoalCard.jsx';
+import GoalProgress from './GoalProgress.jsx';
 import ProjectCard from '../projects/ProjectCard.jsx';
 import ConfirmDialog from '../ConfirmDialog.jsx';
 
@@ -900,11 +901,8 @@ const MobileDashboard = ({
                         );
                       })()}
                       {/* Progress bar */}
-                      <div className={`mt-3 w-full h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-white/60'} overflow-hidden`}>
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${Math.round(goalProgress * 100)}%`, background: goalHex }}
-                        />
+                      <div className="mt-3">
+                        <GoalProgress progress={goalProgress} color={goalColor} />
                       </div>
                     </div>
                   );

@@ -1,6 +1,9 @@
 import React, { forwardRef, useState } from 'react';
 import ConfirmDialog from '../ConfirmDialog.jsx';
-import { AlertTriangle, CheckCircle2, CheckSquare, Edit2, Plus, Target, Trash2, X } from 'lucide-react';
+import {
+  AlertTriangle, CheckCircle2, CheckSquare, ChevronDown,
+  Edit2, GripVertical, Plus, Square, Target, Trash2, X,
+} from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { calculateProjectProgress, isProjectStalled } from '../../utils/projectProgress.js';
 import { TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
@@ -17,7 +20,7 @@ const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
  * Props:
  *   project      — the project object
  *   onFocusClick — called with the project when the "Project Focus" button is clicked
- *                  (actual session scoping is wired in PR 5; button exists here)
+ *   onEditClick  — called to open the project edit form
  */
 const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => {
   const {
@@ -25,30 +28,73 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
     unscheduledTasks, setUnscheduledTasks,
     goals,
     deleteProject,
+    openMobileEditTask,
     darkMode,
     borderClass, textPrimary, textSecondary, hoverBg,
   } = useDayPlannerCtx();
+
+  const [quickAddTitle, setQuickAddTitle] = useState('');
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [tasksExpanded, setTasksExpanded] = useState(false);
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
 
   const handleDelete = () => setShowConfirm(true);
 
   const parentGoal = project.goalId ? goals.find(g => g.id === project.goalId) : null;
   const goalHex = parentGoal ? toHex(parentGoal.color || 'bg-blue-500') : null;
 
-  const [quickAddTitle, setQuickAddTitle] = useState('');
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
   const allTasks = [...tasks, ...unscheduledTasks];
   const projectTasks = allTasks.filter(t => t.projectId === project.id && !t.archived);
   const completedCount = projectTasks.filter(t => t.completed).length;
   const totalCount = projectTasks.length;
   const progress = calculateProjectProgress(project.id, allTasks);
-  // Standalone projects (no parent goal) are never badged as stalled
   const stalled = !!project.goalId && isProjectStalled(project.id, allTasks, project);
 
   // Unscheduled tasks belonging to this project (shown in the card body)
-  const projectUnscheduled = unscheduledTasks.filter(t => t.projectId === project.id);
+  const projectUnscheduled = unscheduledTasks.filter(t => t.projectId === project.id && !t.archived);
+  const VISIBLE_COUNT = 3;
+  const hasMore = projectUnscheduled.length > VISIBLE_COUNT;
+  const visibleTasks = tasksExpanded ? projectUnscheduled : projectUnscheduled.slice(0, VISIBLE_COUNT);
 
+  // ── Drag-to-reorder ────────────────────────────────────────────────────────
+  const handleDragStart = (e, idx) => {
+    setDragIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, idx) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (idx !== dragOverIdx) setDragOverIdx(idx);
+  };
+
+  const handleDrop = (e, idx) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) {
+      setDragIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    const fromId = projectUnscheduled[dragIdx].id;
+    const toId = projectUnscheduled[idx].id;
+    const next = [...unscheduledTasks];
+    const fromFull = next.findIndex(t => t.id === fromId);
+    const toFull = next.findIndex(t => t.id === toId);
+    const [moved] = next.splice(fromFull, 1);
+    next.splice(toFull, 0, moved);
+    setUnscheduledTasks(next);
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+
+  // ── Quick-add ──────────────────────────────────────────────────────────────
   const handleQuickAdd = (e) => {
     e.preventDefault();
     const title = quickAddTitle.trim();
@@ -85,143 +131,168 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
       )}
       {/* Card body */}
       <div className="flex flex-col gap-2 p-3">
-      {/* Header: title + stalled badge + delete */}
-      <div className="flex items-start justify-between gap-2">
-        <span className={`text-sm font-semibold ${textPrimary} leading-tight flex-1 min-w-0`}>
-          {project.title}
-        </span>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          {project.status === 'completed' && (
-            <span
-              className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
-                darkMode
-                  ? 'bg-green-900/50 text-green-400'
-                  : 'bg-green-50 text-green-600'
-              }`}
-            >
-              <CheckCircle2 size={10} />
-              Done
-            </span>
-          )}
-          {stalled && project.status !== 'completed' && (
-            <span
-              className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
-                darkMode
-                  ? 'bg-yellow-900/50 text-yellow-400'
-                  : 'bg-yellow-50 text-yellow-600'
-              }`}
-            >
-              <AlertTriangle size={10} />
-              Stalled
-            </span>
-          )}
-          <button
-            onClick={() => onEditClick?.()}
-            className={`p-1 rounded-lg transition-colors ${
-              darkMode ? 'text-gray-600 hover:text-gray-300 hover:bg-gray-700' : 'text-stone-300 hover:text-stone-600 hover:bg-stone-100'
-            }`}
-            aria-label="Edit project"
-          >
-            <Edit2 size={12} />
-          </button>
-          <button
-            onClick={handleDelete}
-            className={`p-1 rounded-lg transition-colors ${
-              darkMode ? 'text-gray-600 hover:text-red-400 hover:bg-red-900/20' : 'text-stone-300 hover:text-red-500 hover:bg-red-50'
-            }`}
-            aria-label="Delete project"
-          >
-            <Trash2 size={12} />
-          </button>
-        </div>
-      </div>
-
-      {/* Task count */}
-      <span className={`text-xs ${textSecondary}`}>
-        {completedCount}/{totalCount} task{totalCount !== 1 ? 's' : ''}
-      </span>
-
-      {/* Progress bar */}
-      <ProjectProgress progress={progress} compact />
-
-      {/* Project Focus button — only when there are incomplete tasks */}
-      {projectTasks.some(t => !t.completed) && <button
-        onClick={() => onFocusClick?.(project)}
-        className={`flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-medium transition-colors ${
-          darkMode
-            ? 'bg-purple-900/40 hover:bg-purple-900/70 text-purple-400'
-            : 'bg-purple-50 hover:bg-purple-100 text-purple-700'
-        }`}
-      >
-        <Target size={12} />
-        Project Focus
-      </button>}
-
-      {/* Unscheduled tasks for this project */}
-      {projectUnscheduled.length > 0 && (
-        <div className={`flex flex-col gap-1 pt-2 border-t ${borderClass}`}>
-          {projectUnscheduled.slice(0, 3).map(t => (
-            <div key={t.id} className={`flex items-center gap-1.5 text-xs ${textSecondary}`}>
-              <CheckSquare
-                size={11}
-                className={t.completed ? 'text-green-500 flex-shrink-0' : 'flex-shrink-0'}
-              />
-              <span className={`truncate ${t.completed ? 'line-through opacity-50' : ''}`}>
-                {t.title}
+        {/* Header: title + badges + edit + delete */}
+        <div className="flex items-start justify-between gap-2">
+          <span className={`text-sm font-semibold ${textPrimary} leading-tight flex-1 min-w-0`}>
+            {project.title}
+          </span>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {project.status === 'completed' && (
+              <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
+                darkMode ? 'bg-green-900/50 text-green-400' : 'bg-green-50 text-green-600'
+              }`}>
+                <CheckCircle2 size={10} />
+                Done
               </span>
-            </div>
-          ))}
-          {projectUnscheduled.length > 3 && (
-            <span className={`text-xs ${textSecondary} pl-4`}>
-              +{projectUnscheduled.length - 3} more
-            </span>
-          )}
+            )}
+            {stalled && project.status !== 'completed' && (
+              <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
+                darkMode ? 'bg-yellow-900/50 text-yellow-400' : 'bg-yellow-50 text-yellow-600'
+              }`}>
+                <AlertTriangle size={10} />
+                Stalled
+              </span>
+            )}
+            <button
+              onClick={() => onEditClick?.()}
+              className={`p-1 rounded-lg transition-colors ${
+                darkMode ? 'text-gray-600 hover:text-gray-300 hover:bg-gray-700' : 'text-stone-300 hover:text-stone-600 hover:bg-stone-100'
+              }`}
+              aria-label="Edit project"
+            >
+              <Edit2 size={12} />
+            </button>
+            <button
+              onClick={handleDelete}
+              className={`p-1 rounded-lg transition-colors ${
+                darkMode ? 'text-gray-600 hover:text-red-400 hover:bg-red-900/20' : 'text-stone-300 hover:text-red-500 hover:bg-red-50'
+              }`}
+              aria-label="Delete project"
+            >
+              <Trash2 size={12} />
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* Inline quick-add task */}
-      {showQuickAdd ? (
-        <form onSubmit={handleQuickAdd} className="flex gap-1">
-          <input
-            autoFocus
-            value={quickAddTitle}
-            onChange={e => setQuickAddTitle(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Escape') {
-                setShowQuickAdd(false);
-                setQuickAddTitle('');
-              }
-            }}
-            placeholder="Task title…"
-            className={`flex-1 min-w-0 text-xs px-2 py-1.5 rounded-lg border ${borderClass} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-              darkMode
-                ? 'bg-gray-700 text-gray-100 placeholder-gray-500'
-                : 'bg-white text-stone-900 placeholder-stone-400'
-            }`}
-          />
+        {/* Task count */}
+        <span className={`text-xs ${textSecondary}`}>
+          {completedCount}/{totalCount} task{totalCount !== 1 ? 's' : ''}
+        </span>
+
+        {/* Progress bar */}
+        <ProjectProgress progress={progress} compact />
+
+        {/* Project Focus button — only when there are incomplete tasks */}
+        {projectTasks.some(t => !t.completed) && (
           <button
-            type="submit"
-            className="flex-shrink-0 p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            onClick={() => onFocusClick?.(project)}
+            className={`flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              darkMode
+                ? 'bg-purple-900/40 hover:bg-purple-900/70 text-purple-400'
+                : 'bg-purple-50 hover:bg-purple-100 text-purple-700'
+            }`}
+          >
+            <Target size={12} />
+            Project Focus
+          </button>
+        )}
+
+        {/* Unscheduled task list */}
+        {projectUnscheduled.length > 0 && (
+          <div className={`flex flex-col gap-0.5 pt-2 border-t ${borderClass}`}>
+            {visibleTasks.map((t, idx) => (
+              <div
+                key={t.id}
+                draggable
+                onDragStart={e => handleDragStart(e, idx)}
+                onDragOver={e => handleDragOver(e, idx)}
+                onDrop={e => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+                onClick={() => openMobileEditTask?.(t, false)}
+                className={`flex items-center gap-1.5 px-1.5 py-1.5 rounded-lg cursor-pointer select-none transition-colors ${
+                  hoverBg
+                } ${dragIdx === idx ? 'opacity-40' : ''} ${
+                  dragOverIdx === idx && dragIdx !== idx
+                    ? darkMode ? 'border-t-2 border-blue-400' : 'border-t-2 border-blue-500'
+                    : ''
+                }`}
+                style={goalHex ? { borderLeft: `2px solid ${goalHex}99` } : {}}
+              >
+                {t.completed
+                  ? <CheckSquare size={11} className="text-green-500 flex-shrink-0" />
+                  : <Square size={11} className={`${textSecondary} opacity-60 flex-shrink-0`} />
+                }
+                <span className={`text-xs flex-1 min-w-0 truncate ${
+                  t.completed ? `line-through opacity-40 ${textSecondary}` : textSecondary
+                }`}>
+                  {t.title}
+                </span>
+                <GripVertical size={10} className={`${textSecondary} opacity-20 flex-shrink-0`} />
+              </div>
+            ))}
+
+            {/* Expand / collapse toggle */}
+            {hasMore && (
+              <button
+                onClick={() => setTasksExpanded(v => !v)}
+                className={`flex items-center gap-1 text-xs ${textSecondary} ${hoverBg} rounded-lg px-1.5 py-1 transition-colors w-full mt-0.5`}
+              >
+                <ChevronDown
+                  size={11}
+                  className={`transition-transform duration-150 ${tasksExpanded ? 'rotate-180' : ''}`}
+                />
+                {tasksExpanded
+                  ? 'Show less'
+                  : `${projectUnscheduled.length - VISIBLE_COUNT} more`
+                }
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Inline quick-add task */}
+        {showQuickAdd ? (
+          <form onSubmit={handleQuickAdd} className="flex gap-1">
+            <input
+              autoFocus
+              value={quickAddTitle}
+              onChange={e => setQuickAddTitle(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') {
+                  setShowQuickAdd(false);
+                  setQuickAddTitle('');
+                }
+              }}
+              placeholder="Task title…"
+              className={`flex-1 min-w-0 text-xs px-2 py-1.5 rounded-lg border ${borderClass} focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                darkMode
+                  ? 'bg-gray-700 text-gray-100 placeholder-gray-500'
+                  : 'bg-white text-stone-900 placeholder-stone-400'
+              }`}
+            />
+            <button
+              type="submit"
+              className="flex-shrink-0 p-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            >
+              <Plus size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowQuickAdd(false); setQuickAddTitle(''); }}
+              className={`flex-shrink-0 p-1.5 rounded-lg ${hoverBg} transition-colors`}
+            >
+              <X size={12} className={textSecondary} />
+            </button>
+          </form>
+        ) : (
+          <button
+            onClick={() => setShowQuickAdd(true)}
+            className={`flex items-center gap-1.5 text-xs ${textSecondary} ${hoverBg} rounded-lg px-2 py-1.5 transition-colors w-full`}
           >
             <Plus size={12} />
+            Add task
           </button>
-          <button
-            type="button"
-            onClick={() => { setShowQuickAdd(false); setQuickAddTitle(''); }}
-            className={`flex-shrink-0 p-1.5 rounded-lg ${hoverBg} transition-colors`}
-          >
-            <X size={12} className={textSecondary} />
-          </button>
-        </form>
-      ) : (
-        <button
-          onClick={() => setShowQuickAdd(true)}
-          className={`flex items-center gap-1.5 text-xs ${textSecondary} ${hoverBg} rounded-lg px-2 py-1.5 transition-colors w-full`}
-        >
-          <Plus size={12} />
-          Add task
-        </button>
-      )}
+        )}
       </div>
     </div>
 

@@ -11,6 +11,20 @@ import ProjectProgress from './ProjectProgress.jsx';
 
 const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
 
+/** Renders a task title with #tags italicized. */
+const TitleWithTags = ({ title, className }) => {
+  const parts = title.split(/(#[a-zA-Z]\w*)/g);
+  return (
+    <span className={className}>
+      {parts.map((part, i) =>
+        part.startsWith('#')
+          ? <em key={i} className="not-italic italic opacity-60">{part}</em>
+          : part
+      )}
+    </span>
+  );
+};
+
 /**
  * ProjectCard — a single project node in the Goals dashboard.
  *
@@ -222,11 +236,12 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
                   ? <CheckSquare size={11} className="text-green-500 flex-shrink-0" />
                   : <Square size={11} className={`${textSecondary} opacity-60 flex-shrink-0`} />
                 }
-                <span className={`text-xs flex-1 min-w-0 truncate ${
-                  t.completed ? `line-through opacity-40 ${textSecondary}` : textSecondary
-                }`}>
-                  {t.title}
-                </span>
+                <TitleWithTags
+                  title={t.title}
+                  className={`text-xs flex-1 min-w-0 truncate ${
+                    t.completed ? `line-through opacity-40 ${textSecondary}` : textSecondary
+                  }`}
+                />
                 <GripVertical size={10} className={`${textSecondary} opacity-20 flex-shrink-0`} />
               </div>
             ))}

@@ -32,6 +32,7 @@ import SettingsModal from './components/SettingsModal.jsx';
 import RemindersSettingsModal from './components/RemindersSettingsModal.jsx';
 import VoiceInputModal from './components/VoiceInputModal.jsx';
 import WeeklyReviewModal from './components/WeeklyReviewModal.jsx';
+import GoalDashboard from './components/goals/GoalDashboard.jsx';
 import WeeklyReviewReminderCard from './components/WeeklyReviewReminderCard.jsx';
 import IncompleteTasksModal from './components/IncompleteTasksModal.jsx';
 import BackupMenuModal from './components/BackupMenuModal.jsx';
@@ -656,6 +657,7 @@ const DayPlanner = () => {
     selectedTags,
     inboxPriorityFilter,
     hideCompletedInbox,
+    goalsProjectsEnabled,
   });
   const { taskWidths, setTaskRef, getConflictingTasks, calculateConflictPosition, wouldExceedMaxColumns } = useTaskDerived({
     tasks,
@@ -2040,7 +2042,7 @@ const DayPlanner = () => {
     showHabitModal, showFramesModal, frameAdjustModal, showRescheduleModal,
     selectedDate, hoverPreviewTime, hoverPreviewDate,
     setNewTask, setShowAddTask, setHoverPreviewTime, setHoverPreviewDate,
-    routinesEnabled, setShowRoutinesDashboard,
+    routinesEnabled, setRoutinesEnabled, setShowRoutinesDashboard,
     focusModeAvailableRef, enterFocusModeRef,
     setDarkMode,
     showMonthView, goToToday, setViewedMonth,
@@ -2049,7 +2051,8 @@ const DayPlanner = () => {
     setShowBackupMenu,
     isMobile, setTabletActiveTab,
     aiConfig, setShowVoiceInput,
-    habitsEnabled, setShowHabitModal,
+    habitsEnabled, setHabitsEnabled, setShowHabitModal,
+    goalsProjectsEnabled, setGoalsProjectsEnabled, showGoalsDashboard, setShowGoalsDashboard,
     gtdFrames, setShowRescheduleModal, setRescheduleResults, setRescheduleError,
     setMobileActiveTab, setFramesModalTab, setEditingFrame, setShowFramesModal,
     changeDate, setSelectedDate,
@@ -2356,15 +2359,32 @@ const DayPlanner = () => {
       setTasks(prev => prev.filter(t => t.id !== taskId));
       setRecurringTasks(prev => [...prev, template]);
     } else {
-      setTasks(prev => prev.map(t => t.id === taskId ? {
-        ...t,
-        title: cleanTitle(newTask.title),
-        startTime: newTask.isAllDay ? '00:00' : newTask.startTime,
-        duration: newTask.duration,
-        date: newTask.date || t.date,
-        isAllDay: newTask.isAllDay || false,
-        color: newTask.color || colors[0].class,
-      } : t));
+      const inScheduled = tasks.find(t => t.id === taskId);
+      if (inScheduled) {
+        setTasks(prev => prev.map(t => t.id === taskId ? {
+          ...t,
+          title: cleanTitle(newTask.title),
+          startTime: newTask.isAllDay ? '00:00' : newTask.startTime,
+          duration: newTask.duration,
+          date: newTask.date || t.date,
+          isAllDay: newTask.isAllDay || false,
+          color: newTask.color || colors[0].class,
+        } : t));
+      } else {
+        // Task was unscheduled (e.g. a project task) — move it to the scheduled list
+        const existing = unscheduledTasks.find(t => t.id === taskId);
+        setUnscheduledTasks(prev => prev.filter(t => t.id !== taskId));
+        setTasks(prev => [...prev, {
+          ...(existing || {}),
+          id: taskId,
+          title: cleanTitle(newTask.title),
+          startTime: newTask.isAllDay ? '00:00' : newTask.startTime,
+          duration: newTask.duration,
+          date: newTask.date || dateToString(selectedDate),
+          isAllDay: newTask.isAllDay || false,
+          color: newTask.color || colors[0].class,
+        }]);
+      }
     }
     setShowAddTask(false);
     setMobileEditingTask(null);
@@ -7871,6 +7891,9 @@ const DayPlanner = () => {
 
       {/* Frame Manually Schedule Modal */}
       {frameScheduleModal && <FrameScheduleModal />}
+
+      {/* Goals & Projects Dashboard */}
+      <GoalDashboard />
 
       {/* Weekly Review Modal */}
       <WeeklyReviewModal />

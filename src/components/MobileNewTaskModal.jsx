@@ -28,7 +28,7 @@ const MobileNewTaskModal = () => {
   return (
     <>
       {showAddTask && isMobile && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={() => { setShowAddTask(false); setShowNewTaskDeadlinePicker(false); setMobileEditingTask(null); setMobileEditIsInbox(false); }}>
+        <div className="fixed inset-0 z-[80] flex flex-col justify-end" onClick={() => { setShowAddTask(false); setShowNewTaskDeadlinePicker(false); setMobileEditingTask(null); setMobileEditIsInbox(false); }}>
           <div className="bg-black/30 absolute inset-0" />
           <div
             className={`relative ${cardBg} rounded-t-2xl shadow-xl max-h-[85vh] overflow-y-auto`}

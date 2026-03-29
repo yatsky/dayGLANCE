@@ -18,7 +18,7 @@ const TitleWithTags = ({ title, className }) => {
     <span className={className}>
       {parts.map((part, i) =>
         part.startsWith('#')
-          ? <em key={i} className="not-italic italic opacity-60">{part}</em>
+          ? <em key={i} className="italic opacity-60">{part}</em>
           : part
       )}
     </span>

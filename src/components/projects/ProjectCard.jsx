@@ -1,6 +1,6 @@
 import React, { forwardRef, useState } from 'react';
 import ConfirmDialog from '../ConfirmDialog.jsx';
-import { AlertTriangle, CheckSquare, Plus, Target, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CheckSquare, Edit2, Plus, Target, Trash2, X } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { calculateProjectProgress, isProjectStalled } from '../../utils/projectProgress.js';
 import { TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
@@ -19,7 +19,7 @@ const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
  *   onFocusClick — called with the project when the "Project Focus" button is clicked
  *                  (actual session scoping is wired in PR 5; button exists here)
  */
-const ProjectCard = forwardRef(({ project, onFocusClick }, ref) => {
+const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => {
   const {
     tasks,
     unscheduledTasks, setUnscheduledTasks,
@@ -91,7 +91,19 @@ const ProjectCard = forwardRef(({ project, onFocusClick }, ref) => {
           {project.title}
         </span>
         <div className="flex items-center gap-1 flex-shrink-0">
-          {stalled && (
+          {project.status === 'completed' && (
+            <span
+              className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
+                darkMode
+                  ? 'bg-green-900/50 text-green-400'
+                  : 'bg-green-50 text-green-600'
+              }`}
+            >
+              <CheckCircle2 size={10} />
+              Done
+            </span>
+          )}
+          {stalled && project.status !== 'completed' && (
             <span
               className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
                 darkMode
@@ -103,6 +115,15 @@ const ProjectCard = forwardRef(({ project, onFocusClick }, ref) => {
               Stalled
             </span>
           )}
+          <button
+            onClick={() => onEditClick?.()}
+            className={`p-1 rounded-lg transition-colors ${
+              darkMode ? 'text-gray-600 hover:text-gray-300 hover:bg-gray-700' : 'text-stone-300 hover:text-stone-600 hover:bg-stone-100'
+            }`}
+            aria-label="Edit project"
+          >
+            <Edit2 size={12} />
+          </button>
           <button
             onClick={handleDelete}
             className={`p-1 rounded-lg transition-colors ${

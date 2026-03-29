@@ -8,8 +8,10 @@ import React, {
 } from 'react';
 import {
   AlertTriangle,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Edit2,
   Flag,
   FolderOpen,
   GitBranch,
@@ -72,7 +74,7 @@ function findDefaultActiveIdx(sortedGoals) {
 
 // ─── Goal form (create / edit) ────────────────────────────────────────────────
 
-const GoalForm = ({ initial, onSave, onCancel, onDelete }) => {
+const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete }) => {
   const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg } =
     useDayPlannerCtx();
 
@@ -80,11 +82,16 @@ const GoalForm = ({ initial, onSave, onCancel, onDelete }) => {
   const [description, setDescription] = useState(initial?.description || '');
   const [targetDate, setTargetDate] = useState(initial?.targetDate || '');
   const [color, setColor] = useState(initial?.color || TASK_COLORS[0].class);
+  const [status, setStatus] = useState(initial?.status || 'active');
+
+  // "Completed" only available when all child projects are completed (or none exist)
+  const activeChildProjects = childProjects.filter(p => p.status !== 'archived');
+  const canComplete = activeChildProjects.length === 0 || activeChildProjects.every(p => p.status === 'completed');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onSave({ title: title.trim(), description: description.trim(), targetDate: targetDate || undefined, color });
+    onSave({ title: title.trim(), description: description.trim(), targetDate: targetDate || undefined, color, status });
   };
 
   return (
@@ -162,6 +169,41 @@ const GoalForm = ({ initial, onSave, onCancel, onDelete }) => {
         style={{ background: toHex(color) }}
       />
 
+      {/* Status — edit only */}
+      {initial && (
+        <div className="flex flex-col gap-1.5">
+          <label className={`text-xs font-medium ${textSecondary}`}>Status</label>
+          <div className={`flex rounded-lg border ${borderClass} overflow-hidden`}>
+            {[
+              { value: 'active', label: 'Active' },
+              { value: 'completed', label: 'Completed', disabled: !canComplete },
+              { value: 'archived', label: 'Archived' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={opt.disabled}
+                onClick={() => !opt.disabled && setStatus(opt.value)}
+                className={`flex-1 py-2 text-sm font-medium transition-colors border-r last:border-r-0 ${borderClass} ${
+                  status === opt.value
+                    ? 'bg-blue-600 text-white'
+                    : opt.disabled
+                    ? `${textSecondary} opacity-30 cursor-not-allowed`
+                    : `${textSecondary} ${hoverBg}`
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {!canComplete && (
+            <p className={`text-xs ${textSecondary} opacity-60`}>
+              Complete all projects first to mark this goal as done.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex gap-2 items-center">
         {initial && onDelete && (
@@ -201,17 +243,24 @@ const GoalForm = ({ initial, onSave, onCancel, onDelete }) => {
 // ─── Project form (create / edit) ─────────────────────────────────────────────
 
 const ProjectForm = ({ initial, goals, onSave, onCancel }) => {
-  const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg } =
+  const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg, tasks, unscheduledTasks } =
     useDayPlannerCtx();
 
   const [title, setTitle] = useState(initial?.title || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [goalId, setGoalId] = useState(initial?.goalId || '');
+  const [status, setStatus] = useState(initial?.status || 'active');
+
+  // "Completed" only available when all project tasks are completed (or none exist)
+  const projectTasks = initial
+    ? [...tasks, ...unscheduledTasks].filter(t => t.projectId === initial.id && !t.archived)
+    : [];
+  const canComplete = projectTasks.length === 0 || projectTasks.every(t => t.completed);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onSave({ title: title.trim(), description: description.trim(), goalId: goalId || undefined });
+    onSave({ title: title.trim(), description: description.trim(), goalId: goalId || undefined, status });
   };
 
   const activeGoals = goals.filter(g => g.status !== 'archived');
@@ -270,6 +319,41 @@ const ProjectForm = ({ initial, goals, onSave, onCancel }) => {
           ))}
         </select>
       </div>
+
+      {/* Status — edit only */}
+      {initial && (
+        <div className="flex flex-col gap-1.5">
+          <label className={`text-xs font-medium ${textSecondary}`}>Status</label>
+          <div className={`flex rounded-lg border ${borderClass} overflow-hidden`}>
+            {[
+              { value: 'active', label: 'Active' },
+              { value: 'completed', label: 'Completed', disabled: !canComplete },
+              { value: 'archived', label: 'Archived' },
+            ].map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={opt.disabled}
+                onClick={() => !opt.disabled && setStatus(opt.value)}
+                className={`flex-1 py-2 text-sm font-medium transition-colors border-r last:border-r-0 ${borderClass} ${
+                  status === opt.value
+                    ? 'bg-blue-600 text-white'
+                    : opt.disabled
+                    ? `${textSecondary} opacity-30 cursor-not-allowed`
+                    : `${textSecondary} ${hoverBg}`
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {!canComplete && (
+            <p className={`text-xs ${textSecondary} opacity-60`}>
+              Complete all tasks first to mark this project as done.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-2 justify-end">
@@ -567,6 +651,7 @@ const DesktopDashboard = ({
                   ref={el => { projectCardRefs.current[proj.id] = el; }}
                   project={proj}
                   onFocusClick={onFocusClick}
+                  onEditClick={() => onEditProject?.(proj)}
                 />
               ))}
             </div>
@@ -604,6 +689,7 @@ const DesktopDashboard = ({
                 ref={el => { projectCardRefs.current[proj.id] = el; }}
                 project={proj}
                 onFocusClick={onFocusClick}
+                onEditClick={() => onEditProject?.(proj)}
               />
             ))}
           </div>
@@ -634,6 +720,7 @@ const MobileDashboard = ({
   activeGoals,
   activeProjects,
   onEditGoal,
+  onEditProject,
   onFocusClick,
   onNewProject,
 }) => {
@@ -802,6 +889,7 @@ const MobileDashboard = ({
                         key={proj.id}
                         project={proj}
                         onFocusClick={onFocusClick}
+                        onEditClick={() => onEditProject?.(proj)}
                       />
                     ))}
                     <button
@@ -847,6 +935,7 @@ const MobileDashboard = ({
                       key={proj.id}
                       project={proj}
                       onFocusClick={onFocusClick}
+                      onEditClick={() => onEditProject?.(proj)}
                     />
                   ))}
                   <button
@@ -1009,6 +1098,7 @@ const GoalDashboard = () => {
                   activeGoals={activeGoals}
                   activeProjects={activeProjects}
                   onEditGoal={goal => setGoalForm({ editing: goal })}
+                  onEditProject={proj => setProjectForm({ editing: proj, defaultGoalId: null })}
                   onFocusClick={handleFocusClick}
                   onNewProject={defaultGoalId => setProjectForm({ editing: null, defaultGoalId })}
                 />
@@ -1036,6 +1126,7 @@ const GoalDashboard = () => {
         <FormOverlay onClose={() => setGoalForm(null)}>
           <GoalForm
             initial={goalForm.editing}
+            childProjects={goalForm.editing ? projects.filter(p => p.goalId === goalForm.editing.id) : []}
             onSave={handleSaveGoal}
             onCancel={() => setGoalForm(null)}
             onDelete={goalForm.editing ? () => handleDeleteGoal(goalForm.editing.id) : undefined}

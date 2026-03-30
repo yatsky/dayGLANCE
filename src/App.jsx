@@ -483,6 +483,9 @@ const DayPlanner = () => {
     addGoal, updateGoal, deleteGoal,
     addProject, updateProject, deleteProject,
   } = useGoalsProjects();
+  const [projectFilter, setProjectFilter] = useState(null);
+  // Clear project filter when the selected date changes
+  useEffect(() => { setProjectFilter(null); }, [selectedDate]);
   const {
     showFocusMode, setShowFocusMode,
     focusPhase, setFocusPhase,
@@ -2161,6 +2164,7 @@ const DayPlanner = () => {
         startTime: getNextQuarterHour(),
         date: dateToString(selectedDate),
         isAllDay: false,
+        projectId: task.projectId || null,
       });
     } else {
       // Load recurrence from recurring template if editing a recurring task
@@ -2182,6 +2186,8 @@ const DayPlanner = () => {
         isAllDay: task.isAllDay || false,
         color: task.color || colors[0].class,
         recurrence,
+        projectId: task.projectId || null,
+        keepUnscheduled: !!(task.projectId && !task.date),
       });
     }
     setShowAddTask(true);
@@ -2291,6 +2297,7 @@ const DayPlanner = () => {
         color: newTask.color || colors[0].class,
         deadline: newTask.deadline || null,
         priority: newTask.priority || 0,
+        projectId: newTask.projectId || undefined,
       } : t));
     } else if (typeof taskId === 'string' && taskId.startsWith('recurring-')) {
       const parsed = parseRecurringId(taskId);
@@ -2358,6 +2365,29 @@ const DayPlanner = () => {
       };
       setTasks(prev => prev.filter(t => t.id !== taskId));
       setRecurringTasks(prev => [...prev, template]);
+    } else if (newTask.keepUnscheduled && newTask.projectId) {
+      // Keep/make this an unscheduled project task
+      const inScheduled = tasks.find(t => t.id === taskId);
+      if (inScheduled) {
+        // Move from scheduled → unscheduled project task
+        setTasks(prev => prev.filter(t => t.id !== taskId));
+        setUnscheduledTasks(prev => [...prev, {
+          ...inScheduled,
+          title: cleanTitle(newTask.title),
+          duration: newTask.duration,
+          color: newTask.color || colors[0].class,
+          projectId: newTask.projectId,
+        }]);
+      } else {
+        // Already unscheduled, just update
+        setUnscheduledTasks(prev => prev.map(t => t.id === taskId ? {
+          ...t,
+          title: cleanTitle(newTask.title),
+          duration: newTask.duration,
+          color: newTask.color || colors[0].class,
+          projectId: newTask.projectId,
+        } : t));
+      }
     } else {
       const inScheduled = tasks.find(t => t.id === taskId);
       if (inScheduled) {
@@ -2369,6 +2399,7 @@ const DayPlanner = () => {
           date: newTask.date || t.date,
           isAllDay: newTask.isAllDay || false,
           color: newTask.color || colors[0].class,
+          projectId: newTask.projectId || undefined,
         } : t));
       } else {
         // Task was unscheduled (e.g. a project task) — move it to the scheduled list
@@ -2383,6 +2414,7 @@ const DayPlanner = () => {
           date: newTask.date || dateToString(selectedDate),
           isAllDay: newTask.isAllDay || false,
           color: newTask.color || colors[0].class,
+          projectId: newTask.projectId || undefined,
         }]);
       }
     }
@@ -6379,6 +6411,7 @@ const DayPlanner = () => {
     goalsProjectsEnabled, setGoalsProjectsEnabled,
     addGoal, updateGoal, deleteGoal,
     addProject, updateProject, deleteProject,
+    projectFilter, setProjectFilter,
 
     // ── Reminders ─────────────────────────────────────────────────────────────
     reminderSettings, setReminderSettings,

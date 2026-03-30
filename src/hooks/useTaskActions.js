@@ -153,6 +153,7 @@ export default function useTaskActions({
         notes: '',
         subtasks: [],
         ...(obsidianMeta ?? {}),
+        ...(newTask.projectId ? { projectId: newTask.projectId } : {}),
       };
 
       if (toInbox) {
@@ -161,6 +162,9 @@ export default function useTaskActions({
           inboxTask.deadline = newTask.deadline;
         }
         setUnscheduledTasks(prev => [...prev, inboxTask]);
+      } else if (newTask.keepUnscheduled && newTask.projectId) {
+        // Save as unscheduled project task (no scheduling)
+        setUnscheduledTasks(prev => [...prev, task]);
       } else if (newTask.recurrence) {
         // Create recurring task template
         const taskDate = newTask.date || dateToString(selectedDate);

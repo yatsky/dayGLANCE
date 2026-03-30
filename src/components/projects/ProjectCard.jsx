@@ -1,4 +1,4 @@
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useState, useRef } from 'react';
 import ConfirmDialog from '../ConfirmDialog.jsx';
 import {
   AlertTriangle, Calendar, CheckCircle2, CheckSquare, ChevronDown,
@@ -36,14 +36,14 @@ const TitleWithTags = ({ title, className }) => {
  *   onFocusClick — called with the project when the "Project Focus" button is clicked
  *   onEditClick  — called to open the project edit form
  */
-const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => {
+const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact }, ref) => {
   const {
     tasks, setTasks,
     unscheduledTasks, setUnscheduledTasks,
     goals,
     deleteProject,
     openMobileEditTask,
-    darkMode,
+    darkMode, isMobile,
     borderClass, textPrimary, textSecondary, hoverBg,
   } = useDayPlannerCtx();
 
@@ -76,8 +76,10 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [tasksExpanded, setTasksExpanded] = useState(false);
+  const [compactExpanded, setCompactExpanded] = useState(false);
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
+  const touchDragRef = useRef({ active: false, fromIdx: null, overIdx: null });
 
   const handleDelete = () => setShowConfirm(true);
 
@@ -142,6 +144,48 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
     setDragOverIdx(null);
   };
 
+  // ── Touch drag-to-reorder (mobile) ─────────────────────────────────────────
+  const handleGripTouchStart = (e, idx) => {
+    touchDragRef.current = { active: true, fromIdx: idx, overIdx: null };
+    setDragIdx(idx);
+  };
+
+  const handleGripTouchMove = (e) => {
+    if (!touchDragRef.current.active) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const taskEl = el?.closest('[data-drag-idx]');
+    if (taskEl) {
+      const overIdx = parseInt(taskEl.getAttribute('data-drag-idx'), 10);
+      if (!isNaN(overIdx)) {
+        touchDragRef.current.overIdx = overIdx;
+        setDragOverIdx(overIdx);
+      }
+    }
+  };
+
+  const handleGripTouchEnd = () => {
+    if (!touchDragRef.current.active) return;
+    const { fromIdx, overIdx } = touchDragRef.current;
+    touchDragRef.current = { active: false, fromIdx: null, overIdx: null };
+    if (fromIdx !== null && overIdx !== null && fromIdx !== overIdx) {
+      const incompleteUnscheduled = projectUnscheduled.filter(t => !t.completed);
+      const fromId = incompleteUnscheduled[fromIdx]?.id;
+      const toId = incompleteUnscheduled[overIdx]?.id;
+      if (fromId && toId) {
+        const next = [...unscheduledTasks];
+        const fromFull = next.findIndex(t => t.id === fromId);
+        const toFull = next.findIndex(t => t.id === toId);
+        const [moved] = next.splice(fromFull, 1);
+        next.splice(toFull, 0, moved);
+        setUnscheduledTasks(next);
+      }
+    }
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+
   // ── Quick-add ──────────────────────────────────────────────────────────────
   const handleQuickAdd = (e) => {
     e.preventDefault();
@@ -151,7 +195,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
       id: crypto.randomUUID(),
       title,
       duration: 30,
-      color: 'bg-blue-500',
+      color: parentGoal?.color || 'bg-blue-500',
       completed: false,
       isAllDay: false,
       notes: '',
@@ -165,13 +209,90 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
     setShowQuickAdd(false);
   };
 
+  // ── Compact view for completed projects ───────────────────────────────────
+  if (compact) {
+    const btnBase = `p-1 rounded-lg transition-colors`;
+    const editBtn = darkMode ? 'text-gray-600 hover:text-gray-300 hover:bg-gray-700' : 'text-stone-300 hover:text-stone-600 hover:bg-stone-100';
+    const delBtn  = darkMode ? 'text-gray-600 hover:text-red-400 hover:bg-red-900/20' : 'text-stone-300 hover:text-red-500 hover:bg-red-50';
+    return (
+      <>
+        <div
+          ref={ref}
+          className={`flex flex-col rounded-xl border overflow-hidden ${
+            darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-stone-200'
+          } ${isMobile ? 'w-full' : 'min-w-[180px] max-w-[240px] w-full'}`}
+          style={goalHex ? { borderLeft: `3px solid ${goalHex}88` } : {}}
+        >
+          {/* Row 1: title + edit/delete */}
+          <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1">
+            <span className={`text-sm font-medium ${textPrimary} flex-1 min-w-0 truncate`}>
+              {project.title}
+            </span>
+            <button onClick={() => onEditClick?.()} className={`${btnBase} ${editBtn}`} aria-label="Edit project">
+              <Edit2 size={12} />
+            </button>
+            <button onClick={handleDelete} className={`${btnBase} ${delBtn}`} aria-label="Delete project">
+              <Trash2 size={12} />
+            </button>
+          </div>
+          {/* Row 2: Done badge + task count + expand chevron */}
+          <div className="flex items-center gap-2 px-3 pb-2.5">
+            <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
+              darkMode ? 'bg-green-900/50 text-green-400' : 'bg-green-50 text-green-600'
+            }`}>
+              <CheckCircle2 size={10} /> Done
+            </span>
+            {totalCount > 0 && (
+              <span className={`text-xs ${textSecondary} opacity-60`}>{completedCount}/{totalCount} tasks</span>
+            )}
+            {totalCount > 0 && (
+              <button
+                onClick={() => setCompactExpanded(v => !v)}
+                className={`ml-auto ${btnBase} ${editBtn}`}
+                aria-label={compactExpanded ? 'Collapse tasks' : 'Expand tasks'}
+              >
+                <ChevronDown size={13} className={`transition-transform ${compactExpanded ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
+          {/* Expanded task list */}
+          {compactExpanded && totalCount > 0 && (
+            <div className={`border-t px-3 py-2 flex flex-col gap-1 ${
+              darkMode ? 'border-gray-700' : 'border-stone-100'
+            }`}>
+              {allProjectDisplayTasks.map(t => (
+                <div key={t.id} className="flex items-center gap-1.5">
+                  {t.completed
+                    ? <CheckCircle2 size={11} className="text-emerald-500 flex-shrink-0" />
+                    : <Square size={11} className={`${textSecondary} opacity-50 flex-shrink-0`} />
+                  }
+                  <span className={`text-xs ${t.completed ? `line-through ${textSecondary} opacity-50` : textPrimary} truncate`}>
+                    {t.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {showConfirm && (
+          <ConfirmDialog
+            title={`Delete "${project.title}"?`}
+            message="Tasks linked to this project will remain but won't be grouped."
+            onConfirm={() => { setShowConfirm(false); deleteProject(project.id); }}
+            onCancel={() => setShowConfirm(false)}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <>
     <div
       ref={ref}
       className={`flex flex-col rounded-xl border overflow-hidden ${
         darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-stone-200'
-      } min-w-[180px] max-w-[240px] w-full`}
+      } ${isMobile ? 'w-full' : 'min-w-[180px] max-w-[240px] w-full'}`}
     >
       {/* Goal color bar */}
       {goalHex && (
@@ -257,6 +378,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
               return (
                 <div
                   key={t.id}
+                  data-drag-idx={draggable ? incompleteUnscheduledIdx : undefined}
                   draggable={draggable}
                   onDragStart={draggable ? e => handleDragStart(e, incompleteUnscheduledIdx) : undefined}
                   onDragOver={draggable ? e => handleDragOver(e, incompleteUnscheduledIdx) : undefined}
@@ -292,8 +414,18 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
                       }`}
                     />
                     {scheduled && <Calendar size={10} className={`${textSecondary} opacity-40 flex-shrink-0`} />}
-                    {draggable && <GripVertical size={10} className={`${textSecondary} opacity-20 flex-shrink-0`} />}
                   </button>
+                  {draggable && (
+                    <div
+                      className={`flex-shrink-0 p-1 cursor-grab touch-none ${textSecondary} opacity-30`}
+                      onTouchStart={e => handleGripTouchStart(e, incompleteUnscheduledIdx)}
+                      onTouchMove={handleGripTouchMove}
+                      onTouchEnd={handleGripTouchEnd}
+                      aria-label="Drag to reorder"
+                    >
+                      <GripVertical size={12} />
+                    </div>
+                  )}
                 </div>
               );
             })}

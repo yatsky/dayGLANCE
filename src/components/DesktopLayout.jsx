@@ -1341,7 +1341,7 @@ const DesktopLayout = () => {
                                     <button key={i} className="flex-shrink-0 text-purple-400 active:text-purple-300" onClick={(e) => { e.stopPropagation(); window.DayGlanceObsidian?.openNote(note); }} title={`Open "${note}" in Obsidian`}><NotebookPen size={13} /></button>
                                   ))}
                                 </div>
-                                <div className={`text-sm ${textSecondary} flex items-center gap-1 flex-wrap`}>
+                                <div className={`text-sm ${textSecondary} flex items-center gap-1`}>
                                   <span className="whitespace-nowrap">{timeLabel}{relativeLabel ? ',' : ''}</span>{relativeLabel ? <span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span> : ''}
                                   {relativeLabel === 'In Progress' && focusModeAvailable && (
                                     <button
@@ -1352,20 +1352,20 @@ const DesktopLayout = () => {
                                       <Target size={16} className="animate-pulse" />
                                     </button>
                                   )}
-                                  {goalsProjectsEnabled && task.projectId && (() => {
-                                    const proj = projects.find(p => p.id === task.projectId);
-                                    if (!proj) return null;
-                                    return (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
-                                        className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 hover:bg-blue-800/70' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
-                                        title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
-                                      >
-                                        {proj.title}
-                                      </button>
-                                    );
-                                  })()}
                                 </div>
+                                {goalsProjectsEnabled && task.projectId && (() => {
+                                  const proj = projects.find(p => p.id === task.projectId);
+                                  if (!proj) return null;
+                                  return (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                      className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 hover:bg-blue-800/70' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
+                                      title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                    >
+                                      {proj.title}
+                                    </button>
+                                  );
+                                })()}
                               </div>
                               {(relativeLabel === 'Overdue' || (task._agendaType === 'allday' && !task.imported)) && !task.completed && (
                                 <div className="flex items-center gap-1 flex-shrink-0 mr-5">
@@ -2565,7 +2565,7 @@ const DesktopLayout = () => {
                                 <button key={i} className="flex-shrink-0 text-purple-400 active:text-purple-300" onClick={(e) => { e.stopPropagation(); window.DayGlanceObsidian?.openNote(note); }} title={`Open "${note}" in Obsidian`}><NotebookPen size={13} /></button>
                               ))}
                             </div>
-                            <div className={`text-sm ${textSecondary} flex items-center gap-1 flex-wrap`}>
+                            <div className={`text-sm ${textSecondary} flex items-center gap-1`}>
                               <span className="whitespace-nowrap">{timeLabel}{relativeLabel ? ',' : ''}</span>{relativeLabel ? <span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span> : ''}
                               {relativeLabel === 'In Progress' && focusModeAvailable && (
                                 <button
@@ -2576,20 +2576,20 @@ const DesktopLayout = () => {
                                   <Target size={16} className="animate-pulse" />
                                 </button>
                               )}
-                              {goalsProjectsEnabled && task.projectId && (() => {
-                                const proj = projects.find(p => p.id === task.projectId);
-                                if (!proj) return null;
-                                return (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
-                                    className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 hover:bg-blue-800/70' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
-                                    title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
-                                  >
-                                    {proj.title}
-                                  </button>
-                                );
-                              })()}
                             </div>
+                            {goalsProjectsEnabled && task.projectId && (() => {
+                              const proj = projects.find(p => p.id === task.projectId);
+                              if (!proj) return null;
+                              return (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                  className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 hover:bg-blue-800/70' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
+                                  title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                >
+                                  {proj.title}
+                                </button>
+                              );
+                            })()}
                           </div>
                           {(relativeLabel === 'Overdue' || (task._agendaType === 'allday' && !task.imported)) && !task.completed && (
                             <div className="flex items-center gap-1 flex-shrink-0 mr-5">

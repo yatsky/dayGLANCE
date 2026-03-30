@@ -875,7 +875,7 @@ const MobileDashboard = ({
       {/* Carousel */}
       <div
         ref={scrollRef}
-        className="flex-1 min-h-0 flex overflow-x-auto overflow-y-hidden"
+        className="goal-carousel flex-1 min-h-0 flex overflow-x-auto overflow-y-hidden"
         style={{
           scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch',
@@ -896,7 +896,7 @@ const MobileDashboard = ({
             return (
               <div
                 key={goal.id}
-                className="flex-shrink-0 w-full h-full overflow-y-auto px-4 pb-4"
+                className="flex-shrink-0 w-full h-full overflow-y-auto overflow-x-hidden px-4 pb-4"
                 style={{ scrollSnapAlign: 'start' }}
               >
                 {/* Goal header card */}

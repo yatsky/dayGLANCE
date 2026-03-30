@@ -3,7 +3,7 @@ import {
   Activity, AlertCircle, AlertTriangle, BarChart3, Bell, BookOpen, BrainCircuit,
   Calendar, CalendarDays, Check, CheckCircle, CheckSquare, ChevronDown,
   ChevronLeft, ChevronRight, ChevronUp, Clock, Cloud, ExternalLink,
-  Eye, FileText, Filter, Flame, FolderOpen, GripVertical, Hash, HelpCircle,
+  Eye, FileText, Filter, Flame, FolderOpen, GitBranch, GripVertical, Hash, HelpCircle,
   Inbox, Key, LayoutGrid, Link, Loader, Menu, Mic, Minus, Moon, MoreHorizontal,
   NotebookPen, Plus, RefreshCw, Save, Search, Settings, SkipForward, Sparkles,
   Sun, Target, Trash2, TrendingUp, Trophy, Undo2, Upload, Volume2, VolumeX,
@@ -28,6 +28,7 @@ import DeadlinePickerPopover from './DeadlinePickerPopover.jsx';
 import MobileTabBar from './MobileTabBar.jsx';
 import MobileSettingsPanel from './MobileSettingsPanel.jsx';
 import MobileRoutinesTab from './MobileRoutinesTab.jsx';
+import GoalDashboard from './goals/GoalDashboard.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 
 const MobileLayout = () => {
@@ -586,6 +587,15 @@ const MobileLayout = () => {
                 <div className="flex items-center justify-between px-4 py-3">
                   <h2 className={`font-bold text-lg ${textPrimary} flex items-center gap-2`}>
                     <Sparkles size={20} /> Routines
+                  </h2>
+                </div>
+              </div>
+            )}
+            {mobileActiveTab === 'goals' && (
+              <div className={`${cardBg} border-b ${borderClass} sticky top-0 z-30`}>
+                <div className="flex items-center justify-between px-4 py-3">
+                  <h2 className={`font-bold text-lg ${textPrimary} flex items-center gap-2`}>
+                    <GitBranch size={20} className="text-blue-500" /> Goals &amp; Projects
                   </h2>
                 </div>
               </div>
@@ -2931,6 +2941,12 @@ const MobileLayout = () => {
             )}
 
             {mobileActiveTab === 'routines' && <MobileRoutinesTab />}
+
+            {mobileActiveTab === 'goals' && (
+              <div className="mobile-tab-fade-in flex flex-col flex-1 min-h-0 overflow-hidden">
+                <GoalDashboard embedded />
+              </div>
+            )}
 
             {mobileActiveTab === 'frames' && (
               <div className={`px-4 py-4 mobile-tab-fade-in flex-1 min-h-0 overflow-y-auto`}>

@@ -11,7 +11,7 @@ const MobileTabBar = () => {
     todayRoutines, setDashboardSelectedChips,
     setRoutineAddingToBucket, setRoutineNewChipName,
     routinesEnabled,
-    goalsProjectsEnabled, showGoalsDashboard, setShowGoalsDashboard,
+    goalsProjectsEnabled,
     cardBg, borderClass, textSecondary,
     filteredUnscheduledTasks, todayAgenda,
     goToToday, handleRoutinesDone,
@@ -108,9 +108,10 @@ const MobileTabBar = () => {
         <button
           onClick={() => {
             if (mobileActiveTab === 'routines') handleRoutinesDone();
-            setShowGoalsDashboard(true);
+            setMobileActiveTab('goals');
+            setMobileSettingsView('main');
           }}
-          className={`flex flex-col items-center justify-center ${showLabels ? 'gap-0.5' : ''} flex-1 h-full ${showGoalsDashboard ? 'text-blue-500' : textSecondary}`}
+          className={`flex flex-col items-center justify-center ${showLabels ? 'gap-0.5' : ''} flex-1 h-full ${mobileActiveTab === 'goals' ? 'text-blue-500' : textSecondary}`}
         >
           <Target size={iconSize} />
           {showLabels && <span className="text-[10px] font-medium">Goals</span>}

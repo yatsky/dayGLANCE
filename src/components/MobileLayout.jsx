@@ -419,7 +419,7 @@ const MobileLayout = () => {
     saveMobileEditTask, saveMobileEditNativeEvent,
     pushUndo, performUndo, performRedo,
     confirmEmptyBin, emptyRecycleBin,
-    projectFilter,
+    projectFilter, setProjectFilter,
     goals,
     projects,
     goalsProjectsEnabled,
@@ -2445,9 +2445,13 @@ const MobileLayout = () => {
                               const proj = projects.find(p => p.id === task.projectId);
                               if (!proj) return null;
                               return (
-                                <span className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium ${darkMode ? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                  className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 active:bg-blue-800/70' : 'bg-blue-100 text-blue-700 active:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
+                                  title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                >
                                   {proj.title}
-                                </span>
+                                </button>
                               );
                             })()}
                           </div>

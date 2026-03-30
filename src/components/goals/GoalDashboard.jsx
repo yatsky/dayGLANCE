@@ -912,7 +912,7 @@ const MobileDashboard = ({
               <div
                 key={goal.id}
                 className="flex-shrink-0 w-full h-full overflow-y-auto overflow-x-hidden px-4 pb-4"
-                style={{ scrollSnapAlign: 'start' }}
+                style={{ scrollSnapAlign: 'start', touchAction: 'pan-y' }}
               >
                 {/* Goal header card */}
                 {(() => {
@@ -1042,7 +1042,7 @@ const MobileDashboard = ({
             <div
               key="standalone"
               className="flex-shrink-0 w-full h-full overflow-y-auto overflow-x-hidden px-4 pb-4"
-              style={{ scrollSnapAlign: 'start' }}
+              style={{ scrollSnapAlign: 'start', touchAction: 'pan-y' }}
             >
               <div className="mt-2 mb-4">
                 <span className={`text-xs font-semibold uppercase tracking-wider ${textSecondary}`}>

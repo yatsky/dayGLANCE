@@ -682,19 +682,41 @@ const DesktopDashboard = ({
           </div>
 
           {/* Projects for the active goal */}
-          {goalProjects.length > 0 && (
-            <div className="relative z-10 flex flex-wrap gap-4 mb-8 justify-center">
-              {goalProjects.map(proj => (
-                <ProjectCard
-                  key={proj.id}
-                  ref={el => { projectCardRefs.current[proj.id] = el; }}
-                  project={proj}
-                  onFocusClick={onFocusClick}
-                  onEditClick={() => onEditProject?.(proj)}
-                />
-              ))}
-            </div>
-          )}
+          {goalProjects.length > 0 && (() => {
+            const activeProjs = goalProjects.filter(p => p.status !== 'completed');
+            const doneProjs = goalProjects.filter(p => p.status === 'completed');
+            return (
+              <div className="relative z-10 mb-8">
+                {activeProjs.length > 0 && (
+                  <div className="flex flex-wrap gap-4 mb-3 justify-center">
+                    {activeProjs.map(proj => (
+                      <ProjectCard
+                        key={proj.id}
+                        ref={el => { projectCardRefs.current[proj.id] = el; }}
+                        project={proj}
+                        onFocusClick={onFocusClick}
+                        onEditClick={() => onEditProject?.(proj)}
+                      />
+                    ))}
+                  </div>
+                )}
+                {doneProjs.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    {doneProjs.map(proj => (
+                      <ProjectCard
+                        key={proj.id}
+                        ref={el => { projectCardRefs.current[proj.id] = el; }}
+                        project={proj}
+                        onFocusClick={onFocusClick}
+                        onEditClick={() => onEditProject?.(proj)}
+                        compact
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
 
@@ -712,17 +734,41 @@ const DesktopDashboard = ({
               <Layers size={12} /> Add Standalone Project
             </button>
           </div>
-          <div className="flex flex-wrap gap-4">
-            {standaloneProjects.map(proj => (
-              <ProjectCard
-                key={proj.id}
-                ref={el => { projectCardRefs.current[proj.id] = el; }}
-                project={proj}
-                onFocusClick={onFocusClick}
-                onEditClick={() => onEditProject?.(proj)}
-              />
-            ))}
-          </div>
+          {(() => {
+            const activeProjs = standaloneProjects.filter(p => p.status !== 'completed');
+            const doneProjs = standaloneProjects.filter(p => p.status === 'completed');
+            return (
+              <>
+                {activeProjs.length > 0 && (
+                  <div className="flex flex-wrap gap-4 mb-3">
+                    {activeProjs.map(proj => (
+                      <ProjectCard
+                        key={proj.id}
+                        ref={el => { projectCardRefs.current[proj.id] = el; }}
+                        project={proj}
+                        onFocusClick={onFocusClick}
+                        onEditClick={() => onEditProject?.(proj)}
+                      />
+                    ))}
+                  </div>
+                )}
+                {doneProjs.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    {doneProjs.map(proj => (
+                      <ProjectCard
+                        key={proj.id}
+                        ref={el => { projectCardRefs.current[proj.id] = el; }}
+                        project={proj}
+                        onFocusClick={onFocusClick}
+                        onEditClick={() => onEditProject?.(proj)}
+                        compact
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
 
@@ -931,18 +977,31 @@ const MobileDashboard = ({
                       <Layers size={14} /> Add project
                     </button>
                   </div>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {children.map(proj => (
-                      <ProjectCard
-                        key={proj.id}
-                        project={proj}
-                        onFocusClick={onFocusClick}
-                        onEditClick={() => onEditProject?.(proj)}
-                      />
-                    ))}
-                  </div>
-                )}
+                ) : (() => {
+                  const activeProjs = children.filter(p => p.status !== 'completed');
+                  const doneProjs = children.filter(p => p.status === 'completed');
+                  return (
+                    <div className="flex flex-col gap-3">
+                      {activeProjs.map(proj => (
+                        <ProjectCard
+                          key={proj.id}
+                          project={proj}
+                          onFocusClick={onFocusClick}
+                          onEditClick={() => onEditProject?.(proj)}
+                        />
+                      ))}
+                      {doneProjs.map(proj => (
+                        <ProjectCard
+                          key={proj.id}
+                          project={proj}
+                          onFocusClick={onFocusClick}
+                          onEditClick={() => onEditProject?.(proj)}
+                          compact
+                        />
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             );
           }

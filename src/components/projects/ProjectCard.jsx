@@ -36,7 +36,7 @@ const TitleWithTags = ({ title, className }) => {
  *   onFocusClick — called with the project when the "Project Focus" button is clicked
  *   onEditClick  — called to open the project edit form
  */
-const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => {
+const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact }, ref) => {
   const {
     tasks, setTasks,
     unscheduledTasks, setUnscheduledTasks,
@@ -207,6 +207,57 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick }, ref) => 
     setQuickAddTitle('');
     setShowQuickAdd(false);
   };
+
+  // ── Compact view for completed projects ───────────────────────────────────
+  if (compact) {
+    return (
+      <>
+        <div
+          ref={ref}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
+            darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-stone-200'
+          } w-full`}
+          style={goalHex ? { borderLeft: `3px solid ${goalHex}88` } : {}}
+        >
+          <span className={`text-sm font-medium ${textPrimary} flex-1 min-w-0 truncate`}>
+            {project.title}
+          </span>
+          <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+            darkMode ? 'bg-green-900/50 text-green-400' : 'bg-green-50 text-green-600'
+          }`}>
+            <CheckCircle2 size={10} />
+            Done
+          </span>
+          <button
+            onClick={() => onEditClick?.()}
+            className={`p-1 rounded-lg transition-colors ${
+              darkMode ? 'text-gray-600 hover:text-gray-300 hover:bg-gray-700' : 'text-stone-300 hover:text-stone-600 hover:bg-stone-100'
+            }`}
+            aria-label="Edit project"
+          >
+            <Edit2 size={12} />
+          </button>
+          <button
+            onClick={handleDelete}
+            className={`p-1 rounded-lg transition-colors ${
+              darkMode ? 'text-gray-600 hover:text-red-400 hover:bg-red-900/20' : 'text-stone-300 hover:text-red-500 hover:bg-red-50'
+            }`}
+            aria-label="Delete project"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+        {showConfirm && (
+          <ConfirmDialog
+            title={`Delete "${project.title}"?`}
+            message="Tasks linked to this project will remain but won't be grouped."
+            onConfirm={() => { setShowConfirm(false); deleteProject(project.id); }}
+            onCancel={() => setShowConfirm(false)}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <>

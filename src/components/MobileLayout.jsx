@@ -1493,8 +1493,21 @@ const MobileLayout = () => {
                                         ))}
                                       </div>
                                       {height >= 55 && (
-                                        <div className="text-xs text-white/70 mt-0.5">
-                                          {formatTime(task.startTime)} · {task.duration}m
+                                        <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                          <span className="text-xs text-white/70">{formatTime(task.startTime)} · {task.duration}m</span>
+                                          {goalsProjectsEnabled && task.projectId && (() => {
+                                            const proj = projects.find(p => p.id === task.projectId);
+                                            if (!proj) return null;
+                                            return (
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                                className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 active:bg-white/40 text-white font-medium transition-colors flex-shrink-0 ${projectFilter === task.projectId ? 'ring-1 ring-white/60' : ''}`}
+                                                title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                              >
+                                                {proj.title}
+                                              </button>
+                                            );
+                                          })()}
                                         </div>
                                       )}
                                     </div>
@@ -1522,8 +1535,21 @@ const MobileLayout = () => {
                                         </div>
                                       </div>
                                       {height >= 55 && (
-                                        <div className="text-xs text-white/70 mt-0.5">
-                                          {formatTime(task.startTime)} · {task.duration}m
+                                        <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                          <span className="text-xs text-white/70">{formatTime(task.startTime)} · {task.duration}m</span>
+                                          {goalsProjectsEnabled && task.projectId && (() => {
+                                            const proj = projects.find(p => p.id === task.projectId);
+                                            if (!proj) return null;
+                                            return (
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                                className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 active:bg-white/40 text-white font-medium transition-colors flex-shrink-0 ${projectFilter === task.projectId ? 'ring-1 ring-white/60' : ''}`}
+                                                title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                              >
+                                                {proj.title}
+                                              </button>
+                                            );
+                                          })()}
                                         </div>
                                       )}
                                     </div>

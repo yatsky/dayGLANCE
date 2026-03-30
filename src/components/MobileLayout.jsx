@@ -1492,11 +1492,24 @@ const MobileLayout = () => {
                                           <button key={i} className="flex-shrink-0 text-purple-200 active:text-purple-100" onClick={(e) => { e.stopPropagation(); window.DayGlanceObsidian?.openNote(note); }} title={`Open "${note}" in Obsidian`}><NotebookPen size={14} /></button>
                                         ))}
                                       </div>
-                                      {height >= 55 && (
-                                        <div className="text-xs text-white/70 mt-0.5">
-                                          {formatTime(task.startTime)} · {task.duration}m
-                                        </div>
-                                      )}
+                                      {goalsProjectsEnabled && task.projectId ? (() => {
+                                        const proj = projects.find(p => p.id === task.projectId);
+                                        if (!proj) return height >= 55 ? <div className="text-xs text-white/70 mt-0.5">{formatTime(task.startTime)} · {task.duration}m</div> : null;
+                                        return (
+                                          <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                              className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 active:bg-white/40 text-white font-medium transition-colors flex-shrink-0 ${projectFilter === task.projectId ? 'ring-1 ring-white/60' : ''}`}
+                                              title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                            >
+                                              {proj.title}
+                                            </button>
+                                            {height >= 55 && <span className="text-xs text-white/70">{formatTime(task.startTime)} · {task.duration}m</span>}
+                                          </div>
+                                        );
+                                      })() : height >= 55 ? (
+                                        <div className="text-xs text-white/70 mt-0.5">{formatTime(task.startTime)} · {task.duration}m</div>
+                                      ) : null}
                                     </div>
                                   ) : (
                                     /* WIDE: checkbox + title + action buttons + time row */
@@ -1521,11 +1534,24 @@ const MobileLayout = () => {
                                           <MobileActionButtons />
                                         </div>
                                       </div>
-                                      {height >= 55 && (
-                                        <div className="text-xs text-white/70 mt-0.5">
-                                          {formatTime(task.startTime)} · {task.duration}m
-                                        </div>
-                                      )}
+                                      {goalsProjectsEnabled && task.projectId ? (() => {
+                                        const proj = projects.find(p => p.id === task.projectId);
+                                        if (!proj) return height >= 55 ? <div className="text-xs text-white/70 mt-0.5">{formatTime(task.startTime)} · {task.duration}m</div> : null;
+                                        return (
+                                          <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                              className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 active:bg-white/40 text-white font-medium transition-colors flex-shrink-0 ${projectFilter === task.projectId ? 'ring-1 ring-white/60' : ''}`}
+                                              title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                            >
+                                              {proj.title}
+                                            </button>
+                                            {height >= 55 && <span className="text-xs text-white/70">{formatTime(task.startTime)} · {task.duration}m</span>}
+                                          </div>
+                                        );
+                                      })() : height >= 55 ? (
+                                        <div className="text-xs text-white/70 mt-0.5">{formatTime(task.startTime)} · {task.duration}m</div>
+                                      ) : null}
                                     </div>
                                   )}
                                   </div>{/* end content */}
@@ -2430,7 +2456,7 @@ const MobileLayout = () => {
                               </button>
                             )}
                           </div>
-                          <div className={`text-sm ${textSecondary} flex items-center gap-1 flex-wrap`}>
+                          <div className={`text-sm ${textSecondary} flex items-center gap-1`}>
                             {timeLabel}{relativeLabel ? <>{`, `}<span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span></> : ''}
                             {relativeLabel === 'In Progress' && focusModeAvailable && (
                               <button
@@ -2441,20 +2467,20 @@ const MobileLayout = () => {
                                 <Target size={16} className="animate-pulse" />
                               </button>
                             )}
-                            {goalsProjectsEnabled && task.projectId && (() => {
-                              const proj = projects.find(p => p.id === task.projectId);
-                              if (!proj) return null;
-                              return (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
-                                  className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 active:bg-blue-800/70' : 'bg-blue-100 text-blue-700 active:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
-                                  title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
-                                >
-                                  {proj.title}
-                                </button>
-                              );
-                            })()}
                           </div>
+                          {goalsProjectsEnabled && task.projectId && (() => {
+                            const proj = projects.find(p => p.id === task.projectId);
+                            if (!proj) return null;
+                            return (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 active:bg-blue-800/70' : 'bg-blue-100 text-blue-700 active:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
+                                title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                              >
+                                {proj.title}
+                              </button>
+                            );
+                          })()}
                         </div>
                         {(relativeLabel === 'Overdue' || (task._agendaType === 'allday' && !task.imported)) && !task.completed && (
                           <div className="flex items-center gap-1 flex-shrink-0 mr-5">

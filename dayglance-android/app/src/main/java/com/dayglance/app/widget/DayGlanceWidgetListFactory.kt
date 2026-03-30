@@ -469,13 +469,17 @@ class DayGlanceWidgetListFactory(
             rv.setViewVisibility(R.id.tv_task_badge, View.GONE)
         }
 
-        // Time / tag line — project name prepended when present (e.g. "My Project  ·  9:30 – 10:00")
-        val displayLine = listOfNotNull(
-            item.projectName.takeIf { it.isNotEmpty() },
-            item.timeStr.takeIf { it.isNotEmpty() },
-        ).joinToString("  ·  ")
-        if (displayLine.isNotEmpty()) {
-            rv.setTextViewText(R.id.tv_task_time, displayLine)
+        // Project chip — shown as a styled pill when task belongs to a project
+        if (item.projectName.isNotEmpty()) {
+            rv.setTextViewText(R.id.tv_task_project, item.projectName)
+            rv.setViewVisibility(R.id.tv_task_project, View.VISIBLE)
+        } else {
+            rv.setViewVisibility(R.id.tv_task_project, View.GONE)
+        }
+
+        // Time line
+        if (item.timeStr.isNotEmpty()) {
+            rv.setTextViewText(R.id.tv_task_time, item.timeStr)
             rv.setViewVisibility(R.id.tv_task_time, View.VISIBLE)
         } else {
             rv.setViewVisibility(R.id.tv_task_time, View.GONE)
@@ -483,6 +487,7 @@ class DayGlanceWidgetListFactory(
 
         rv.boostTextSizeForOneUi(R.id.tv_task_title, 13f)
         rv.boostTextSizeForOneUi(R.id.tv_task_badge, 11f)
+        rv.boostTextSizeForOneUi(R.id.tv_task_project, 10f)
         rv.boostTextSizeForOneUi(R.id.tv_task_time, 12f)
         rv.setOnClickFillInIntent(R.id.task_item_root, android.content.Intent())
         return rv

@@ -409,6 +409,7 @@ const DesktopLayout = () => {
     pushUndo, performUndo, performRedo,
     confirmEmptyBin, emptyRecycleBin,
     goals, projects, goalsProjectsEnabled,
+    setShowGoalsDashboard,
     projectFilter, setProjectFilter,
   } = useDayPlannerCtx();
 
@@ -618,7 +619,7 @@ const DesktopLayout = () => {
           {/* Tablet static side panel */}
           {isTablet && (
             <div
-              className={`${cardBg} border-r ${borderClass} flex flex-col flex-shrink-0`}
+              className={`${cardBg} border-r ${borderClass} flex flex-col flex-shrink-0 relative`}
               style={{ width: '340px', height: '100%' }}
             >
               {/* Tabbed header — both portrait and landscape */}
@@ -1834,6 +1835,16 @@ const DesktopLayout = () => {
                   </div>
                 )}
               </div>
+              {/* Goals & Projects FAB — bottom-left of GLANCE panel */}
+              {goalsProjectsEnabled && tabletActiveTab === 'glance' && (
+                <button
+                  onClick={() => setShowGoalsDashboard(true)}
+                  className={`absolute bottom-4 left-4 z-10 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
+                  title="Goals & Projects"
+                >
+                  <Target size={18} />
+                </button>
+              )}
             </div>
           )}
 
@@ -3087,6 +3098,16 @@ const DesktopLayout = () => {
               </div>
               )}
             </div>
+            {/* Goals & Projects FAB — bottom-left of GLANCE panel */}
+            {goalsProjectsEnabled && tabletActiveTab === 'glance' && (
+              <button
+                onClick={() => setShowGoalsDashboard(true)}
+                className={`absolute bottom-4 left-4 z-10 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
+                title="Goals & Projects"
+              >
+                <Target size={18} />
+              </button>
+            )}
           </div>
           )}
 

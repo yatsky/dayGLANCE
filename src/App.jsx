@@ -7103,16 +7103,7 @@ const DayPlanner = () => {
               <Sparkles size={22} />
             </button>
           )}
-          {/* Goals & Projects FAB */}
-          {goalsProjectsEnabled && (
-            <button
-              onClick={() => setShowGoalsDashboard(true)}
-              className={`fixed z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 active:bg-gray-600' : 'bg-stone-200 text-stone-600 active:bg-stone-300'}`}
-              style={{ left: '268px', bottom: `${(recycleBin.filter(t => !t.isExample).length > 0 ? 13.5 : 9.5) + (habitsEnabled ? 4 : 0) + (routinesEnabled ? 4 : 0)}rem` }}
-            >
-              <Target size={22} />
-            </button>
-          )}
+
           </>)}
         </>
       )}

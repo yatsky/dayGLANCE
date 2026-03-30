@@ -408,7 +408,7 @@ const MobileNewTaskModal = () => {
                   type="submit"
                   className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                 >
-                  {mobileEditingTask ? 'Save Changes' : newTask.openInInbox ? 'Add to Inbox' : 'Add to Schedule'}
+                  {mobileEditingTask ? 'Save Changes' : newTask.openInInbox ? 'Add to Inbox' : newTask.projectId && newTask.keepUnscheduled ? 'Add to Project' : newTask.projectId ? 'Add to Project and Schedule' : 'Add to Schedule'}
                 </button>
               </div>
 

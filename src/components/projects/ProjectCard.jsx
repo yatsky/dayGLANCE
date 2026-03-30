@@ -76,6 +76,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact },
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [tasksExpanded, setTasksExpanded] = useState(false);
+  const [compactExpanded, setCompactExpanded] = useState(false);
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const touchDragRef = useRef({ active: false, fromIdx: null, overIdx: null });
@@ -210,42 +211,68 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact },
 
   // ── Compact view for completed projects ───────────────────────────────────
   if (compact) {
+    const btnBase = `p-1 rounded-lg transition-colors`;
+    const editBtn = darkMode ? 'text-gray-600 hover:text-gray-300 hover:bg-gray-700' : 'text-stone-300 hover:text-stone-600 hover:bg-stone-100';
+    const delBtn  = darkMode ? 'text-gray-600 hover:text-red-400 hover:bg-red-900/20' : 'text-stone-300 hover:text-red-500 hover:bg-red-50';
     return (
       <>
         <div
           ref={ref}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${
+          className={`flex flex-col rounded-xl border overflow-hidden ${
             darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-stone-200'
           } ${isMobile ? 'w-full' : 'min-w-[180px] max-w-[240px] w-full'}`}
           style={goalHex ? { borderLeft: `3px solid ${goalHex}88` } : {}}
         >
-          <span className={`text-sm font-medium ${textPrimary} flex-1 min-w-0 truncate`}>
-            {project.title}
-          </span>
-          <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${
-            darkMode ? 'bg-green-900/50 text-green-400' : 'bg-green-50 text-green-600'
-          }`}>
-            <CheckCircle2 size={10} />
-            Done
-          </span>
-          <button
-            onClick={() => onEditClick?.()}
-            className={`p-1 rounded-lg transition-colors ${
-              darkMode ? 'text-gray-600 hover:text-gray-300 hover:bg-gray-700' : 'text-stone-300 hover:text-stone-600 hover:bg-stone-100'
-            }`}
-            aria-label="Edit project"
-          >
-            <Edit2 size={12} />
-          </button>
-          <button
-            onClick={handleDelete}
-            className={`p-1 rounded-lg transition-colors ${
-              darkMode ? 'text-gray-600 hover:text-red-400 hover:bg-red-900/20' : 'text-stone-300 hover:text-red-500 hover:bg-red-50'
-            }`}
-            aria-label="Delete project"
-          >
-            <Trash2 size={12} />
-          </button>
+          {/* Row 1: title + edit/delete */}
+          <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1">
+            <span className={`text-sm font-medium ${textPrimary} flex-1 min-w-0 truncate`}>
+              {project.title}
+            </span>
+            <button onClick={() => onEditClick?.()} className={`${btnBase} ${editBtn}`} aria-label="Edit project">
+              <Edit2 size={12} />
+            </button>
+            <button onClick={handleDelete} className={`${btnBase} ${delBtn}`} aria-label="Delete project">
+              <Trash2 size={12} />
+            </button>
+          </div>
+          {/* Row 2: Done badge + task count + expand chevron */}
+          <div className="flex items-center gap-2 px-3 pb-2.5">
+            <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
+              darkMode ? 'bg-green-900/50 text-green-400' : 'bg-green-50 text-green-600'
+            }`}>
+              <CheckCircle2 size={10} /> Done
+            </span>
+            {totalCount > 0 && (
+              <span className={`text-xs ${textSecondary} opacity-60`}>{completedCount}/{totalCount} tasks</span>
+            )}
+            {totalCount > 0 && (
+              <button
+                onClick={() => setCompactExpanded(v => !v)}
+                className={`ml-auto ${btnBase} ${editBtn}`}
+                aria-label={compactExpanded ? 'Collapse tasks' : 'Expand tasks'}
+              >
+                <ChevronDown size={13} className={`transition-transform ${compactExpanded ? 'rotate-180' : ''}`} />
+              </button>
+            )}
+          </div>
+          {/* Expanded task list */}
+          {compactExpanded && totalCount > 0 && (
+            <div className={`border-t px-3 py-2 flex flex-col gap-1 ${
+              darkMode ? 'border-gray-700' : 'border-stone-100'
+            }`}>
+              {allProjectDisplayTasks.map(t => (
+                <div key={t.id} className="flex items-center gap-1.5">
+                  {t.completed
+                    ? <CheckCircle2 size={11} className="text-emerald-500 flex-shrink-0" />
+                    : <Square size={11} className={`${textSecondary} opacity-50 flex-shrink-0`} />
+                  }
+                  <span className={`text-xs ${t.completed ? `line-through ${textSecondary} opacity-50` : textPrimary} truncate`}>
+                    {t.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         {showConfirm && (
           <ConfirmDialog

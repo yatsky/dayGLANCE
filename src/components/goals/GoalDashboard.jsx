@@ -1325,7 +1325,7 @@ const GoalDashboard = ({ embedded = false, addGoalTrigger = 0, addProjectTrigger
         )}
         {projectForm && (
           <FormOverlay onClose={() => setProjectForm(null)} mobile cardBg={cardBg}>
-            <ProjectForm initial={projectForm.editing} defaultGoalId={projectForm.defaultGoalId} onSave={handleSaveProject} onCancel={() => setProjectForm(null)} mobile />
+            <ProjectForm initial={projectForm.editing} goals={goals} defaultGoalId={projectForm.defaultGoalId} onSave={handleSaveProject} onCancel={() => setProjectForm(null)} mobile />
           </FormOverlay>
         )}
         {confirmDialog && (

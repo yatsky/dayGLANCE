@@ -3115,10 +3115,11 @@ const DesktopLayout = () => {
             {goalsProjectsEnabled && tabletActiveTab === 'glance' && (
               <button
                 onClick={() => setShowGoalsDashboard(true)}
-                className={`absolute bottom-4 left-4 z-10 w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
+                className={`absolute bottom-6 left-4 z-10 h-9 px-3 rounded-full shadow-lg flex items-center gap-1.5 transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
                 title="Goals & Projects"
               >
-                <Target size={18} />
+                <GitBranch size={15} />
+                <span className="text-xs font-medium whitespace-nowrap">Goals &amp; Projects</span>
               </button>
             )}
           </div>

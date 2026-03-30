@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Eye, Inbox, LayoutGrid, Settings, Sparkles } from 'lucide-react';
+import { Calendar, Eye, Inbox, Settings, Sparkles, Target } from 'lucide-react';
 import { isNativeAndroid } from '../native.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 
@@ -11,12 +11,13 @@ const MobileTabBar = () => {
     todayRoutines, setDashboardSelectedChips,
     setRoutineAddingToBucket, setRoutineNewChipName,
     routinesEnabled,
+    goalsProjectsEnabled, showGoalsDashboard, setShowGoalsDashboard,
     cardBg, borderClass, textSecondary,
     filteredUnscheduledTasks, todayAgenda,
     goToToday, handleRoutinesDone,
   } = useDayPlannerCtx();
 
-  const tabCount = 5 + (routinesEnabled ? 1 : 0);
+  const tabCount = 4 + (routinesEnabled ? 1 : 0) + (goalsProjectsEnabled ? 1 : 0);
   const showLabels = tabCount <= 5;
   const iconSize = showLabels ? 20 : 22;
 
@@ -103,17 +104,18 @@ const MobileTabBar = () => {
           {showLabels && <span className="text-[10px] font-medium">Routines</span>}
         </button>
         )}
+        {goalsProjectsEnabled && (
         <button
           onClick={() => {
             if (mobileActiveTab === 'routines') handleRoutinesDone();
-            setMobileActiveTab('frames');
-            setMobileSettingsView('main');
+            setShowGoalsDashboard(true);
           }}
-          className={`flex flex-col items-center justify-center ${showLabels ? 'gap-0.5' : ''} flex-1 h-full ${mobileActiveTab === 'frames' ? 'text-blue-500' : textSecondary}`}
+          className={`flex flex-col items-center justify-center ${showLabels ? 'gap-0.5' : ''} flex-1 h-full ${showGoalsDashboard ? 'text-blue-500' : textSecondary}`}
         >
-          <LayoutGrid size={iconSize} />
-          {showLabels && <span className="text-[10px] font-medium">Frames</span>}
+          <Target size={iconSize} />
+          {showLabels && <span className="text-[10px] font-medium">Goals</span>}
         </button>
+        )}
         <button
           onClick={() => {
             if (mobileActiveTab === 'routines') handleRoutinesDone();

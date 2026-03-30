@@ -3,8 +3,8 @@ import {
   Activity, BarChart3, Bell, BookOpen, BrainCircuit,
   CalendarDays, CheckCircle, CheckSquare, ChevronDown,
   ChevronLeft, ChevronRight, Clock, Cloud, ExternalLink,
-  FolderOpen, HelpCircle, Key, Loader, Mic, Moon,
-  RefreshCw, Save, Settings, Sparkles, Sun, Trash2,
+  FolderOpen, HelpCircle, Key, LayoutGrid, Loader, Mic, Moon,
+  RefreshCw, Save, Settings, Sparkles, Sun, Target, Trash2,
   Undo2, Upload, Volume2, VolumeX, Wifi, Zap,
 } from 'lucide-react';
 import { isNativeAndroid, nativeGetCalendars } from '../native.js';
@@ -43,6 +43,8 @@ const MobileSettingsPanel = () => {
     obsidianSyncStatus, obsidianSyncError, obsidianLastSynced, setObsidianLastSynced,
     routinesEnabled, setRoutinesEnabled,
     habitsEnabled, setHabitsEnabled,
+    goalsProjectsEnabled, setGoalsProjectsEnabled,
+    mobileActiveTab, setMobileActiveTab,
     aiConfig, setAiConfig,
     aiConnectionStatus, setAiConnectionStatus,
     aiConnectionMessage, setAiConnectionMessage,
@@ -107,11 +109,25 @@ const MobileSettingsPanel = () => {
         <span className={`text-xs font-medium ${textPrimary}`}>Routines {routinesEnabled ? 'On' : 'Off'}</span>
       </button>
       <button
+        onClick={() => { if (!goalsProjectsEnabled) setOnboardingProgress(prev => ({ ...prev, hasEnabledOptionalFeature: true })); setGoalsProjectsEnabled(!goalsProjectsEnabled); }}
+        className={`${cardBg} border ${borderClass} rounded-xl p-4 flex flex-col items-center gap-2`}
+      >
+        {goalsProjectsEnabled ? <Target size={24} className="text-blue-500" /> : <Target size={24} className={textSecondary} />}
+        <span className={`text-xs font-medium ${textPrimary}`}>Goals {goalsProjectsEnabled ? 'On' : 'Off'}</span>
+      </button>
+      <button
         onClick={() => setMobileSettingsView('ai')}
         className={`${cardBg} border ${borderClass} rounded-xl p-4 flex flex-col items-center gap-2`}
       >
         {aiConfig.enabled ? <BrainCircuit size={24} className="text-purple-400" /> : <BrainCircuit size={24} className={textSecondary} />}
         <span className={`text-xs font-medium ${textPrimary}`}>AI {aiConfig.enabled ? 'On' : 'Off'}</span>
+      </button>
+      <button
+        onClick={() => setMobileActiveTab('frames')}
+        className={`${cardBg} border ${borderClass} rounded-xl p-4 flex flex-col items-center gap-2`}
+      >
+        <LayoutGrid size={24} className={mobileActiveTab === 'frames' ? 'text-blue-500' : textSecondary} />
+        <span className={`text-xs font-medium ${textPrimary}`}>Frames</span>
       </button>
     </div>
 

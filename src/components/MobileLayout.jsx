@@ -591,7 +591,10 @@ const MobileLayout = () => {
             )}
             {mobileActiveTab === 'frames' && (
               <div className={`${cardBg} border-b ${borderClass} sticky top-0 z-30`}>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <button onClick={() => setMobileActiveTab('settings')} className={`p-1 -ml-1 rounded-lg ${textSecondary}`}>
+                    <ChevronLeft size={20} />
+                  </button>
                   <h2 className={`font-bold text-lg ${textPrimary} flex items-center gap-2`}>
                     <LayoutGrid size={20} /> Frames
                   </h2>

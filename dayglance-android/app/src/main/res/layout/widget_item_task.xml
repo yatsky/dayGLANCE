@@ -10,33 +10,24 @@
     [color bar 3dp] [title + label row]
                     [project chip]       ← hidden when no projectId
                     [time/tag line]
+
+  The color bar uses alignTop/alignBottom on the text content block so it
+  always stretches to the full row height (2 lines without chip, 3 with).
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/task_item_root"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp"
-    android:paddingStart="0dp"
-    android:paddingEnd="0dp">
+    android:layout_height="wrap_content">
 
-    <!-- Color bar -->
-    <TextView
-        android:id="@+id/task_color_bar"
-        android:layout_width="3dp"
-        android:layout_height="28dp"
-        android:background="#3b82f6"
-        android:layout_marginEnd="7dp"
-        android:text="" />
-
-    <!-- Text content -->
+    <!-- Text content — drives the row height -->
     <LinearLayout
-        android:layout_width="0dp"
+        android:id="@+id/task_text_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:layout_marginStart="10dp"
+        android:orientation="vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
 
         <!-- Title row: task name + badge (ALL DAY / DUE TODAY / OVERDUE) -->
         <LinearLayout
@@ -103,4 +94,13 @@
 
     </LinearLayout>
 
-</LinearLayout>
+    <!-- Color bar — aligned to text content so it always spans the full row height -->
+    <View
+        android:id="@+id/task_color_bar"
+        android:layout_width="3dp"
+        android:layout_height="0dp"
+        android:layout_alignTop="@id/task_text_content"
+        android:layout_alignBottom="@id/task_text_content"
+        android:background="#3b82f6" />
+
+</RelativeLayout>

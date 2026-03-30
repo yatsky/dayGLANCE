@@ -55,6 +55,7 @@ const GoalCard = forwardRef(
     // All non-archived projects complete → offer one-click completion
     const nonArchivedProjects = projects.filter(p => p.status !== 'archived');
     const allProjectsDone = nonArchivedProjects.length > 0 && progress >= 1;
+    const isCompleted = goal.status === 'completed';
 
     return (
       <div
@@ -62,7 +63,7 @@ const GoalCard = forwardRef(
         className={`rounded-xl overflow-hidden border-2 w-full ${
           darkMode ? 'border-gray-600' : 'border-stone-200'
         }`}
-        style={{ borderTopColor: 'transparent', borderLeftColor: 'transparent', borderRightColor: 'transparent' }}
+        style={{ opacity: isCompleted ? 0.45 : 1, borderTopColor: 'transparent', borderLeftColor: 'transparent', borderRightColor: 'transparent' }}
       >
         {/* Colored header */}
         <div className={`${goalColor} px-3 py-2.5 flex items-center gap-2`}>
@@ -84,8 +85,10 @@ const GoalCard = forwardRef(
             darkMode ? 'bg-gray-800' : 'bg-white'
           }`}
         >
-          {/* Target date + caution */}
-          {(daysLabel || showCaution) && (
+          {/* Target date + caution, or Completed label */}
+          {isCompleted ? (
+            <p className="text-xs text-emerald-500">Completed</p>
+          ) : (daysLabel || showCaution || allProjectsDone) ? (
             <div className="flex items-center gap-1.5">
               {daysLabel && (
                 <>
@@ -108,7 +111,7 @@ const GoalCard = forwardRef(
                 </button>
               )}
             </div>
-          )}
+          ) : null}
 
           {/* Description */}
           {goal.description && (

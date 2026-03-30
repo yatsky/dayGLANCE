@@ -4270,24 +4270,26 @@ const DesktopLayout = () => {
                                               ))}
                                             </div>
                                           )}
-                                          {extractTags(task.title).length > 0 && (
-                                            <div className="text-xs italic opacity-75 truncate">
-                                              {extractTags(task.title).map(tag => `#${tag}`).join(' ')}
+                                          {(extractTags(task.title).length > 0 || (goalsProjectsEnabled && task.projectId)) && (
+                                            <div className="flex items-center gap-1 flex-wrap text-xs italic opacity-75">
+                                              {extractTags(task.title).length > 0 && (
+                                                <span className="truncate">{extractTags(task.title).map(tag => `#${tag}`).join(' ')}</span>
+                                              )}
+                                              {goalsProjectsEnabled && task.projectId && (() => {
+                                                const proj = projects.find(p => p.id === task.projectId);
+                                                if (!proj) return null;
+                                                return (
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                                    className={`not-italic inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors flex-shrink-0`}
+                                                    title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                                  >
+                                                    {proj.title}
+                                                  </button>
+                                                );
+                                              })()}
                                             </div>
                                           )}
-                                          {goalsProjectsEnabled && task.projectId && (() => {
-                                            const proj = projects.find(p => p.id === task.projectId);
-                                            if (!proj) return null;
-                                            return (
-                                              <button
-                                                onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
-                                                className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors mt-0.5`}
-                                                title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
-                                              >
-                                                {proj.title}
-                                              </button>
-                                            );
-                                          })()}
                                         </div>
                                       </div>
                                     </div>
@@ -4357,24 +4359,26 @@ const DesktopLayout = () => {
                                               ))}
                                             </div>
                                           )}
-                                          {extractTags(task.title).length > 0 && (
-                                            <div className="text-xs italic opacity-75 truncate">
-                                              {extractTags(task.title).map(tag => `#${tag}`).join(' ')}
+                                          {(extractTags(task.title).length > 0 || (goalsProjectsEnabled && task.projectId)) && (
+                                            <div className="flex items-center gap-1 flex-wrap text-xs italic opacity-75">
+                                              {extractTags(task.title).length > 0 && (
+                                                <span className="truncate">{extractTags(task.title).map(tag => `#${tag}`).join(' ')}</span>
+                                              )}
+                                              {goalsProjectsEnabled && task.projectId && (() => {
+                                                const proj = projects.find(p => p.id === task.projectId);
+                                                if (!proj) return null;
+                                                return (
+                                                  <button
+                                                    onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                                    className={`not-italic inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors flex-shrink-0`}
+                                                    title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                                  >
+                                                    {proj.title}
+                                                  </button>
+                                                );
+                                              })()}
                                             </div>
                                           )}
-                                          {goalsProjectsEnabled && task.projectId && (() => {
-                                            const proj = projects.find(p => p.id === task.projectId);
-                                            if (!proj) return null;
-                                            return (
-                                              <button
-                                                onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
-                                                className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors mt-0.5`}
-                                                title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
-                                              >
-                                                {proj.title}
-                                              </button>
-                                            );
-                                          })()}
                                         </div>
                                       </div>
                                       {!isImported && (

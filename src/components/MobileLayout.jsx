@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Activity, AlertCircle, AlertTriangle, BarChart3, Bell, BookOpen, BrainCircuit,
   Calendar, CalendarDays, Check, CheckCircle, CheckSquare, ChevronDown,
   ChevronLeft, ChevronRight, ChevronUp, Clock, Cloud, ExternalLink,
-  Eye, FileText, Filter, Flame, FolderOpen, GitBranch, GripVertical, Hash, HelpCircle,
-  Inbox, Key, LayoutGrid, Link, Loader, Menu, Mic, Minus, Moon, MoreHorizontal,
+  Eye, FileText, Filter, Flag, Flame, FolderOpen, GitBranch, GripVertical, Hash, HelpCircle,
+  Inbox, Key, Layers, LayoutGrid, Link, Loader, Menu, Mic, Minus, Moon, MoreHorizontal,
   NotebookPen, Plus, RefreshCw, Save, Search, Settings, SkipForward, Sparkles,
   Sun, Target, Trash2, TrendingUp, Trophy, Undo2, Upload, Volume2, VolumeX,
   Wifi, X, Zap,
@@ -420,7 +420,11 @@ const MobileLayout = () => {
     pushUndo, performUndo, performRedo,
     confirmEmptyBin, emptyRecycleBin,
     projectFilter,
+    goals,
   } = useDayPlannerCtx();
+
+  const [addGoalTrigger, setAddGoalTrigger] = useState(0);
+  const [addProjectTrigger, setAddProjectTrigger] = useState(0);
 
   return (
         <>
@@ -593,10 +597,26 @@ const MobileLayout = () => {
             )}
             {mobileActiveTab === 'goals' && (
               <div className={`${cardBg} border-b ${borderClass} sticky top-0 z-30`}>
-                <div className="flex items-center justify-between px-4 py-3">
+                <div className="px-4 pt-3 pb-1">
                   <h2 className={`font-bold text-lg ${textPrimary} flex items-center gap-2`}>
                     <GitBranch size={20} className="text-blue-500" /> Goals &amp; Projects
                   </h2>
+                </div>
+                <div className="flex items-center gap-1 px-4 py-2">
+                  <button
+                    onClick={() => setAddGoalTrigger(v => v + 1)}
+                    className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-lg active:bg-blue-700 transition-colors"
+                  >
+                    <Flag size={14} strokeWidth={2.5} />
+                    <span className="text-xs font-medium">Add Goal</span>
+                  </button>
+                  <button
+                    onClick={() => setAddProjectTrigger(v => v + 1)}
+                    className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-emerald-600 text-white rounded-lg active:bg-emerald-700 transition-colors"
+                  >
+                    <Layers size={14} strokeWidth={2.5} />
+                    <span className="text-xs font-medium">Add Project</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -2932,7 +2952,7 @@ const MobileLayout = () => {
 
             {mobileActiveTab === 'goals' && (
               <div className="mobile-tab-fade-in flex flex-col flex-1 min-h-0 overflow-hidden">
-                <GoalDashboard embedded />
+                <GoalDashboard embedded addGoalTrigger={addGoalTrigger} addProjectTrigger={addProjectTrigger} />
               </div>
             )}
 

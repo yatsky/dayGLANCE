@@ -838,7 +838,7 @@ const MobileDashboard = ({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Dot indicators + page navigation — at top */}
       <div className="flex items-center justify-center gap-3 py-3 flex-shrink-0">
         <button
@@ -1052,7 +1052,7 @@ const MobileDashboard = ({
 
 // ─── GoalDashboard modal ──────────────────────────────────────────────────────
 
-const GoalDashboard = ({ embedded = false }) => {
+const GoalDashboard = ({ embedded = false, addGoalTrigger = 0, addProjectTrigger = 0 }) => {
   const {
     showGoalsDashboard, setShowGoalsDashboard,
     goals, projects,
@@ -1069,6 +1069,10 @@ const GoalDashboard = ({ embedded = false }) => {
   const [projectForm, setProjectForm] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, onConfirm }
   const [showArchived, setShowArchived] = useState(false);
+
+  // Trigger props from header buttons (mobile embedded mode)
+  useEffect(() => { if (addGoalTrigger > 0) setGoalForm({ editing: null }); }, [addGoalTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (addProjectTrigger > 0) setProjectForm({ editing: null, defaultGoalId: null }); }, [addProjectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refs for SVG line calculation (desktop only)
   const goalCardRefs = useRef({});
@@ -1147,23 +1151,8 @@ const GoalDashboard = ({ embedded = false }) => {
   if (embedded) {
     return (
       <>
-        {/* Action buttons row */}
-        <div className={`flex items-center gap-2 px-4 py-2 border-b ${borderClass} flex-shrink-0`}>
-          <button
-            onClick={() => setGoalForm({ editing: null })}
-            className="flex items-center gap-1.5 text-sm text-blue-500 font-medium px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Flag size={14} /> Add Goal
-          </button>
-          <button
-            onClick={() => setProjectForm({ editing: null, defaultGoalId: null })}
-            className="flex items-center gap-1.5 text-sm text-emerald-500 font-medium px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Layers size={14} /> Add Project
-          </button>
-        </div>
         {/* Body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           <MobileDashboard
             activeGoals={activeGoals}
             activeProjects={activeProjects}
@@ -1173,7 +1162,7 @@ const GoalDashboard = ({ embedded = false }) => {
             onNewProject={defaultGoalId => setProjectForm({ editing: null, defaultGoalId })}
           />
           {archivedCount > 0 && (
-            <div className={`border-t ${borderClass} px-4 py-3`}>
+            <div className={`border-t ${borderClass} px-4 py-3 flex-shrink-0`}>
               <button
                 onClick={() => setShowArchived(v => !v)}
                 className={`flex items-center gap-2 text-sm ${textSecondary} ${hoverBg} px-2 py-1.5 rounded-lg transition-colors w-full`}

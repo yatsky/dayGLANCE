@@ -103,10 +103,10 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact },
   const projectScheduled = tasks.filter(t => t.projectId === project.id && !t.archived)
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const allProjectDisplayTasks = [
-    ...projectUnscheduled.filter(t => !t.completed),
     ...projectScheduled.filter(t => !t.completed),
-    ...projectUnscheduled.filter(t => t.completed),
+    ...projectUnscheduled.filter(t => !t.completed),
     ...projectScheduled.filter(t => t.completed),
+    ...projectUnscheduled.filter(t => t.completed),
   ];
   const VISIBLE_COUNT = 3;
   const hasMore = allProjectDisplayTasks.length > VISIBLE_COUNT;

@@ -485,7 +485,7 @@ const DayPlanner = () => {
     showGoalsDashboard, setShowGoalsDashboard,
     goalsProjectsEnabled, setGoalsProjectsEnabled,
     addGoal, updateGoal, deleteGoal,
-    addProject, updateProject, deleteProject,
+    addProject, updateProject, deleteProject, moveProject,
   } = useGoalsProjects();
   const [projectFilter, setProjectFilter] = useState(null);
   // Clear project filter when the selected date changes
@@ -6466,7 +6466,7 @@ const DayPlanner = () => {
     showGoalsDashboard, setShowGoalsDashboard,
     goalsProjectsEnabled, setGoalsProjectsEnabled,
     addGoal, updateGoal, deleteGoal,
-    addProject, updateProject, deleteProject,
+    addProject, updateProject, deleteProject, moveProject,
     projectFilter, setProjectFilter,
 
     // ── Reminders ─────────────────────────────────────────────────────────────

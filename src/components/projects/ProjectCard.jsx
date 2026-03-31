@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import ConfirmDialog from '../ConfirmDialog.jsx';
 import {
   AlertTriangle, Calendar, CheckCircle2, CheckSquare, ChevronDown,
-  Edit2, ExternalLink, FileText, GripVertical, NotebookPen, Plus,
+  Edit2, ExternalLink, FileText, GripVertical, LogIn, NotebookPen, Plus,
   Square, Target, Trash2, X,
 } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
@@ -27,7 +27,7 @@ const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
  *   onFocusClick — called with the project when the "Project Focus" button is clicked
  *   onEditClick  — called to open the project edit form
  */
-const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact }, ref) => {
+const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, dragHandleProps, onMoveToClick }, ref) => {
   const {
     tasks, setTasks,
     unscheduledTasks, setUnscheduledTasks,
@@ -228,9 +228,19 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact },
         >
           {/* Row 1: title + edit/delete */}
           <div className="flex items-center gap-1.5 px-3 pt-2.5 pb-1">
+            {dragHandleProps && (
+              <div {...dragHandleProps} className={`flex-shrink-0 cursor-grab active:cursor-grabbing ${textSecondary} opacity-30 hover:opacity-60 transition-opacity touch-none`} title="Drag to reorder">
+                <GripVertical size={12} />
+              </div>
+            )}
             <span className={`text-sm font-medium ${textPrimary} flex-1 min-w-0 truncate`}>
               {project.title}
             </span>
+            {onMoveToClick && (
+              <button onClick={() => onMoveToClick(project)} className={`${btnBase} ${editBtn}`} title="Move to…" aria-label="Move to goal">
+                <LogIn size={12} />
+              </button>
+            )}
             <button onClick={() => onEditClick?.()} className={`${btnBase} ${editBtn}`} aria-label="Edit project">
               <Edit2 size={12} />
             </button>
@@ -305,10 +315,25 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact },
       <div className="flex flex-col gap-2 p-3">
         {/* Header: title + badges + edit + delete */}
         <div className="flex items-start justify-between gap-2">
+          {dragHandleProps && (
+            <div {...dragHandleProps} className={`flex-shrink-0 mt-0.5 cursor-grab active:cursor-grabbing ${textSecondary} opacity-30 hover:opacity-60 transition-opacity touch-none`} title="Drag to reorder">
+              <GripVertical size={14} />
+            </div>
+          )}
           <span className={`text-sm font-semibold ${textPrimary} leading-tight flex-1 min-w-0`}>
             {project.title}
           </span>
           <div className="flex items-center gap-1 flex-shrink-0">
+            {onMoveToClick && (
+              <button
+                onClick={() => onMoveToClick(project)}
+                className={`p-1 rounded-lg transition-colors ${darkMode ? 'text-gray-600 hover:text-gray-300 hover:bg-gray-700' : 'text-stone-300 hover:text-stone-600 hover:bg-stone-100'}`}
+                title="Move to…"
+                aria-label="Move to goal"
+              >
+                <LogIn size={12} />
+              </button>
+            )}
             {project.status === 'completed' && (
               <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full ${
                 darkMode ? 'bg-green-900/50 text-green-400' : 'bg-green-50 text-green-600'

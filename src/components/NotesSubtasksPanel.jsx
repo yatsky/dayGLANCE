@@ -216,7 +216,7 @@ const NotesSubtasksPanel = ({
           ) : (
             <div
               onClick={() => setIsEditingNotes(true)}
-              className="text-sm whitespace-pre-wrap cursor-text min-h-[4.5rem] p-2 rounded bg-white/10 hover:bg-white/15"
+              className={`text-sm whitespace-pre-wrap cursor-text p-2 rounded bg-white/10 hover:bg-white/15 ${compact ? 'min-h-[4.5rem]' : 'min-h-[12rem]'}`}
             >
               {urlOnlyNote ? (
                 <a

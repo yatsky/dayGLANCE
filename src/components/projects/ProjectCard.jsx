@@ -12,7 +12,7 @@ import { TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
 import ProjectProgress from './ProjectProgress.jsx';
 import NotesSubtasksPanel from '../NotesSubtasksPanel.jsx';
 import { renderTitle, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, getLinkUrl, isObsidianNoteOnlyTask } from '../../utils/textFormatting.jsx';
-import { extractWikilinks } from '../../utils/taskUtils.js';
+import { dateToString, extractWikilinks } from '../../utils/taskUtils.js';
 
 const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
 
@@ -54,8 +54,9 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
       return;
     }
     // Unscheduled: toggle + reorder within project
+    const todayStr = dateToString(new Date());
     setUnscheduledTasks(prev => {
-      const updated = prev.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t);
+      const updated = prev.map(t => t.id === taskId ? { ...t, completed: !t.completed, completedAt: !t.completed ? todayStr : null } : t);
       const nowComplete = updated.find(t => t.id === taskId)?.completed;
       const others = updated.filter(t => !(t.projectId === project.id && t.id === taskId));
       const moved = updated.find(t => t.id === taskId);

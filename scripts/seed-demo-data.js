@@ -17,6 +17,68 @@
   let idCounter = 0;
   const uid = () => `demo-${Date.now()}-${++idCounter}`;
 
+  // ── Goals ────────────────────────────────────────────────────────────
+  const goalLaunch = {
+    id: uid(),
+    title: 'Launch v2.0 client SaaS platform',
+    description: 'Ship billing, auth, and API milestones to production and hand off to the client.',
+    status: 'active',
+    color: 'bg-blue-500',
+    targetDate: '2026-06-30',
+    createdAt: now,
+    updatedAt: now,
+  };
+  const goalBrand = {
+    id: uid(),
+    title: 'Grow personal dev brand',
+    description: 'Publish, speak, and ship demos to build reputation as a product-minded indie dev.',
+    status: 'active',
+    color: 'bg-purple-500',
+    targetDate: '2026-12-31',
+    createdAt: now,
+    updatedAt: now,
+  };
+  const goals = [goalLaunch, goalBrand];
+
+  // ── Projects ──────────────────────────────────────────────────────────
+  const projBilling = {
+    id: uid(),
+    title: 'Billing Integration',
+    description: 'Stripe webhook handling for subscription lifecycle events.',
+    status: 'active',
+    goalId: goalLaunch.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const projApiDocs = {
+    id: uid(),
+    title: 'API Documentation',
+    description: 'OpenAPI spec + developer guides for /users and /projects endpoints.',
+    status: 'active',
+    goalId: goalLaunch.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const projAuth = {
+    id: uid(),
+    title: 'Auth Refactor',
+    description: 'Extract token validation into shared middleware util; close out PR #247.',
+    status: 'active',
+    goalId: goalLaunch.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const projPortfolio = {
+    id: uid(),
+    title: 'Portfolio Refresh',
+    description: 'Update case studies, screenshots, and copy for 2026 projects.',
+    status: 'active',
+    goalId: goalBrand.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const projects = [projBilling, projApiDocs, projAuth, projPortfolio];
+
   // ── Scheduled tasks (today) ──────────────────────────────────────────
   const tasks = [
     {
@@ -44,6 +106,7 @@
       priority: 2,
       color: 'bg-blue-500',
       notes: 'Focus on the auth refactor PR — Ben asked for a second pass.',
+      projectId: projAuth.id,
       subtasks: [
         { id: uid(), title: 'Auth refactor PR (#247)', completed: true },
         { id: uid(), title: 'CI pipeline fix PR (#251)', completed: true },
@@ -75,6 +138,7 @@
       priority: 2,
       color: 'bg-indigo-500',
       notes: 'Endpoints for /users and /projects. Use the OpenAPI template.',
+      projectId: projApiDocs.id,
       subtasks: [
         { id: uid(), title: 'Document /users endpoints', completed: false },
         { id: uid(), title: 'Document /projects endpoints', completed: false },
@@ -105,6 +169,7 @@
       priority: 3,
       color: 'bg-red-500',
       notes: 'Stripe webhook handling for subscription changes. Blocked until API docs are done.',
+      projectId: projBilling.id,
       subtasks: [
         { id: uid(), title: 'Set up webhook endpoint', completed: false },
         { id: uid(), title: 'Handle subscription.updated event', completed: false },
@@ -152,6 +217,7 @@
       priority: 3,
       color: 'bg-red-500',
       notes: 'Continue from today if not done.',
+      projectId: projBilling.id,
       subtasks: [],
       lastModified: now,
     },
@@ -191,6 +257,7 @@
       priority: 2,
       color: 'bg-blue-500',
       notes: 'Extract token validation into shared util.',
+      projectId: projAuth.id,
       subtasks: [],
       lastModified: now,
     },
@@ -247,6 +314,7 @@
       priority: 0,
       color: 'bg-blue-500',
       notes: '',
+      projectId: projPortfolio.id,
       subtasks: [],
       lastModified: now,
     },
@@ -274,6 +342,53 @@
       color: 'bg-indigo-500',
       notes: '',
       subtasks: [],
+      lastModified: now,
+    },
+    // Project-specific inbox tasks
+    {
+      id: uid(),
+      title: 'Add rate limiting to /users endpoint #work',
+      date: null,
+      startTime: '00:00',
+      duration: 60,
+      completed: false,
+      priority: 2,
+      color: 'bg-indigo-500',
+      notes: 'Cap at 100 req/min per API key. Document in OpenAPI spec.',
+      projectId: projApiDocs.id,
+      subtasks: [],
+      lastModified: now,
+    },
+    {
+      id: uid(),
+      title: 'Handle subscription.cancelled webhook event #work',
+      date: null,
+      startTime: '00:00',
+      duration: 45,
+      completed: false,
+      priority: 2,
+      color: 'bg-red-500',
+      notes: 'Downgrade user to free tier and send cancellation email.',
+      projectId: projBilling.id,
+      subtasks: [],
+      lastModified: now,
+    },
+    {
+      id: uid(),
+      title: 'Write case study for client SaaS project #work',
+      date: null,
+      startTime: '00:00',
+      duration: 90,
+      completed: false,
+      priority: 1,
+      color: 'bg-purple-500',
+      notes: 'Cover problem, approach, results. Add to portfolio once v2 ships.',
+      projectId: projPortfolio.id,
+      subtasks: [
+        { id: uid(), title: 'Draft problem & approach sections', completed: false },
+        { id: uid(), title: 'Gather metrics / results', completed: false },
+        { id: uid(), title: 'Design layout in Figma', completed: false },
+      ],
       lastModified: now,
     },
   ];
@@ -360,6 +475,9 @@
   localStorage.setItem('day-planner-daily-notes', JSON.stringify(dailyNotes));
   localStorage.setItem('day-planner-recycle-bin', JSON.stringify([]));
   localStorage.setItem('day-planner-deleted-task-ids', JSON.stringify({}));
+  localStorage.setItem('day-planner-goals', JSON.stringify(goals));
+  localStorage.setItem('day-planner-projects', JSON.stringify(projects));
+  localStorage.setItem('day-planner-goals-projects-enabled', JSON.stringify(true));
 
   console.log('Seed data loaded — refresh the page');
 })();

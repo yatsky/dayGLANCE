@@ -18,7 +18,9 @@ import {
   Flag,
   FolderOpen,
   GitBranch,
+  GripVertical,
   Layers,
+  LogIn,
   RotateCcw,
   X,
 } from 'lucide-react';
@@ -35,6 +37,15 @@ import ConfirmDialog from '../ConfirmDialog.jsx';
 
 /** Returns the hex value for a Tailwind bg-* class, falling back to blue. */
 const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
+
+/** Sort projects within a group by sortOrder, preserving array order for items without it. */
+const sortByOrder = (projs) =>
+  [...projs].sort((a, b) => {
+    if (a.sortOrder !== undefined && b.sortOrder !== undefined) return a.sortOrder - b.sortOrder;
+    if (a.sortOrder !== undefined) return -1;
+    if (b.sortOrder !== undefined) return 1;
+    return 0;
+  });
 
 /** Returns a light background for a Tailwind bg-* class. */
 const toLightBg = (bgClass, dark) => {
@@ -493,12 +504,33 @@ const DesktopDashboard = ({
   goalCardRefs,
   projectCardRefs,
 }) => {
-  const { darkMode, textPrimary, textSecondary, borderClass, hoverBg } =
+  const { darkMode, textPrimary, textSecondary, borderClass, hoverBg, moveProject } =
     useDayPlannerCtx();
 
   const containerRef = useRef(null);
   const [svgLines, setSvgLines] = useState([]);
   const [svgSize, setSvgSize] = useState({ w: 0, h: 0 });
+
+  // ── Drag state ───────────────────────────────────────────────────────────────
+  const [dragProjectId, setDragProjectId] = useState(null);
+  // Which cross-group pill is hovered: undefined = none, null = standalone, string = goalId
+  const [dropZoneTarget, setDropZoneTarget] = useState(undefined);
+  // Which card to insert before during within-group reorder (null = append)
+  const [dropInsertBeforeId, setDropInsertBeforeId] = useState(null);
+
+  const startDrag = useCallback((e, projId) => {
+    e.dataTransfer.effectAllowed = 'move';
+    const cardEl = projectCardRefs.current[projId];
+    if (cardEl) e.dataTransfer.setDragImage(cardEl, 30, 30);
+    // Use setTimeout so React state update doesn't cancel the drag
+    setTimeout(() => setDragProjectId(projId), 0);
+  }, [projectCardRefs]);
+
+  const endDrag = useCallback(() => {
+    setDragProjectId(null);
+    setDropZoneTarget(undefined);
+    setDropInsertBeforeId(null);
+  }, []);
 
   // Sort goals: completed/overdue → left, active/upcoming → right (default focus)
   const sortedGoals = useMemo(() => sortGoalsForCarousel(activeGoals), [activeGoals]);
@@ -516,12 +548,12 @@ const DesktopDashboard = ({
   const nextGoal = safeIdx < sortedGoals.length - 1 ? sortedGoals[safeIdx + 1] : null;
 
   const goalProjects = useMemo(
-    () => (activeGoal ? activeProjects.filter(p => p.goalId === activeGoal.id) : []),
+    () => sortByOrder(activeGoal ? activeProjects.filter(p => p.goalId === activeGoal.id) : []),
     [activeGoal, activeProjects]
   );
 
   const standaloneProjects = useMemo(
-    () => activeProjects.filter(p => !p.goalId),
+    () => sortByOrder(activeProjects.filter(p => !p.goalId)),
     [activeProjects]
   );
 
@@ -681,35 +713,122 @@ const DesktopDashboard = ({
             )}
           </div>
 
+          {/* Cross-group drop-zone strip — visible while dragging */}
+          {dragProjectId && (
+            <div className={`relative z-10 mb-4 px-3 py-2.5 rounded-xl border-2 border-dashed ${
+              darkMode ? 'border-gray-600 bg-gray-800/60' : 'border-stone-300 bg-stone-50'
+            }`}>
+              <p className={`text-xs text-center mb-2 ${textSecondary} opacity-50`}>Drop on a goal to reassign</p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {sortedGoals.map(g => {
+                  const hex = toHex(g.color || 'bg-blue-500');
+                  const active = dropZoneTarget === g.id;
+                  return (
+                    <div
+                      key={g.id}
+                      onDragOver={e => { e.preventDefault(); setDropZoneTarget(g.id); }}
+                      onDragLeave={() => setDropZoneTarget(undefined)}
+                      onDrop={e => { e.preventDefault(); moveProject(dragProjectId, g.id); endDrag(); }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border cursor-pointer select-none transition-all ${
+                        active ? 'text-white border-transparent scale-105' :
+                        darkMode ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600' :
+                                   'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'
+                      }`}
+                      style={active ? { background: hex, borderColor: hex } : {}}
+                    >
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: hex }} />
+                      {g.title}
+                    </div>
+                  );
+                })}
+                <div
+                  onDragOver={e => { e.preventDefault(); setDropZoneTarget(null); }}
+                  onDragLeave={() => setDropZoneTarget(undefined)}
+                  onDrop={e => { e.preventDefault(); moveProject(dragProjectId, null); endDrag(); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border cursor-pointer select-none transition-all ${
+                    dropZoneTarget === null
+                      ? 'bg-emerald-500 text-white border-transparent scale-105'
+                      : darkMode ? 'bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600'
+                                 : 'bg-white border-stone-200 text-stone-700 hover:bg-stone-100'
+                  }`}
+                >
+                  <Layers size={10} />
+                  Standalone
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Projects for the active goal */}
-          {goalProjects.length > 0 && (() => {
+          {(() => {
             const activeProjs = goalProjects.filter(p => p.status !== 'completed');
             const doneProjs = goalProjects.filter(p => p.status === 'completed');
+            const makeDragHandle = (proj) => ({
+              draggable: true,
+              onDragStart: (e) => startDrag(e, proj.id),
+              onDragEnd: endDrag,
+            });
+            const wrapCard = (proj, cardJsx) => (
+              <div
+                key={proj.id}
+                data-proj-id={proj.id}
+                className={`relative transition-opacity ${dragProjectId === proj.id ? 'opacity-40' : ''} ${
+                  dropInsertBeforeId === proj.id && dragProjectId && dragProjectId !== proj.id
+                    ? 'ring-2 ring-blue-500 rounded-xl' : ''
+                }`}
+                onDragOver={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (dragProjectId && dragProjectId !== proj.id) setDropInsertBeforeId(proj.id);
+                }}
+                onDrop={e => {
+                  e.preventDefault();
+                  if (!dragProjectId) return;
+                  moveProject(dragProjectId, activeGoal.id, proj.id);
+                  endDrag();
+                }}
+              >
+                {dragProjectId && dragProjectId !== proj.id && (
+                  <div className="absolute inset-0 z-10 rounded-xl" />
+                )}
+                {cardJsx}
+              </div>
+            );
+            if (activeProjs.length === 0 && doneProjs.length === 0) return null;
             return (
-              <div className="relative z-10 mb-8">
+              <div
+                className="relative z-10 mb-8"
+                onDragOver={e => { e.preventDefault(); }}
+                onDrop={e => {
+                  e.preventDefault();
+                  if (!dragProjectId || dropInsertBeforeId) return; // card-level handled it
+                  moveProject(dragProjectId, activeGoal.id);
+                  endDrag();
+                }}
+              >
                 {activeProjs.length > 0 && (
                   <div className="flex flex-wrap gap-4 mb-3 justify-center">
-                    {activeProjs.map(proj => (
+                    {activeProjs.map(proj => wrapCard(proj,
                       <ProjectCard
-                        key={proj.id}
                         ref={el => { projectCardRefs.current[proj.id] = el; }}
                         project={proj}
                         onFocusClick={onFocusClick}
                         onEditClick={() => onEditProject?.(proj)}
+                        dragHandleProps={makeDragHandle(proj)}
                       />
                     ))}
                   </div>
                 )}
                 {doneProjs.length > 0 && (
                   <div className="flex flex-wrap gap-4 justify-center">
-                    {doneProjs.map(proj => (
+                    {doneProjs.map(proj => wrapCard(proj,
                       <ProjectCard
-                        key={proj.id}
                         ref={el => { projectCardRefs.current[proj.id] = el; }}
                         project={proj}
                         onFocusClick={onFocusClick}
                         onEditClick={() => onEditProject?.(proj)}
                         compact
+                        dragHandleProps={makeDragHandle(proj)}
                       />
                     ))}
                   </div>
@@ -721,8 +840,22 @@ const DesktopDashboard = ({
       )}
 
       {/* Standalone projects */}
-      {standaloneProjects.length > 0 && (
-        <div className={`relative z-10 pt-6 border-t ${borderClass}`}>
+      {(standaloneProjects.length > 0 || dragProjectId) && (
+        <div
+          className={`relative z-10 pt-6 border-t ${borderClass} ${
+            dragProjectId && dropZoneTarget === null
+              ? darkMode ? 'bg-emerald-900/20 rounded-xl' : 'bg-emerald-50 rounded-xl'
+              : ''
+          }`}
+          onDragOver={e => { e.preventDefault(); setDropZoneTarget(null); }}
+          onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDropZoneTarget(undefined); }}
+          onDrop={e => {
+            e.preventDefault();
+            if (!dragProjectId || dropInsertBeforeId) return;
+            moveProject(dragProjectId, null);
+            endDrag();
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <h3 className={`text-sm font-semibold ${textSecondary} uppercase tracking-wider`}>
               Standalone Projects
@@ -737,31 +870,67 @@ const DesktopDashboard = ({
           {(() => {
             const activeProjs = standaloneProjects.filter(p => p.status !== 'completed');
             const doneProjs = standaloneProjects.filter(p => p.status === 'completed');
+            const makeDragHandle = (proj) => ({
+              draggable: true,
+              onDragStart: (e) => startDrag(e, proj.id),
+              onDragEnd: endDrag,
+            });
+            const wrapCard = (proj, cardJsx) => (
+              <div
+                key={proj.id}
+                data-proj-id={proj.id}
+                className={`relative transition-opacity ${dragProjectId === proj.id ? 'opacity-40' : ''} ${
+                  dropInsertBeforeId === proj.id && dragProjectId && dragProjectId !== proj.id
+                    ? 'ring-2 ring-blue-500 rounded-xl' : ''
+                }`}
+                onDragOver={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (dragProjectId && dragProjectId !== proj.id) setDropInsertBeforeId(proj.id);
+                }}
+                onDrop={e => {
+                  e.preventDefault();
+                  if (!dragProjectId) return;
+                  moveProject(dragProjectId, null, proj.id);
+                  endDrag();
+                }}
+              >
+                {dragProjectId && dragProjectId !== proj.id && (
+                  <div className="absolute inset-0 z-10 rounded-xl" />
+                )}
+                {cardJsx}
+              </div>
+            );
+            if (activeProjs.length === 0 && doneProjs.length === 0) {
+              return dragProjectId
+                ? <p className={`text-xs text-center py-4 ${textSecondary} opacity-50`}>Drop here to make standalone</p>
+                : null;
+            }
             return (
               <>
                 {activeProjs.length > 0 && (
                   <div className="flex flex-wrap gap-4 mb-3">
-                    {activeProjs.map(proj => (
+                    {activeProjs.map(proj => wrapCard(proj,
                       <ProjectCard
-                        key={proj.id}
                         ref={el => { projectCardRefs.current[proj.id] = el; }}
                         project={proj}
                         onFocusClick={onFocusClick}
                         onEditClick={() => onEditProject?.(proj)}
+                        dragHandleProps={makeDragHandle(proj)}
                       />
                     ))}
                   </div>
                 )}
                 {doneProjs.length > 0 && (
                   <div className="flex flex-wrap gap-4">
-                    {doneProjs.map(proj => (
+                    {doneProjs.map(proj => wrapCard(proj,
                       <ProjectCard
-                        key={proj.id}
                         ref={el => { projectCardRefs.current[proj.id] = el; }}
                         project={proj}
                         onFocusClick={onFocusClick}
                         onEditClick={() => onEditProject?.(proj)}
                         compact
+                        dragHandleProps={makeDragHandle(proj)}
                       />
                     ))}
                   </div>
@@ -801,22 +970,31 @@ const MobileDashboard = ({
   onNewProject,
 }) => {
   const {
-    darkMode, textPrimary, textSecondary, hoverBg,
+    darkMode, textPrimary, textSecondary, hoverBg, cardBg, borderClass,
     tasks: scheduledTasks,
     unscheduledTasks,
     updateGoal,
+    moveProject,
   } = useDayPlannerCtx();
 
   const scrollRef = useRef(null);
   const swipeRef = useRef(null); // { startX, startY, locked }
   const pageRef = useRef(0);    // mirror of `page` for use inside event handlers
 
+  // ── Touch drag state (within-page reorder) ──────────────────────────────────
+  const touchDragRef = useRef({ active: false, fromId: null, overId: null });
+  const [touchDragId, setTouchDragId] = useState(null);
+  const [touchOverId, setTouchOverId] = useState(null);
+
+  // ── "Move to…" sheet state ──────────────────────────────────────────────────
+  const [moveToProject, setMoveToProject] = useState(null);
+
   // Same sort order as desktop: completed/overdue → left, active/upcoming → right
   const sortedGoals = useMemo(() => sortGoalsForCarousel(activeGoals), [activeGoals]);
   const defaultPageIdx = useMemo(() => findDefaultActiveIdx(sortedGoals), [sortedGoals]);
   const [page, setPage] = useState(defaultPageIdx);
 
-  const standaloneProjects = activeProjects.filter(p => !p.goalId);
+  const standaloneProjects = sortByOrder(activeProjects.filter(p => !p.goalId));
   const pages = [
     ...sortedGoals.map(g => ({ type: 'goal', goal: g })),
     { type: 'standalone' },
@@ -841,6 +1019,39 @@ const MobileDashboard = ({
       behavior: 'smooth',
     });
   };
+
+  // ── Touch drag handlers (within-page project reorder) ────────────────────────
+  const handleGripTouchStart = useCallback((e, projId, goalId) => {
+    e.preventDefault(); // block text selection on long-press
+    touchDragRef.current = { active: true, fromId: projId, overId: null, goalId };
+    setTouchDragId(projId);
+  }, []);
+
+  const handleGripTouchMove = useCallback((e) => {
+    if (!touchDragRef.current.active) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const card = el?.closest('[data-mobile-proj-id]');
+    if (card) {
+      const overId = card.getAttribute('data-mobile-proj-id');
+      if (overId && overId !== touchDragRef.current.fromId) {
+        touchDragRef.current.overId = overId;
+        setTouchOverId(overId);
+      }
+    }
+  }, []);
+
+  const handleGripTouchEnd = useCallback((e, goalId) => {
+    if (!touchDragRef.current.active) return;
+    const { fromId, overId } = touchDragRef.current;
+    touchDragRef.current = { active: false, fromId: null, overId: null, goalId: null };
+    setTouchDragId(null);
+    setTouchOverId(null);
+    if (fromId && overId && fromId !== overId) {
+      moveProject(fromId, goalId ?? null, overId);
+    }
+  }, [moveProject]);
 
   // JS swipe handler attached with { passive: false } so we can call
   // preventDefault() on horizontal gestures. This is necessary in Android
@@ -1059,26 +1270,48 @@ const MobileDashboard = ({
                     </button>
                   </div>
                 ) : (() => {
-                  const activeProjs = children.filter(p => p.status !== 'completed');
-                  const doneProjs = children.filter(p => p.status === 'completed');
+                  const sorted = sortByOrder(children);
+                  const activeProjs = sorted.filter(p => p.status !== 'completed');
+                  const doneProjs = sorted.filter(p => p.status === 'completed');
                   return (
                     <div className="flex flex-col gap-3">
                       {activeProjs.map(proj => (
-                        <ProjectCard
+                        <div
                           key={proj.id}
-                          project={proj}
-                          onFocusClick={onFocusClick}
-                          onEditClick={() => onEditProject?.(proj)}
-                        />
+                          data-mobile-proj-id={proj.id}
+                          className={`transition-opacity ${touchDragId === proj.id ? 'opacity-40' : ''} ${
+                            touchOverId === proj.id && touchDragId && touchDragId !== proj.id
+                              ? 'ring-2 ring-blue-500 rounded-xl' : ''
+                          }`}
+                        >
+                          <ProjectCard
+                            project={proj}
+                            onFocusClick={onFocusClick}
+                            onEditClick={() => onEditProject?.(proj)}
+                            onMoveToClick={() => setMoveToProject(proj)}
+                            dragHandleProps={{
+                              onTouchStart: (e) => handleGripTouchStart(e, proj.id, goal.id),
+                              onTouchMove: handleGripTouchMove,
+                              onTouchEnd: (e) => handleGripTouchEnd(e, goal.id),
+                            }}
+                          />
+                        </div>
                       ))}
                       {doneProjs.map(proj => (
-                        <ProjectCard
-                          key={proj.id}
-                          project={proj}
-                          onFocusClick={onFocusClick}
-                          onEditClick={() => onEditProject?.(proj)}
-                          compact
-                        />
+                        <div key={proj.id} data-mobile-proj-id={proj.id}>
+                          <ProjectCard
+                            project={proj}
+                            onFocusClick={onFocusClick}
+                            onEditClick={() => onEditProject?.(proj)}
+                            onMoveToClick={() => setMoveToProject(proj)}
+                            compact
+                            dragHandleProps={{
+                              onTouchStart: (e) => handleGripTouchStart(e, proj.id, goal.id),
+                              onTouchMove: handleGripTouchMove,
+                              onTouchEnd: (e) => handleGripTouchEnd(e, goal.id),
+                            }}
+                          />
+                        </div>
                       ))}
                     </div>
                   );
@@ -1116,21 +1349,42 @@ const MobileDashboard = ({
               ) : (
                 <div className="flex flex-col gap-3">
                   {activeStandalone.map(proj => (
-                    <ProjectCard
+                    <div
                       key={proj.id}
-                      project={proj}
-                      onFocusClick={onFocusClick}
-                      onEditClick={() => onEditProject?.(proj)}
-                    />
+                      data-mobile-proj-id={proj.id}
+                      className={`transition-opacity ${touchDragId === proj.id ? 'opacity-40' : ''} ${
+                        touchOverId === proj.id && touchDragId && touchDragId !== proj.id
+                          ? 'ring-2 ring-blue-500 rounded-xl' : ''
+                      }`}
+                    >
+                      <ProjectCard
+                        project={proj}
+                        onFocusClick={onFocusClick}
+                        onEditClick={() => onEditProject?.(proj)}
+                        onMoveToClick={() => setMoveToProject(proj)}
+                        dragHandleProps={{
+                          onTouchStart: (e) => handleGripTouchStart(e, proj.id, null),
+                          onTouchMove: handleGripTouchMove,
+                          onTouchEnd: (e) => handleGripTouchEnd(e, null),
+                        }}
+                      />
+                    </div>
                   ))}
                   {doneStandalone.map(proj => (
-                    <ProjectCard
-                      key={proj.id}
-                      project={proj}
-                      onFocusClick={onFocusClick}
-                      onEditClick={() => onEditProject?.(proj)}
-                      compact
-                    />
+                    <div key={proj.id} data-mobile-proj-id={proj.id}>
+                      <ProjectCard
+                        project={proj}
+                        onFocusClick={onFocusClick}
+                        onEditClick={() => onEditProject?.(proj)}
+                        onMoveToClick={() => setMoveToProject(proj)}
+                        compact
+                        dragHandleProps={{
+                          onTouchStart: (e) => handleGripTouchStart(e, proj.id, null),
+                          onTouchMove: handleGripTouchMove,
+                          onTouchEnd: (e) => handleGripTouchEnd(e, null),
+                        }}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
@@ -1138,6 +1392,60 @@ const MobileDashboard = ({
           );
         })}
       </div>
+
+      {/* "Move to…" bottom sheet */}
+      {moveToProject && (
+        <div
+          className="fixed inset-0 z-[70] flex flex-col justify-end"
+          onClick={() => setMoveToProject(null)}
+        >
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className={`relative ${cardBg} rounded-t-2xl shadow-xl px-4 pt-4 pb-8 border-t ${borderClass}`}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className={`text-sm font-semibold ${textPrimary}`}>
+                Move "{moveToProject.title}" to…
+              </span>
+              <button onClick={() => setMoveToProject(null)} className={`p-1 rounded-lg ${hoverBg}`}>
+                <X size={16} className={textSecondary} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-1">
+              {sortedGoals.map(g => {
+                const hex = toHex(g.color || 'bg-blue-500');
+                const isCurrent = moveToProject.goalId === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    disabled={isCurrent}
+                    onClick={() => { moveProject(moveToProject.id, g.id); setMoveToProject(null); }}
+                    className={`flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-xl transition-colors ${
+                      isCurrent ? 'opacity-40 cursor-default' : hoverBg
+                    }`}
+                  >
+                    <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: hex }} />
+                    <span className={`text-sm ${textPrimary}`}>{g.title}</span>
+                    {isCurrent && <span className={`ml-auto text-xs ${textSecondary}`}>current</span>}
+                  </button>
+                );
+              })}
+              <button
+                disabled={!moveToProject.goalId}
+                onClick={() => { moveProject(moveToProject.id, null); setMoveToProject(null); }}
+                className={`flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-xl transition-colors ${
+                  !moveToProject.goalId ? 'opacity-40 cursor-default' : hoverBg
+                }`}
+              >
+                <Layers size={12} className={`flex-shrink-0 ${textSecondary}`} />
+                <span className={`text-sm ${textPrimary}`}>Standalone</span>
+                {!moveToProject.goalId && <span className={`ml-auto text-xs ${textSecondary}`}>current</span>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

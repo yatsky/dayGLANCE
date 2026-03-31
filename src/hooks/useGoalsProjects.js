@@ -81,13 +81,64 @@ const useGoalsProjects = () => {
     setProjects(prev => prev.filter(p => p.id !== id));
   }, []);
 
+  // Move a project to a new goal (or standalone) and optionally insert it before
+  // a specific sibling. Renumbers sortOrder for affected groups so the order syncs.
+  const moveProject = useCallback((projectId, newGoalId, insertBeforeProjectId = null) => {
+    setProjects(prev => {
+      const now = new Date().toISOString();
+      const movedIdx = prev.findIndex(p => p.id === projectId);
+      if (movedIdx === -1) return prev;
+
+      const sourceGoalId = prev[movedIdx].goalId ?? null;
+      const targetGoalId = newGoalId ?? null;
+
+      // Build updated project with new goalId
+      const moved = targetGoalId
+        ? { ...prev[movedIdx], goalId: targetGoalId, updatedAt: now }
+        : { ...prev[movedIdx], updatedAt: now, goalId: undefined };
+
+      // Remove from current position
+      const without = prev.filter((_, i) => i !== movedIdx);
+
+      // Find insertion index in the without-array
+      let insertAt;
+      if (insertBeforeProjectId) {
+        insertAt = without.findIndex(p => p.id === insertBeforeProjectId);
+        if (insertAt === -1) insertAt = without.length;
+      } else {
+        // Append to end of target group
+        let lastIdx = -1;
+        without.forEach((p, i) => {
+          if ((p.goalId ?? null) === targetGoalId) lastIdx = i;
+        });
+        insertAt = lastIdx === -1 ? without.length : lastIdx + 1;
+      }
+
+      const result = [...without];
+      result.splice(insertAt, 0, moved);
+
+      // Renumber sortOrder (0, 10, 20…) for both affected groups so order syncs
+      const affectedGroups = new Set([sourceGoalId, targetGoalId]);
+      const groupCounters = {};
+      return result.map(p => {
+        const gk = p.goalId ?? null;
+        if (affectedGroups.has(gk)) {
+          const order = groupCounters[gk] ?? 0;
+          groupCounters[gk] = order + 10;
+          return { ...p, sortOrder: order, updatedAt: now };
+        }
+        return p;
+      });
+    });
+  }, []);
+
   return {
     goals, setGoals,
     projects, setProjects,
     showGoalsDashboard, setShowGoalsDashboard,
     goalsProjectsEnabled, setGoalsProjectsEnabled,
     addGoal, updateGoal, deleteGoal,
-    addProject, updateProject, deleteProject,
+    addProject, updateProject, deleteProject, moveProject,
   };
 };
 

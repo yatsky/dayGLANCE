@@ -26,7 +26,7 @@ const NotesSubtasksPanel = ({
   const [editingSubtaskText, setEditingSubtaskText] = useState('');
   const [localNotes, setLocalNotes] = useState(task.notes || '');
   const [localSubtaskText, setLocalSubtaskText] = useState('');
-  const [isEditingNotes, setIsEditingNotes] = useState(!compact || !task.notes);
+  const [isEditingNotes, setIsEditingNotes] = useState(!task.notes); // Edit mode when no content
   const localNotesRef = useRef(localNotes);
   const taskNotesRef = useRef(task.notes || '');
   const taskIdRef = useRef(task.id);
@@ -90,7 +90,7 @@ const NotesSubtasksPanel = ({
   // Sync local notes with task notes when task changes (e.g., switching between tasks)
   useEffect(() => {
     setLocalNotes(task.notes || '');
-    setIsEditingNotes(!compact || !task.notes);
+    setIsEditingNotes(!task.notes); // Edit mode when no content
   }, [task.id]);
 
   // Save notes on unmount only (e.g., when ESC is pressed or panel closes)
@@ -216,7 +216,7 @@ const NotesSubtasksPanel = ({
           ) : (
             <div
               onClick={() => setIsEditingNotes(true)}
-              className="text-sm whitespace-pre-wrap cursor-text min-h-[4.5rem] p-2 rounded bg-white/10 hover:bg-white/15"
+              className={`text-sm whitespace-pre-wrap cursor-text p-2 rounded bg-white/10 hover:bg-white/15 ${compact ? 'min-h-[4.5rem]' : 'min-h-[12rem]'}`}
             >
               {urlOnlyNote ? (
                 <a

@@ -1805,16 +1805,32 @@ const DayPlanner = () => {
         localStorage.setItem('day-planner-deleted-task-ids', JSON.stringify(tombstones));
       }
 
-      // Update tasks — remove old Obsidian imports, add fresh ones
+      // Update tasks — remove old Obsidian imports, add fresh ones.
+      // Preserve app-only fields (projectId, deadline) that aren't stored in the
+      // Obsidian markdown and would otherwise be wiped on every re-sync.
       setTasks(prev => {
         const nonObsidian = prev.filter(t => t.importSource !== 'obsidian');
-        return [...nonObsidian, ...result.scheduledTasks];
+        const oldObsidianMap = new Map(prev.filter(t => t.importSource === 'obsidian').map(t => [String(t.id), t]));
+        const merged = result.scheduledTasks.map(t => {
+          const old = oldObsidianMap.get(String(t.id));
+          if (!old) return t;
+          return { ...t, ...(old.projectId ? { projectId: old.projectId } : {}), ...(old.deadline ? { deadline: old.deadline } : {}) };
+        });
+        return [...nonObsidian, ...merged];
       });
 
-      // Update inbox — remove old Obsidian imports, add fresh ones
+      // Update inbox — remove old Obsidian imports, add fresh ones.
+      // Preserve app-only fields (projectId, deadline) that aren't stored in the
+      // Obsidian markdown and would otherwise be wiped on every re-sync.
       setUnscheduledTasks(prev => {
         const nonObsidian = prev.filter(t => t.importSource !== 'obsidian');
-        return [...nonObsidian, ...result.inboxTasks];
+        const oldObsidianMap = new Map(prev.filter(t => t.importSource === 'obsidian').map(t => [String(t.id), t]));
+        const merged = result.inboxTasks.map(t => {
+          const old = oldObsidianMap.get(String(t.id));
+          if (!old) return t;
+          return { ...t, ...(old.projectId ? { projectId: old.projectId } : {}), ...(old.deadline ? { deadline: old.deadline } : {}) };
+        });
+        return [...nonObsidian, ...merged];
       });
 
       // Snapshot the fresh task state so the writeback effect doesn't re-trigger
@@ -6821,7 +6837,7 @@ const DayPlanner = () => {
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Activity size={16} className="text-purple-500" />
+                  <Target size={16} className="text-purple-500" />
                   <span className={`font-semibold text-sm ${textPrimary}`}>Focus Log</span>
                   <span className={`text-xs ${textSecondary}`}>{displayDate}</span>
                 </div>

@@ -155,13 +155,13 @@ const MobileNewTaskModal = () => {
               {/* Color row */}
               <div>
                 <label className={`block text-sm ${textSecondary} mb-2`}>Color</label>
-                <div className="flex gap-2 flex-wrap">
+                <div className="grid grid-cols-9 gap-2">
                   {colors.map((color) => (
                     <button
                       type="button"
                       key={color.class}
                       onClick={() => setNewTask({ ...newTask, color: color.class })}
-                      className={`${color.class} w-8 h-8 rounded-full transition-transform ${(newTask.color || colors[0].class) === color.class ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''}`}
+                      className={`${color.class} w-full aspect-square rounded-full transition-transform ${(newTask.color || colors[0].class) === color.class ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''}`}
                       title={color.name}
                     />
                   ))}

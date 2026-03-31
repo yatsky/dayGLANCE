@@ -2372,10 +2372,14 @@ const DayPlanner = () => {
       // Keep/make this an unscheduled project task
       const inScheduled = tasks.find(t => t.id === taskId);
       if (inScheduled) {
-        // Move from scheduled → unscheduled project task
+        // Move from scheduled → unscheduled project task.
+        // Clear schedule fields and drop lastModified so stampTaskTimestamps
+        // re-stamps it as "just changed", preventing cloud sync from reverting
+        // the move when the remote still has the task in the scheduled list.
+        const { date: _d, startTime: _s, isAllDay: _a, lastModified: _m, ...rest } = inScheduled;
         setTasks(prev => prev.filter(t => t.id !== taskId));
         setUnscheduledTasks(prev => [...prev, {
-          ...inScheduled,
+          ...rest,
           title: cleanTitle(newTask.title),
           duration: newTask.duration,
           color: newTask.color || colors[0].class,

@@ -471,8 +471,8 @@
     {
       id: '1710000000001',
       name: 'Exercise',
-      icon: '',
-      color: '',
+      icon: 'Dumbbell',
+      color: 'green',
       description: '30 min of movement — run, yoga, or weights',
       frequency: 'daily',
       target: 1,
@@ -483,8 +483,8 @@
     {
       id: '1710000000002',
       name: 'Read',
-      icon: '',
-      color: '',
+      icon: 'BookOpen',
+      color: 'purple',
       description: 'At least 20 pages',
       frequency: 'daily',
       target: 1,

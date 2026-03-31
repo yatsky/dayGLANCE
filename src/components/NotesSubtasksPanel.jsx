@@ -26,7 +26,7 @@ const NotesSubtasksPanel = ({
   const [editingSubtaskText, setEditingSubtaskText] = useState('');
   const [localNotes, setLocalNotes] = useState(task.notes || '');
   const [localSubtaskText, setLocalSubtaskText] = useState('');
-  const [isEditingNotes, setIsEditingNotes] = useState(!task.notes); // Edit mode when no content
+  const [isEditingNotes, setIsEditingNotes] = useState(!compact || !task.notes);
   const localNotesRef = useRef(localNotes);
   const taskNotesRef = useRef(task.notes || '');
   const taskIdRef = useRef(task.id);
@@ -90,7 +90,7 @@ const NotesSubtasksPanel = ({
   // Sync local notes with task notes when task changes (e.g., switching between tasks)
   useEffect(() => {
     setLocalNotes(task.notes || '');
-    setIsEditingNotes(!task.notes); // Edit mode when no content
+    setIsEditingNotes(!compact || !task.notes);
   }, [task.id]);
 
   // Save notes on unmount only (e.g., when ESC is pressed or panel closes)

@@ -542,13 +542,14 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact },
 
     {/* Notes/subtasks panel — portalled to body, centered over viewport */}
     {expandedTask && createPortal(
-      <div className={`notes-panel-container fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 max-h-[75vh] overflow-y-auto rounded-xl shadow-2xl border ${
+      <div className={`notes-panel-container fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] max-w-[92vw] max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl border ${
         darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-stone-200'
       }`}>
         <NotesSubtasksPanel
           task={expandedTask}
           isInbox={!isScheduled(expandedTask)}
           darkMode={darkMode}
+          compact={false}
           updateTaskNotes={updateTaskNotes}
           addSubtask={addSubtask}
           toggleSubtask={toggleSubtask}

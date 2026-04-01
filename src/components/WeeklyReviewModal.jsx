@@ -577,7 +577,7 @@ const WeeklyReviewModal = () => {
                             <StatCard value={pastCompletedProjects.length} label={pastCompletedProjects.length === 1 ? 'Project completed' : 'Projects completed'} icon={<FolderOpen size={16} className="text-blue-400" />} />
                           )}
                           {pastUnscheduledProjectDone.length > 0 && (
-                            <StatCard value={pastUnscheduledProjectDone.length} label="Project tasks done" icon={<TrendingUp size={16} className="text-green-400" />} />
+                            <StatCard value={pastUnscheduledProjectDone.length} label="Project queue done" icon={<TrendingUp size={16} className="text-green-400" />} />
                           )}
                         </div>
                       )}

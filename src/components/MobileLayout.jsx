@@ -2882,7 +2882,7 @@ const MobileLayout = () => {
                                   >
                                     {renderTitle(task.title)}
                                   </div>
-                                  <div className="text-xs opacity-90 mt-1 flex items-center gap-2">
+                                  <div className="text-xs opacity-90 mt-1 flex items-center gap-2 flex-wrap">
                                     <span>{task.duration} min</span>
                                     {task.deadline && (
                                       <span className="flex items-center gap-1">
@@ -2890,6 +2890,19 @@ const MobileLayout = () => {
                                         {formatDeadlineDate(task.deadline)}
                                       </span>
                                     )}
+                                    {goalsProjectsEnabled && task.projectId && (() => {
+                                      const proj = projects.find(p => p.id === task.projectId);
+                                      if (!proj) return null;
+                                      return (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                                          className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 active:bg-white/40 text-white font-medium transition-colors flex-shrink-0 ${projectFilter === task.projectId ? 'ring-1 ring-white/60' : ''}`}
+                                          title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
+                                        >
+                                          {proj.title}
+                                        </button>
+                                      );
+                                    })()}
                                   </div>
                                 </div>
                               </div>

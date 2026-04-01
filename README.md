@@ -75,6 +75,9 @@ A native Android app is available as a direct APK download — no Play Store req
 
 [**Download APK from Releases →**](https://github.com/krelltunez/dayglance/releases)
 
+[**Get it on Obtainium →**](https://github.com/ImranR98/Obtainium)
+<br> *Just point Obtainium to `krelltunez/dayGLANCE`!*
+
 The Android app ships the full web app in a WebView with native enhancements that aren't possible in a browser:
 
 | Feature | Details |

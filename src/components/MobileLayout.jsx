@@ -3065,6 +3065,15 @@ const MobileLayout = () => {
           {/* Glance tab FABs - stacked on right: Weekly Review (bottom), Daily Stats (above weekly), Recycle Bin (top) */}
           {mobileActiveTab === 'dayglance' && (
             <>
+              {/* Daily Note FAB — bottom-left */}
+              <button
+                onClick={() => setDailyNotesModalDate(getTodayStr())}
+                className={`fixed left-4 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 active:bg-gray-600' : 'bg-stone-200 text-stone-600 active:bg-stone-300'}`}
+                style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
+                title="Today's daily note"
+              >
+                {obsidianConfig?.enabled ? <BookOpen size={22} /> : <NotebookPen size={22} />}
+              </button>
               {/* Daily summary ring FAB */}
               {(() => {
                 const pct = actualTodayNonImportedTasks.length > 0 ? Math.round(((actualTodayCompletedTasks.length + inboxCompletedTodayCount) / actualTodayNonImportedTasks.length) * 100) : 0;

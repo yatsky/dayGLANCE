@@ -1877,6 +1877,18 @@ const DesktopLayout = () => {
                   </div>
                 )}
               </div>
+              {/* Daily Note FAB — above Goals & Projects FAB */}
+              {tabletActiveTab === 'glance' && (
+                <button
+                  onClick={() => setDailyNotesModalDate(getTodayStr())}
+                  className={`absolute left-4 z-10 h-9 px-3 rounded-full shadow-lg flex items-center gap-1.5 transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
+                  style={{ bottom: goalsProjectsEnabled ? '68px' : '24px' }}
+                  title="Today's daily note"
+                >
+                  {obsidianConfig?.enabled ? <BookOpen size={15} /> : <NotebookPen size={15} />}
+                  <span className="text-xs font-medium whitespace-nowrap">Daily Note</span>
+                </button>
+              )}
               {/* Goals & Projects FAB — bottom-left of GLANCE panel */}
               {goalsProjectsEnabled && tabletActiveTab === 'glance' && (
                 <button
@@ -3167,6 +3179,18 @@ const DesktopLayout = () => {
               </div>
               )}
             </div>
+            {/* Daily Note FAB — above Goals & Projects FAB */}
+            {tabletActiveTab === 'glance' && (
+              <button
+                onClick={() => setDailyNotesModalDate(getTodayStr())}
+                className={`absolute left-4 z-10 h-9 px-3 rounded-full shadow-lg flex items-center gap-1.5 transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
+                style={{ bottom: goalsProjectsEnabled ? '68px' : '24px' }}
+                title="Today's daily note"
+              >
+                {obsidianConfig?.enabled ? <BookOpen size={15} /> : <NotebookPen size={15} />}
+                <span className="text-xs font-medium whitespace-nowrap">Daily Note</span>
+              </button>
+            )}
             {/* Goals & Projects FAB — bottom-left of GLANCE panel */}
             {goalsProjectsEnabled && tabletActiveTab === 'glance' && (
               <button

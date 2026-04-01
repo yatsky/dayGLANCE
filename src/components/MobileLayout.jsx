@@ -432,7 +432,6 @@ const MobileLayout = () => {
     goals,
     projects,
     goalsProjectsEnabled,
-    hideCompletedInbox, hideProjectTasksInbox,
     hideStandaloneTasksInbox, inboxTagFilter, inboxProjectFilter,
     archiveInboxTask,
   } = useDayPlannerCtx();
@@ -3582,12 +3581,12 @@ const MobileLayout = () => {
 
           {/* Bottom Tab Bar */}
           <MobileTabBar />
+          <InboxFilterPopover
+            open={showInboxFilter}
+            onClose={() => setShowInboxFilter(false)}
+            buttonRef={inboxFilterBtnRef}
+          />
         </>
-      <InboxFilterPopover
-        open={showInboxFilter}
-        onClose={() => setShowInboxFilter(false)}
-        buttonRef={inboxFilterBtnRef}
-      />
 );
 };
 

@@ -415,6 +415,7 @@ const WeeklyReviewModal = () => {
                 const completedTasks = allTasksCombined.filter(t => childProjects.some(p => p.id === t.projectId) && !t.archived && t.completed).length;
                 return { id: g.id, title: g.title, progressPct: Math.round(progress * 100), daysLeft, totalTasks, completedTasks };
               })
+              .sort((a, b) => a.daysLeft - b.daysLeft)
           : [];
 
         // Active projects — with momentum indicator

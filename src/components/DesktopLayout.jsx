@@ -414,7 +414,6 @@ const DesktopLayout = () => {
     goals, projects, goalsProjectsEnabled,
     setShowGoalsDashboard,
     projectFilter, setProjectFilter,
-    hideCompletedInbox, hideProjectTasksInbox,
     hideStandaloneTasksInbox, inboxTagFilter, inboxProjectFilter,
     archiveInboxTask,
   } = useDayPlannerCtx();

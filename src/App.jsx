@@ -225,6 +225,13 @@ const DayPlanner = () => {
   });
   const [tasks, setTasks] = useState([]);
   const [unscheduledTasks, setUnscheduledTasks] = useState([]);
+  const [unscheduledOrderTimestamp, setUnscheduledOrderTimestamp] = useState(null);
+  // Call this instead of setUnscheduledTasks when the user explicitly reorders tasks
+  // so the new order is timestamped and wins during cloud sync merges.
+  const reorderUnscheduledTasks = (nextTasks) => {
+    setUnscheduledTasks(nextTasks);
+    setUnscheduledOrderTimestamp(new Date().toISOString());
+  };
   const [dataLoaded, setDataLoaded] = useState(false); // Track if initial data has been loaded
   const [recycleBin, setRecycleBin] = useState([]);
   const [recurringTasks, setRecurringTasks] = useState([]);
@@ -801,12 +808,14 @@ const DayPlanner = () => {
     setDailyNotes, setRoutineDefinitions, setTodayRoutines, setRoutinesDate,
     setRemovedTodayRoutineIds, setHabits, setHabitLogs, setHabitsEnabled,
     setRoutinesEnabled, setGoals, setProjects, setGoalsProjectsEnabled, setDataLoaded,
+    setUnscheduledOrderTimestamp,
     // values for saveData
     tasks, unscheduledTasks, recycleBin, recurringTasks, todayRoutines,
     darkMode, syncUrl, taskCalendarUrl, syncRetentionDays, completedTaskUids,
     routineDefinitions, routinesDate, removedTodayRoutineIds,
     habits, habitLogs, habitsEnabled, routinesEnabled, gtdFrames,
     goals, projects, goalsProjectsEnabled,
+    unscheduledOrderTimestamp,
     cloudSyncConfig, cloudSyncInitialDoneRef, suppressTimestampRef,
     setUndoToast,
   });
@@ -3955,6 +3964,7 @@ const DayPlanner = () => {
       data: {
         tasks: stampTaskTimestamps(tasks.filter(t => !t._native), 'day-planner-tasks'),
         unscheduledTasks: stampTaskTimestamps(unscheduledTasks, 'day-planner-unscheduled'),
+        unscheduledOrderTimestamp,
         recycleBin: stampTaskTimestamps(recycleBin, 'day-planner-recycle-bin'),
         syncUrl,
         taskCalendarUrl,
@@ -4153,6 +4163,10 @@ const DayPlanner = () => {
       return [...normalizedTasks, ...prev.filter(t => !mergedIds.has(String(t.id)) && (t._native || t.imported))];
     });
     if (normalizedUnsched) setUnscheduledTasks(normalizedUnsched);
+    if (data.unscheduledOrderTimestamp) {
+      setUnscheduledOrderTimestamp(data.unscheduledOrderTimestamp);
+      localStorage.setItem('day-planner-unscheduled-order-ts', data.unscheduledOrderTimestamp);
+    }
     if (data.recycleBin) setRecycleBin(data.recycleBin);
     if (data.syncUrl) setSyncUrl(data.syncUrl);
     if (data.taskCalendarUrl) setTaskCalendarUrl(data.taskCalendarUrl);
@@ -6677,6 +6691,8 @@ const DayPlanner = () => {
     handleSpotlightSelect,
     updateDailyNote,
     setTaskRef,
+
+    reorderUnscheduledTasks,
 
     // ── Functions – drag / drop ───────────────────────────────────────────────
     handleCalendarMouseMove, handleCalendarMouseLeave,

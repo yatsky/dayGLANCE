@@ -459,6 +459,28 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
   }
   let finalTasks = reconciledTasks;
   let finalUnsched = reconciledUnsched;
+
+  // Apply the ordering from whichever side last explicitly reordered their inbox.
+  // Without this, reordering tasks in a project card would never propagate via sync
+  // because individual task lastModified timestamps don't change on reorder.
+  const localOrderTs = new Date(localData.unscheduledOrderTimestamp || 0);
+  const remoteOrderTs = new Date(remoteData.unscheduledOrderTimestamp || 0);
+  if (remoteOrderTs > localOrderTs && remoteData.unscheduledTasks?.length) {
+    const remoteOrderIds = remoteData.unscheduledTasks.map(t => String(t.id));
+    const unschedById = new Map(finalUnsched.map(t => [String(t.id), t]));
+    const ordered = [];
+    for (const id of remoteOrderIds) {
+      if (unschedById.has(id)) ordered.push(unschedById.get(id));
+    }
+    // append tasks not present in remote order (new local-only tasks)
+    const remoteOrderSet = new Set(remoteOrderIds);
+    for (const t of finalUnsched) {
+      if (!remoteOrderSet.has(String(t.id))) ordered.push(t);
+    }
+    finalUnsched = ordered;
+    localChanged = true;
+  }
+
   if (crossListIds.size > 0) {
     const keepInScheduled = new Set();
     const keepInInbox = new Set();
@@ -664,6 +686,9 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
     data: {
       tasks: finalTasks,
       unscheduledTasks: finalUnsched,
+      unscheduledOrderTimestamp: remoteOrderTs > localOrderTs
+        ? remoteData.unscheduledOrderTimestamp
+        : localData.unscheduledOrderTimestamp,
       recycleBin: reconciledBin,
       recurringTasks: recurMerge.merged,
       completedTaskUids: mergedCompletedUids,

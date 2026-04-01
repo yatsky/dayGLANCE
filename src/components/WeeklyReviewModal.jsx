@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, BarChart3, CalendarDays, CheckSquare, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, Flag, Flame, FolderOpen, Loader, RefreshCw, Sparkles, Target, TrendingUp, Trophy, X, Zap } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { dateToString, stripWikilinks } from '../utils/taskUtils.js';
@@ -31,6 +31,9 @@ const WeeklyReviewModal = () => {
   // Local collapse state for past-week HABITS and FRAME UTILIZATION sections
   const [habitsCollapsed, setHabitsCollapsed] = useState(true);
   const [framesCollapsed, setFramesCollapsed] = useState(true);
+
+  // Reset to page 0 whenever the modal opens so chevrons are never stale
+  useEffect(() => { setMobileReviewPage(0); }, []);
 
   if (!showWeeklyReview) return null;
 

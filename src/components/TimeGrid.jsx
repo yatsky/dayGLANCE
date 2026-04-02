@@ -8,6 +8,7 @@ import { isNativeAndroid, nativeUpdateEvent } from '../native.js';
 import { renderTitleWithoutTags, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, isObsidianNoteOnlyTask } from '../utils/textFormatting.jsx';
 import { dateToString, extractTags, extractWikilinks, stripWikilinks } from '../utils/taskUtils.js';
 import SuggestionAutocomplete from './SuggestionAutocomplete.jsx';
+import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 
 const TimeGrid = () => {
@@ -20,6 +21,8 @@ const TimeGrid = () => {
     borderClass, cardBg, textPrimary, textSecondary, hoverBg,
     tasks, setTasks,
     conflicts,
+    goalsProjectsEnabled,
+    projects,
     projectFilter, setProjectFilter,
     taskWidths,
     expandedNotesTaskId, setExpandedNotesTaskId,
@@ -56,6 +59,9 @@ const TimeGrid = () => {
     getTasksForDate, getFrameInstancesForDate,
     getTaskCalendarStyle,
     computeAvailableSlots,
+    updateTaskNotes, addSubtask, toggleSubtask, deleteSubtask, updateSubtaskTitle,
+    aiConfig, aiSubtasksLoadingForTask, generateAISubtasks,
+    loadWikiNote, saveWikiNote,
   } = useDayPlannerCtx();
 
   return (

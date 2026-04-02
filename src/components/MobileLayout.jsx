@@ -552,7 +552,7 @@ const MobileLayout = () => {
               </div>
             )}
             {mobileActiveTab === 'inbox' && (
-              <div className={`${cardBg} border-b ${borderClass} sticky top-0 z-30`}>
+              <div className={`${cardBg} border-b ${borderClass} sticky top-0 z-30`} data-inbox-container>
                 <div className="px-4 pt-3 pb-1">
                   <h2 className={`font-bold text-lg ${textPrimary} flex items-center gap-2`}>
                     <Inbox size={20} /> Inbox
@@ -2998,7 +2998,6 @@ const MobileLayout = () => {
                     ))
                   )}
                 </div>
-                <InboxArchivedBar />
 
                 {/* Mobile notes panel overlay for inbox tasks */}
                 {expandedNotesTaskId && (() => {
@@ -3041,13 +3040,14 @@ const MobileLayout = () => {
               </div>
             )}
 
+            {mobileActiveTab === 'inbox' && <InboxArchivedBar />}
+
             {mobileActiveTab === 'routines' && <MobileRoutinesTab />}
 
-            {mobileActiveTab === 'goals' && (
-              <div className="mobile-tab-fade-in flex flex-col flex-1 min-h-0 overflow-hidden">
-                <GoalDashboard embedded addGoalTrigger={addGoalTrigger} addProjectTrigger={addProjectTrigger} />
-              </div>
-            )}
+            {/* GoalDashboard stays mounted to avoid expensive remount on every tab switch */}
+            <div className={`flex flex-col flex-1 min-h-0 overflow-hidden ${mobileActiveTab === 'goals' ? '' : 'hidden'}`}>
+              <GoalDashboard embedded addGoalTrigger={addGoalTrigger} addProjectTrigger={addProjectTrigger} />
+            </div>
 
 
             {mobileActiveTab === 'settings' && <MobileSettingsPanel />}

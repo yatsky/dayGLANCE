@@ -1632,7 +1632,7 @@ const DesktopLayout = () => {
 
                 {/* Inbox section — shown when inbox tab active */}
                 {tabletActiveTab === 'inbox' && (
-                  <div className="p-4">
+                  <div className="p-4" data-inbox-container>
                     {/* Inbox header with priority filter */}
                     <div className="flex items-center mb-4">
                         <button
@@ -1872,10 +1872,10 @@ const DesktopLayout = () => {
                         ))
                       )}
                     </div>
-                    <InboxArchivedBar />
                   </div>
                 )}
               </div>
+              {tabletActiveTab === 'inbox' && <InboxArchivedBar />}
               {/* Daily Note FAB — above Goals & Projects FAB */}
               {tabletActiveTab === 'glance' && (
                 <button
@@ -2893,7 +2893,7 @@ const DesktopLayout = () => {
 
               {/* Inbox section — shown when inbox tab active */}
               {tabletActiveTab === 'inbox' && (
-              <div className="p-4">
+              <div className="p-4" data-inbox-container>
                 <div
                   onDragOver={handleDragOverInbox}
                   onDragLeave={(e) => {
@@ -3191,11 +3191,11 @@ const DesktopLayout = () => {
                     ))
                   )}
                   </div>
-                  <InboxArchivedBar />
                 </div>
               </div>
               )}
             </div>
+            {tabletActiveTab === 'inbox' && <InboxArchivedBar />}
             {/* Daily Note FAB — above Goals & Projects FAB */}
             {tabletActiveTab === 'glance' && (
               <button

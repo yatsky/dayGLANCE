@@ -5016,9 +5016,13 @@ const DayPlanner = () => {
     for (const task of tasks) {
       matchTask(task, 'scheduled', 'Scheduled', task.date);
     }
-    // Inbox tasks
+    // Inbox tasks (archived get their own source/label)
     for (const task of unscheduledTasks) {
-      matchTask(task, 'inbox', 'Inbox', task.deadline || null);
+      if (task.archived) {
+        matchTask(task, 'archived', 'Completed', task.deadline || null);
+      } else {
+        matchTask(task, 'inbox', 'Inbox', task.deadline || null);
+      }
     }
     // Recurring templates
     for (const template of recurringTasks) {
@@ -5034,9 +5038,10 @@ const DayPlanner = () => {
     const weekEndDate = new Date(now);
     weekEndDate.setDate(weekEndDate.getDate() + 7);
     const weekEndStr = dateToString(weekEndDate);
-    const groupOrder = { today: 0, thisweek: 1, future: 2, nodate: 3, past: 4, deleted: 5 };
+    const groupOrder = { today: 0, thisweek: 1, future: 2, nodate: 3, past: 4, deleted: 5, archived: 6 };
     const getGroup = (r) => {
       if (r.source === 'deleted') return 'deleted';
+      if (r.source === 'archived') return 'archived';
       const d = r.date;
       if (!d) return 'nodate';
       if (d < todayStr) return 'past';
@@ -5047,7 +5052,7 @@ const DayPlanner = () => {
     results.forEach(r => { r.group = getGroup(r); });
 
     // Sort: by group, then title match, then source priority, then date
-    const sourcePriority = { scheduled: 0, inbox: 1, recurring: 2, deleted: 3 };
+    const sourcePriority = { scheduled: 0, inbox: 1, recurring: 2, deleted: 3, archived: 4 };
     results.sort((a, b) => {
       const gA = groupOrder[a.group] ?? 6;
       const gB = groupOrder[b.group] ?? 6;

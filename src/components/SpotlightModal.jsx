@@ -65,13 +65,15 @@ const SpotlightModal = () => {
               inbox: 'bg-green-900/40 text-green-300',
               recurring: 'bg-purple-900/40 text-purple-300',
               deleted: 'bg-red-900/40 text-red-300',
+              archived: 'bg-gray-700/60 text-gray-400',
             } : {
               scheduled: 'bg-blue-100 text-blue-700',
               inbox: 'bg-green-100 text-green-700',
               recurring: 'bg-purple-100 text-purple-700',
               deleted: 'bg-red-100 text-red-700',
+              archived: 'bg-stone-200 text-stone-500',
             };
-            const groupLabels = { today: 'Today', thisweek: 'This week', future: 'Coming up', nodate: 'No date', past: 'Past', deleted: 'Deleted' };
+            const groupLabels = { today: 'Today', thisweek: 'This week', future: 'Coming up', nodate: 'No date', past: 'Past', deleted: 'Deleted', archived: 'Archived' };
             let lastGroup = null;
             return spotlightResults.map((result, idx) => {
               const isSelected = idx === spotlightSelectedIndex;

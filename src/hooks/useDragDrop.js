@@ -985,8 +985,8 @@ export default function useDragDrop({
       setMobileDragPreviewTime('all-day');
       return;
     }
-    // For all-day source tasks, use absolute position (finger = time)
-    if (mobileDragSourceType.current === 'allday') {
+    // For all-day and deadline source tasks, use absolute position (finger = time)
+    if (mobileDragSourceType.current === 'allday' || mobileDragSourceType.current === 'deadline') {
       if (!timeGridRef.current) return;
       const headerHeight = timeGridRef.current.offsetTop;
       const y = Math.max(0, touch.clientY - calendarRect.top + scrollTop - headerHeight);

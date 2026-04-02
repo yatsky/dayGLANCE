@@ -2,7 +2,7 @@ import React from 'react';
 import {
   AlertCircle, BookOpen, Calendar, Check, CheckSquare,
   ExternalLink, FileText, GripVertical, Inbox, NotebookPen,
-  RefreshCw, Settings, SkipForward,
+  RefreshCw, Settings, SkipForward, Trash2,
 } from 'lucide-react';
 import { isNativeAndroid } from '../native.js';
 import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, isObsidianNoteOnlyTask } from '../utils/textFormatting.jsx';

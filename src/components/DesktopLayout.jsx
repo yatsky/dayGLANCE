@@ -16,7 +16,6 @@ import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import SuggestionAutocomplete from './SuggestionAutocomplete.jsx';
 import DeadlinePickerPopover from './DeadlinePickerPopover.jsx';
 import DesktopHeader from './DesktopHeader.jsx';
-import InboxFilterPopover from './InboxFilterPopover.jsx';
 import InboxArchivedBar from './InboxArchivedBar.jsx';
 import GlanceSidebar from './GlanceSidebar.jsx';
 import InboxSidebar from './InboxSidebar.jsx';
@@ -416,8 +415,6 @@ const DesktopLayout = () => {
     archiveInboxTask,
   } = useDayPlannerCtx();
 
-  const [showInboxFilter, setShowInboxFilter] = useState(false);
-  const inboxFilterBtnRef = useRef(null);
 
   // A filter is "active" (non-default) when any non-priority filter deviates from defaults
   const inboxFilterActive =
@@ -2358,11 +2355,6 @@ const DesktopLayout = () => {
           <Trash2 size={26} className="text-white" />
         </div>
       )}
-      <InboxFilterPopover
-        open={showInboxFilter}
-        onClose={() => setShowInboxFilter(false)}
-        buttonRef={inboxFilterBtnRef}
-      />
       </>
 );
 };

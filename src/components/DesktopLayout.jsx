@@ -1872,10 +1872,10 @@ const DesktopLayout = () => {
                         ))
                       )}
                     </div>
-                    <InboxArchivedBar />
                   </div>
                 )}
               </div>
+              {tabletActiveTab === 'inbox' && <InboxArchivedBar />}
               {/* Daily Note FAB — above Goals & Projects FAB */}
               {tabletActiveTab === 'glance' && (
                 <button
@@ -3191,11 +3191,11 @@ const DesktopLayout = () => {
                     ))
                   )}
                   </div>
-                  <InboxArchivedBar />
                 </div>
               </div>
               )}
             </div>
+            {tabletActiveTab === 'inbox' && <InboxArchivedBar />}
             {/* Daily Note FAB — above Goals & Projects FAB */}
             {tabletActiveTab === 'glance' && (
               <button

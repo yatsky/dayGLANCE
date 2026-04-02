@@ -2998,7 +2998,6 @@ const MobileLayout = () => {
                     ))
                   )}
                 </div>
-                <InboxArchivedBar />
 
                 {/* Mobile notes panel overlay for inbox tasks */}
                 {expandedNotesTaskId && (() => {
@@ -3040,6 +3039,8 @@ const MobileLayout = () => {
                 })()}
               </div>
             )}
+
+            {mobileActiveTab === 'inbox' && <InboxArchivedBar />}
 
             {mobileActiveTab === 'routines' && <MobileRoutinesTab />}
 

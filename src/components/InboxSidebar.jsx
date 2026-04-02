@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   AlertCircle, Archive, BookOpen, BrainCircuit,
   Calendar, Check, CheckSquare, ExternalLink,
@@ -9,12 +9,13 @@ import { dateToString, extractWikilinks, formatDeadlineDate } from '../utils/tas
 import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import SuggestionAutocomplete from './SuggestionAutocomplete.jsx';
 import DeadlinePickerPopover from './DeadlinePickerPopover.jsx';
+import InboxFilterPopover from './InboxFilterPopover.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 
 const InboxSidebar = ({ variant = 'desktop' }) => {
   const {
     longPressTriggeredRef, longPressTimerRef,
-    inboxFilterBtnRef, editingInputRef,
+    editingInputRef,
     darkMode,
     unscheduledTasks,
     editingTaskId, editingTaskText,
@@ -54,15 +55,17 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
     handleDragOverInbox, handleDropOnInbox,
     dragOverInbox, setDragOverInbox,
     inboxFilterActive,
-    showInboxFilter, setShowInboxFilter,
     setInboxProjectFilter,
     handleMobileTaskTouchStart, handleMobileTaskTouchMove, handleMobileTaskTouchEnd,
   } = useDayPlannerCtx();
 
+  const [showInboxFilter, setShowInboxFilter] = useState(false);
+  const inboxFilterBtnRef = useRef(null);
   const isDesktop = variant === 'desktop';
 
   if (isDesktop) {
     return (
+    <>
   <div
     onDragOver={handleDragOverInbox}
     onDragLeave={(e) => {
@@ -361,11 +364,18 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
     )}
     </div>
   </div>
+  <InboxFilterPopover
+    open={showInboxFilter}
+    onClose={() => setShowInboxFilter(false)}
+    buttonRef={inboxFilterBtnRef}
+  />
+    </>
     );
   }
 
   // Tablet variant
   return (
+    <>
 <div className="p-4" data-inbox-container>
   {/* Inbox header with priority filter */}
   <div className="flex items-center mb-4">
@@ -607,6 +617,12 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
     )}
   </div>
 </div>
+  <InboxFilterPopover
+    open={showInboxFilter}
+    onClose={() => setShowInboxFilter(false)}
+    buttonRef={inboxFilterBtnRef}
+  />
+    </>
   );
 };
 

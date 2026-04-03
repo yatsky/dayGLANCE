@@ -95,21 +95,6 @@ const MobileTabBar = () => {
           </div>
           {showLabels && <span className="text-[10px] font-medium">Inbox</span>}
         </button>
-        {routinesEnabled && (
-        <button
-          onClick={() => {
-            setMobileActiveTab('routines');
-            setMobileSettingsView('main');
-            setDashboardSelectedChips(todayRoutines.map(r => ({ id: r.id, name: r.name, bucket: r.bucket, startTime: r.startTime || null })));
-            setRoutineAddingToBucket(null);
-            setRoutineNewChipName('');
-          }}
-          className={`flex flex-col items-center justify-center ${showLabels ? 'gap-0.5' : ''} flex-1 h-full ${mobileActiveTab === 'routines' ? 'text-blue-500' : textSecondary}`}
-        >
-          <Sparkles size={iconSize} />
-          {showLabels && <span className="text-[10px] font-medium">Routines</span>}
-        </button>
-        )}
         {goalsProjectsEnabled && (
         <button
           onClick={() => {
@@ -128,6 +113,21 @@ const MobileTabBar = () => {
             )}
           </div>
           {showLabels && <span className="text-[10px] font-medium">Goals</span>}
+        </button>
+        )}
+        {routinesEnabled && (
+        <button
+          onClick={() => {
+            setMobileActiveTab('routines');
+            setMobileSettingsView('main');
+            setDashboardSelectedChips(todayRoutines.map(r => ({ id: r.id, name: r.name, bucket: r.bucket, startTime: r.startTime || null })));
+            setRoutineAddingToBucket(null);
+            setRoutineNewChipName('');
+          }}
+          className={`flex flex-col items-center justify-center ${showLabels ? 'gap-0.5' : ''} flex-1 h-full ${mobileActiveTab === 'routines' ? 'text-blue-500' : textSecondary}`}
+        >
+          <Sparkles size={iconSize} />
+          {showLabels && <span className="text-[10px] font-medium">Routines</span>}
         </button>
         )}
         <button

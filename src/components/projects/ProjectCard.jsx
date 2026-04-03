@@ -486,9 +486,9 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
                       <NotebookPen size={10} />
                     </button>
                   ))}
-                  {/* Calendar badge for scheduled tasks — same p-1 padding as drag handle for consistent alignment */}
+                  {/* Calendar badge for scheduled tasks — w-5 h-5 matches drag handle (p-1 + size-12) footprint exactly */}
                   {scheduled && (
-                    <div className={`flex-shrink-0 p-1 ${textSecondary} opacity-40`}>
+                    <div className={`flex-shrink-0 w-5 h-5 flex items-center justify-center ${textSecondary} opacity-40`}>
                       <Calendar size={10} />
                     </div>
                   )}

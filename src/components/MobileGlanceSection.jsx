@@ -4,7 +4,7 @@ import {
   Calendar, CalendarDays, Check, CheckCircle, CheckSquare, ChevronDown,
   ChevronUp, Clock, ExternalLink, FileText, Filter, Inbox, LayoutGrid,
   Loader, Mic, Minus, Moon, NotebookPen, Plus, RefreshCw,
-  Search, Sparkles, Sun, Target, X,
+  Search, Sparkles, Sun, Target, Trash2, X,
 } from 'lucide-react';
 import { isNativeAndroid } from '../native.js';
 import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, isObsidianNoteOnlyTask } from '../utils/textFormatting.jsx';

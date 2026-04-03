@@ -140,7 +140,7 @@ const GoalCard = forwardRef(
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span className={`text-xs ${textSecondary}`}>
                   {projects.length} project{projects.length !== 1 ? 's' : ''}
                 </span>
@@ -148,10 +148,9 @@ const GoalCard = forwardRef(
                   <button
                     type="button"
                     onClick={onNewProject}
-                    className={`p-0.5 rounded transition-colors ${textSecondary} hover:text-emerald-500`}
-                    aria-label="Add project"
+                    className={`flex items-center gap-0.5 text-xs ${textSecondary} opacity-60 hover:opacity-100 transition-opacity`}
                   >
-                    <Plus size={11} />
+                    <Plus size={10} /> Add
                   </button>
                 )}
               </div>

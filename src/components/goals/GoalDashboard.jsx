@@ -260,13 +260,13 @@ const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mob
 
 // ─── Project form (create / edit) ─────────────────────────────────────────────
 
-const ProjectForm = ({ initial, goals, onSave, onCancel, mobile }) => {
+const ProjectForm = ({ initial, goals, defaultGoalId, onSave, onCancel, mobile }) => {
   const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg, tasks, unscheduledTasks } =
     useDayPlannerCtx();
 
   const [title, setTitle] = useState(initial?.title || '');
   const [description, setDescription] = useState(initial?.description || '');
-  const [goalId, setGoalId] = useState(initial?.goalId || '');
+  const [goalId, setGoalId] = useState(initial?.goalId || defaultGoalId || '');
   const [status, setStatus] = useState(initial?.status || 'active');
 
   // "Completed" only available when all project tasks are completed (or none exist)
@@ -1265,17 +1265,16 @@ const MobileDashboard = ({
                       {/* Project count + completion % */}
                       {!isCompleted && nonArchivedProjects.length > 0 && (
                         <div className="flex items-center justify-between mt-1.5">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             <span className={`text-xs ${textSecondary}`}>
                               {nonArchivedProjects.length} project{nonArchivedProjects.length !== 1 ? 's' : ''}
                             </span>
                             <button
                               type="button"
                               onClick={() => onNewProject(goal.id)}
-                              className={`p-0.5 rounded transition-colors ${textSecondary} hover:text-emerald-500`}
-                              aria-label="Add project"
+                              className={`flex items-center gap-0.5 text-xs ${textSecondary} opacity-60 hover:opacity-100 transition-opacity`}
                             >
-                              <Plus size={11} />
+                              <Plus size={10} /> Add
                             </button>
                           </div>
                           <span className={`text-xs font-medium ${goalProgress >= 1 ? 'text-green-500' : textSecondary}`}>

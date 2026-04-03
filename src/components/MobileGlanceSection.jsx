@@ -25,6 +25,8 @@ const MobileGlanceSection = () => {
     darkMode,
     currentTime, use24HourClock,
     selectedDate, setSelectedDate,
+    mobileActiveTab, setMobileActiveTab,
+    mobileSettingsView, setMobileSettingsView,
     tasks, setTasks,
     unscheduledTasks, setUnscheduledTasks,
     recycleBin, setRecycleBin,

@@ -63,12 +63,14 @@ const SpotlightModal = () => {
             const sourceBadgeColors = darkMode ? {
               scheduled: 'bg-blue-900/40 text-blue-300',
               inbox: 'bg-green-900/40 text-green-300',
+              project: 'bg-green-900/40 text-green-300',
               recurring: 'bg-purple-900/40 text-purple-300',
               deleted: 'bg-red-900/40 text-red-300',
               archived: 'bg-gray-700/60 text-gray-400',
             } : {
               scheduled: 'bg-blue-100 text-blue-700',
               inbox: 'bg-green-100 text-green-700',
+              project: 'bg-green-100 text-green-700',
               recurring: 'bg-purple-100 text-purple-700',
               deleted: 'bg-red-100 text-red-700',
               archived: 'bg-stone-200 text-stone-500',
@@ -115,9 +117,16 @@ const SpotlightModal = () => {
                       <span className={`text-xs ${textSecondary} flex-shrink-0`}>{result.date}</span>
                     )}
                     {/* Source badge */}
-                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${sourceBadgeColors[result.source]}`}>
-                      {result.sourceLabel}
-                    </span>
+                    {(() => {
+                      const isProjectTask = result.source === 'inbox' && result.task.projectId;
+                      const badgeKey = isProjectTask ? 'project' : result.source;
+                      const label = isProjectTask ? 'Project' : result.sourceLabel;
+                      return (
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${sourceBadgeColors[badgeKey]}`}>
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               );

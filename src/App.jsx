@@ -649,6 +649,7 @@ const DayPlanner = () => {
     isMobile,
     setMobileActiveTab,
     setTabletActiveTab,
+    setInboxProjectFilter,
     calendarRef,
   });
 

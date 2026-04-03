@@ -9,6 +9,7 @@ export default function useNavigation({
   isMobile,
   setMobileActiveTab,
   setTabletActiveTab,
+  setInboxProjectFilter,
   calendarRef,
 }) {
   const changeDate = useCallback((direction) => {
@@ -69,7 +70,18 @@ export default function useNavigation({
       } else {
         setTabletActiveTab('inbox');
       }
+      // If the task belongs to a project, pre-apply the project filter so it's visible
+      if (task.projectId) {
+        setInboxProjectFilter([task.projectId]);
+      }
       scrollAndHighlight(`[data-task-id="${task.id}"]`);
+    } else if (source === 'archived') {
+      if (isMobile) {
+        setMobileActiveTab('inbox');
+      } else {
+        setTabletActiveTab('inbox');
+      }
+      scrollAndHighlight(`[data-task-id="${task.id}"]`, 400);
     } else if (source === 'recurring') {
       const date = task.startDate || dateToString(new Date());
       if (isMobile) {
@@ -79,7 +91,7 @@ export default function useNavigation({
     } else if (source === 'deleted') {
       scrollAndHighlight(`[data-task-id="bin-${task.id}"]`);
     }
-  }, [setShowSpotlight, isMobile, setMobileActiveTab, setTabletActiveTab, calendarRef, goToDate]);
+  }, [setShowSpotlight, isMobile, setMobileActiveTab, setTabletActiveTab, setInboxProjectFilter, calendarRef, goToDate]);
 
   return { changeDate, goToToday, goToDate, handleSpotlightSelect };
 }

@@ -1116,8 +1116,16 @@ export default function useDragDrop({
         setMobileDragPreviewTime(_initTime);
         setMobileDragPreviewDate(_initDate);
         // Add native non-passive touchmove listener to prevent browser scroll
-        // (React 18 registers touchmove as passive, so e.preventDefault() in onTouchMove is a no-op)
-        const preventScroll = (e) => e.preventDefault();
+        // (React 18 registers touchmove as passive, so e.preventDefault() in onTouchMove is a no-op).
+        // Also update the drag preview here so the trash FAB hit-test stays current even when
+        // the element-level onTouchMove is suppressed (e.g. tablet with touchAction ancestor).
+        const preventScroll = (e) => {
+          e.preventDefault();
+          if (mobileDragActive.current && e.touches[0]) {
+            mobileDragLastTouch.current = { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+            updateMobileDragPreview();
+          }
+        };
         document.addEventListener('touchmove', preventScroll, { passive: false });
         mobileDragPreventScrollRef.current = preventScroll;
         // Suppress iOS text selection / magnifier during drag

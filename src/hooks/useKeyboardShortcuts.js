@@ -55,7 +55,7 @@ export default function useKeyboardShortcuts({
   // reschedule ('e')
   gtdFrames, setShowRescheduleModal, setRescheduleResults, setRescheduleError,
   // smart schedule ('s')
-  setMobileActiveTab, setFramesModalTab, setEditingFrame, setShowFramesModal,
+  setMobileActiveTab, setMobileSettingsView, setFramesModalTab, setEditingFrame, setShowFramesModal,
   // date navigation (arrows)
   changeDate, setSelectedDate,
 }) {
@@ -240,7 +240,8 @@ export default function useKeyboardShortcuts({
       if (e.key === 's' && noModifiers && aiConfig?.enabled && aiConfig.features?.smartScheduling && gtdFrames.filter(f => f.enabled).length > 0) {
         e.preventDefault();
         if (isMobile) {
-          setMobileActiveTab('frames');
+          setMobileActiveTab('settings');
+          setMobileSettingsView('frames');
           setFramesModalTab('schedule');
           setEditingFrame(null);
         } else {

@@ -143,7 +143,11 @@ export default function useKeyboardShortcuts({
       if (e.key === 'r' && noModifiers) {
         e.preventDefault();
         if (!routinesEnabled) setRoutinesEnabled(true);
-        setShowRoutinesDashboard(true);
+        if (isMobile) {
+          setMobileActiveTab('routines');
+        } else {
+          setShowRoutinesDashboard(true);
+        }
       }
 
       // 'f' for focus mode (only when available)
@@ -210,7 +214,11 @@ export default function useKeyboardShortcuts({
       if (e.key === 'g' && noModifiers) {
         e.preventDefault();
         if (!goalsProjectsEnabled) setGoalsProjectsEnabled(true);
-        setShowGoalsDashboard(true);
+        if (isMobile) {
+          setMobileActiveTab('goals');
+        } else {
+          setShowGoalsDashboard(true);
+        }
       }
 
       // 'h' for habits modal

@@ -733,47 +733,6 @@ const MobileGlanceSection = () => {
                   <NotebookPen size={14} />
                 </button>
               ))}
-              {hasNotesOrSubtasks(task) && (
-                <button
-                  onMouseDown={() => {
-                    if (isLinkOnlyTask(task)) {
-                      longPressTriggeredRef.current = false;
-                      longPressTimerRef.current = setTimeout(() => {
-                        longPressTriggeredRef.current = true;
-                        setExpandedNotesTaskId(prev => prev === task.id ? null : task.id);
-                      }, 500);
-                    }
-                  }}
-                  onMouseUp={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
-                  onMouseLeave={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
-                  onTouchStart={(e) => {
-                    e.stopPropagation();
-                    if (isLinkOnlyTask(task)) {
-                      longPressTriggeredRef.current = false;
-                      longPressTimerRef.current = setTimeout(() => {
-                        longPressTriggeredRef.current = true;
-                        setExpandedNotesTaskId(prev => prev === task.id ? null : task.id);
-                      }, 500);
-                    }
-                  }}
-                  onTouchEnd={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isLinkOnlyTask(task)) {
-                      if (!longPressTriggeredRef.current) {
-                        window.open(getLinkUrl(task), '_blank', 'noopener,noreferrer');
-                      }
-                      longPressTriggeredRef.current = false;
-                    } else {
-                      setExpandedNotesTaskId(prev => prev === task.id ? null : task.id);
-                    }
-                  }}
-                  className={`notes-toggle-button flex-shrink-0 rounded p-1.5 transition-colors ${darkMode ? 'hover:bg-white/20 text-gray-400' : 'hover:bg-black/10 text-stone-500'}`}
-                  title={isLinkOnlyTask(task) ? getLinkUrl(task) : "Notes & subtasks"}
-                >
-                  {isLinkOnlyTask(task) ? <ExternalLink size={14} /> : hasOnlySubtasks(task) ? <CheckSquare size={14} /> : isObsidianNoteOnlyTask(task) ? <BookOpen size={14} /> : <FileText size={14} />}
-                </button>
-              )}
             </div>
             <div className={`text-sm ${textSecondary} flex items-center gap-1`}>
               {timeLabel}{relativeLabel ? <>{`, `}<span className={relativeLabel === 'Overdue' ? 'text-orange-500 font-medium' : relativeLabel === 'In Progress' ? 'text-blue-500 font-medium' : ''}>{relativeLabel}</span></> : ''}

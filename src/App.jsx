@@ -90,6 +90,7 @@ import useMobileInteractions from './hooks/useMobileInteractions.js';
 import useKeyboardShortcuts from './hooks/useKeyboardShortcuts.js';
 import { DayPlannerContext } from './context/DayPlannerContext.jsx';
 import { SyncContext } from './context/SyncContext.jsx';
+import { FeaturesContext } from './context/FeaturesContext.jsx';
 import FrameNudgeCard from './components/FrameNudgeCard.jsx';
 import DeadlinePickerPopover from './components/DeadlinePickerPopover.jsx';
 import DatePicker from './components/DatePicker.jsx';
@@ -6853,9 +6854,178 @@ const DayPlanner = () => {
     fetchAllDailyContent, fetchWeather,
   };
 
+  const featuresCtx = {
+    // ── Routines ──────────────────────────────────────────────────────────────
+    routineDefinitions, setRoutineDefinitions,
+    todayRoutines, setTodayRoutines,
+    routinesDate, setRoutinesDate,
+    removedTodayRoutineIds, setRemovedTodayRoutineIds,
+    showRoutinesDashboard, setShowRoutinesDashboard,
+    dashboardSelectedChips, setDashboardSelectedChips,
+    routineAddingToBucket, setRoutineAddingToBucket,
+    routineNewChipName, setRoutineNewChipName,
+    routineTimePickerChipId, setRoutineTimePickerChipId,
+    routineDeleteConfirm, setRoutineDeleteConfirm,
+    routineFocusedChipId, setRoutineFocusedChipId,
+    routineDurationEditId, setRoutineDurationEditId,
+    routinesEnabled, setRoutinesEnabled,
+
+    // ── Habits ────────────────────────────────────────────────────────────────
+    habits, setHabits,
+    habitLogs, setHabitLogs,
+    habitsEnabled, setHabitsEnabled,
+    showHabitModal, setShowHabitModal,
+    editingHabit, setEditingHabit,
+    draggedHabitIdx, setDraggedHabitIdx,
+    habitOverflowOpen, setHabitOverflowOpen,
+    habitLongPressId, setHabitLongPressId,
+    habitEditingCountId, setHabitEditingCountId,
+    habitDayPopup, setHabitDayPopup,
+    activeHabits, habitStreaks,
+    habitLongPressTimer,
+
+    // ── Focus mode ────────────────────────────────────────────────────────────
+    showFocusMode, setShowFocusMode,
+    focusPhase, setFocusPhase,
+    focusTimerSeconds, setFocusTimerSeconds,
+    focusCycleCount, setFocusCycleCount,
+    focusSessionStart, setFocusSessionStart,
+    focusWorkMinutes, setFocusWorkMinutes,
+    focusBreakMinutes, setFocusBreakMinutes,
+    focusLongBreakMinutes, setFocusLongBreakMinutes,
+    focusCompletedTasks, setFocusCompletedTasks,
+    focusShowStats, setFocusShowStats,
+    focusShowSettings, setFocusShowSettings,
+    focusTimerRunning, setFocusTimerRunning,
+    focusTaskMinutes, setFocusTaskMinutes,
+    focusBlockTasks, setFocusBlockTasks,
+    focusLog, setFocusLog,
+    focusLogModalDate, setFocusLogModalDate,
+    wakeLockSentinel, focusModeAvailable,
+
+    // ── AI / Voice ────────────────────────────────────────────────────────────
+    aiConfig, setAiConfig,
+    aiConnectionStatus, setAiConnectionStatus,
+    aiConnectionMessage, setAiConnectionMessage,
+    aiOllamaHelp, setAiOllamaHelp,
+    showVoiceInput, setShowVoiceInput,
+    voiceIsRecording, setVoiceIsRecording,
+    voiceIsTranscribing, setVoiceIsTranscribing,
+    voiceTranscript, setVoiceTranscript,
+    voiceParsedTasks, setVoiceParsedTasks,
+    voiceTaskTimePickerIdx, setVoiceTaskTimePickerIdx,
+    voiceParsedEdits, setVoiceParsedEdits,
+    voiceIsParsing, setVoiceIsParsing,
+    voiceParseError, setVoiceParseError,
+    voiceEditingParsed, setVoiceEditingParsed,
+    voiceManualMode, setVoiceManualMode,
+    voiceMicError, setVoiceMicError,
+    voiceCanRecord,
+    taskAISuggestion, setTaskAISuggestion,
+    taskAISuggestionLoading, setTaskAISuggestionLoading,
+    aiSubtasksLoadingForTask, setAiSubtasksLoadingForTask,
+
+    // ── Weekly review / AI summaries ──────────────────────────────────────────
+    showWeeklyReview, setShowWeeklyReview,
+    showWeeklyReviewTimePicker, setShowWeeklyReviewTimePicker,
+    showWeeklyReviewReminder, setShowWeeklyReviewReminder,
+    showMorningTimePicker, setShowMorningTimePicker,
+    morningGlanceText, setMorningGlanceText,
+    morningGlanceLoading, setMorningGlanceLoading,
+    morningGlanceDismissed, setMorningGlanceDismissed,
+    morningGlanceError, setMorningGlanceError,
+    eveningGlanceText, setEveningGlanceText,
+    eveningGlanceLoading, setEveningGlanceLoading,
+    eveningGlanceDismissed, setEveningGlanceDismissed,
+    eveningGlanceError, setEveningGlanceError,
+    weeklyAISummary, setWeeklyAISummary,
+    weeklyAILoading, setWeeklyAILoading,
+    weeklyAIError, setWeeklyAIError,
+
+    // ── GTD Frames ────────────────────────────────────────────────────────────
+    gtdFrames, setGtdFrames,
+    showFramesModal, setShowFramesModal,
+    framesModalTab, setFramesModalTab,
+    editingFrame, setEditingFrame,
+    smartScheduleResults, setSmartScheduleResults,
+    smartScheduleLoading, setSmartScheduleLoading,
+    smartScheduleError, setSmartScheduleError,
+    smartScheduleAccepted, setSmartScheduleAccepted,
+    showRescheduleModal, setShowRescheduleModal,
+    rescheduleResults, setRescheduleResults,
+    rescheduleLoading, setRescheduleLoading,
+    rescheduleError, setRescheduleError,
+    rescheduleAccepted, setRescheduleAccepted,
+    frameContextMenu, setFrameContextMenu,
+    quickAddFrameModal, setQuickAddFrameModal,
+    frameAdjustModal, setFrameAdjustModal,
+    frameAdjustTimeField, setFrameAdjustTimeField,
+    frameScheduleModal, setFrameScheduleModal,
+    frameNudgeSuggestion, setFrameNudgeSuggestion,
+    frameNudgeLoading, setFrameNudgeLoading,
+    frameNudgeError, setFrameNudgeError,
+    frameNudgeDismissedKey, setFrameNudgeDismissedKey,
+
+    // ── Goals & Projects ──────────────────────────────────────────────────────
+    goals, setGoals,
+    projects, setProjects,
+    showGoalsDashboard, setShowGoalsDashboard,
+    goalsProjectsEnabled, setGoalsProjectsEnabled,
+    addGoal, updateGoal, deleteGoal,
+    addProject, updateProject, deleteProject, moveProject,
+    projectFilter, setProjectFilter,
+
+    // ── Reminders ─────────────────────────────────────────────────────────────
+    reminderSettings, setReminderSettings,
+    showRemindersSettings, setShowRemindersSettings,
+    activeReminders, setActiveReminders,
+
+    // ── Refs ──────────────────────────────────────────────────────────────────
+    voiceRecorderRef, voiceAudioChunksRef, voiceAutoStartRef,
+    voiceAllTagsRef, voiceBuildTaskContextRef, voiceResolveTaskMatchRef,
+    lastWeeklyReviewFiredRef, weeklyReviewDismissedRef,
+    focusTimerRef, handleFocusTimerEndRef, focusModeAvailableRef,
+    syncHealthConnectHabitsRef,
+
+    // ── Functions – routines ──────────────────────────────────────────────────
+    openRoutinesDashboard, addRoutineChip, deleteRoutineChip,
+    toggleRoutineChipSelection, handleRoutinesDone,
+
+    // ── Functions – habits ────────────────────────────────────────────────────
+    getTodayHabitCount, incrementHabit, setHabitCount,
+    addHabit, updateHabit, archiveHabit, deleteHabit, reorderHabits,
+    addStepsHabit, addSleepHabit,
+
+    // ── Functions – focus mode ────────────────────────────────────────────────
+    enterFocusMode, enterProjectFocusMode, exitFocusMode,
+    startFocusTimer, dismissFocusStats, focusProjectId, handleFocusTimerEnd,
+    focusCompleteTask, focusToggleSubtask, focusAddSubtask,
+    focusDeleteSubtask, focusUpdateSubtaskTitle, focusUpdateTaskNotes,
+    computeFocusBlockTasks,
+
+    // ── Functions – GTD / AI ──────────────────────────────────────────────────
+    saveFrame, deleteFrame, skipFrameForDay,
+    openFrameAdjust, openFrameSchedule, saveFrameAdjust,
+    getFrameInstancesForDate,
+    runSmartSchedule, applySmartSchedule,
+    runReschedule, applyReschedule,
+    computeAvailableSlots,
+    generateFrameNudge, generateMorningSummary, generateEveningReflection,
+    generateWeeklyAISummary, generateAISubtasks,
+    dismissMorningGlance, dismissEveningGlance,
+    voiceParseWithAI, voiceStartRecording, voiceStopRecording,
+    voiceApplyAllChanges, voiceHasTranscription,
+    buildTaskContextForAI, resolveTaskMatch,
+
+    // ── Functions – reminders ─────────────────────────────────────────────────
+    applyReminderPreset, updateCategoryReminder,
+    snoozeReminder, dismissReminder, dismissAllReminders,
+  };
+
   return (
     <DayPlannerContext.Provider value={ctx}>
     <SyncContext.Provider value={syncCtx}>
+    <FeaturesContext.Provider value={featuresCtx}>
     <div className={`app-shell ${bgClass}`} style={{ paddingTop: 'env(safe-area-inset-top)' }}
       onContextMenu={(e) => {
         // Allow native context menu on inputs/textareas/contenteditable
@@ -8264,6 +8434,7 @@ const DayPlanner = () => {
       {/* GTD Frames Modal (Desktop/Tablet) */}
       {showFramesModal && !isMobile && <FramesModal />}
     </div>
+    </FeaturesContext.Provider>
     </SyncContext.Provider>
     </DayPlannerContext.Provider>
   );

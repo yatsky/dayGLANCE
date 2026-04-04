@@ -336,8 +336,7 @@ const MobileLayout = () => {
     routinesEnabled, setRoutinesEnabled,
     habits, setHabits,
     habitLogs, setHabitLogs,
-    habitsEnabled, setHabitsEnabled,
-    showHabitModal, setShowHabitModal,
+    habitsEnabled,
     editingHabit, setEditingHabit,
     draggedHabitIdx, setDraggedHabitIdx,
     habitOverflowOpen, setHabitOverflowOpen,
@@ -1187,16 +1186,6 @@ const MobileLayout = () => {
                       {recycleBin.filter(t => !t.isExample).length > 9 ? '9+' : recycleBin.filter(t => !t.isExample).length}
                     </span>
                   </div>
-                </button>
-              )}
-              {/* Habit management FAB */}
-              {habitsEnabled && (
-                <button
-                  onClick={() => setShowHabitModal(true)}
-                  className={`fixed right-4 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 active:bg-gray-600' : 'bg-stone-200 text-stone-600 active:bg-stone-300'}`}
-                  style={{ bottom: `calc(${recycleBin.filter(t => !t.isExample).length > 0 ? '16.5rem' : '12.5rem'} + env(safe-area-inset-bottom, 0px))` }}
-                >
-                  <Activity size={22} />
                 </button>
               )}
             </>

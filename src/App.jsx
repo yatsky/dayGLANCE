@@ -1558,6 +1558,7 @@ const DayPlanner = () => {
           date: dateStr,
           isRecurring: true,
           recurringTemplateId: template.id,
+          recurrenceType: template.recurrence?.type,
           _overdueType: 'scheduled',
         });
       }
@@ -4950,6 +4951,7 @@ const DayPlanner = () => {
           date: dateStr,
           isRecurring: true,
           recurringTemplateId: template.id,
+          recurrenceType: template.recurrence?.type,
           ...(template.isExample ? { isExample: true } : {}),
         });
       }
@@ -8042,7 +8044,8 @@ const DayPlanner = () => {
         // Check if any menu items would be visible; if not, don't show the menu
         const hasEdit = !isImported;
         const hasNotes = isImported ? !!ctxHasNotes : true;
-        const hasMoveTomorrow = !isImported && !isInbox;
+        const isDaily = isRecurring && ctxTask?.recurrenceType === 'daily';
+        const hasMoveTomorrow = !isImported && !isInbox && !isDaily;
         const hasMoveInbox = !isRecurring && !isImported && !isAllDay && !isInbox;
         const hasComplete = !isImported || isTaskCalendar;
         const hasDelete = !isImported;
@@ -8113,7 +8116,7 @@ const DayPlanner = () => {
                   Generate subtasks (AI)
                 </button>
               )}
-              {!isImported && !isInbox && (
+              {!isImported && !isInbox && !isDaily && (
                 <button
                   className={`w-full text-left px-3 py-2 text-sm ${textPrimary} ${hoverBg} transition-colors flex items-center gap-2`}
                   onClick={() => {

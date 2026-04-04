@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar, Check, Loader, Sparkles, X } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
+import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import SuggestionAutocomplete from './SuggestionAutocomplete.jsx';
 import { dateToString, extractTags, getRecurrenceLabel } from '../utils/taskUtils.js';
 import { getRecurrencePresets } from '../utils/recurrenceEngine.js';
@@ -16,7 +17,6 @@ const DesktopNewTaskModal = () => {
     selectedDate,
     cardBg, borderClass, textPrimary, textSecondary, darkMode, hoverBg, colors,
     durationOptions, formatTime,
-    aiConfig, taskAISuggestion, setTaskAISuggestion, taskAISuggestionLoading,
     showNewTaskDeadlinePicker, setShowNewTaskDeadlinePicker,
     showRecurrencePicker, setShowRecurrencePicker,
     showDatePicker, setShowDatePicker,
@@ -29,8 +29,8 @@ const DesktopNewTaskModal = () => {
     addTask, saveMobileEditTask, moveToRecycleBin,
     applySuggestionForNewTask,
     handleNewTaskInputChange, handleNewTaskInputKeyDown,
-    goals, projects, goalsProjectsEnabled,
   } = useDayPlannerCtx();
+  const { aiConfig, taskAISuggestion, setTaskAISuggestion, taskAISuggestionLoading, goals, projects, goalsProjectsEnabled } = useFeaturesCtx();
 
   if (!showAddTask || isMobile) return null;
 

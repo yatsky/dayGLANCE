@@ -2408,28 +2408,57 @@ const DayPlanner = () => {
           recordDeletedTaskTombstone(parsed.templateId);
           setRecurringTasks(prev => prev.filter(t => t.id !== parsed.templateId));
         } else {
-          setRecurringTasks(prev => prev.map(t => {
-            if (t.id === parsed.templateId) {
-              const updated = {
+          const dateChanged = newTask.date && newTask.date !== parsed.dateStr;
+          const isDaily = newTask.recurrence?.type === 'daily';
+          if (dateChanged && !isDaily) {
+            // Date changed for a non-daily recurring instance:
+            // skip the original occurrence and create a one-off task on the new date
+            setRecurringTasks(prev => prev.map(t => {
+              if (t.id !== parsed.templateId) return t;
+              return {
                 ...t,
                 exceptions: {
                   ...t.exceptions,
-                  [parsed.dateStr]: {
-                    ...(t.exceptions?.[parsed.dateStr] || {}),
-                    title: cleanTitle(newTask.title),
-                    startTime: newTask.isAllDay ? '00:00' : newTask.startTime,
-                    duration: newTask.duration,
-                    isAllDay: newTask.isAllDay || false,
-                    color: newTask.color || colors[0].class,
-                  }
+                  [parsed.dateStr]: { ...(t.exceptions?.[parsed.dateStr] || {}), skipped: true },
                 }
               };
-              // Update recurrence pattern on template if changed
-              updated.recurrence = { ...newTask.recurrence, startDate: t.recurrence?.startDate || parsed.dateStr.substring(0, 8) + '01' };
-              return updated;
-            }
-            return t;
-          }));
+            }));
+            setTasks(prev => [...prev, {
+              id: crypto.randomUUID(),
+              title: cleanTitle(newTask.title),
+              startTime: newTask.isAllDay ? '00:00' : newTask.startTime,
+              duration: newTask.duration,
+              color: newTask.color || colors[0].class,
+              isAllDay: newTask.isAllDay || false,
+              date: newTask.date,
+              completed: false,
+              notes: '',
+              subtasks: [],
+            }]);
+          } else {
+            setRecurringTasks(prev => prev.map(t => {
+              if (t.id === parsed.templateId) {
+                const updated = {
+                  ...t,
+                  exceptions: {
+                    ...t.exceptions,
+                    [parsed.dateStr]: {
+                      ...(t.exceptions?.[parsed.dateStr] || {}),
+                      title: cleanTitle(newTask.title),
+                      startTime: newTask.isAllDay ? '00:00' : newTask.startTime,
+                      duration: newTask.duration,
+                      isAllDay: newTask.isAllDay || false,
+                      color: newTask.color || colors[0].class,
+                    }
+                  }
+                };
+                // Update recurrence pattern on template if changed
+                updated.recurrence = { ...newTask.recurrence, startDate: t.recurrence?.startDate || parsed.dateStr.substring(0, 8) + '01' };
+                return updated;
+              }
+              return t;
+            }));
+          }
         }
       }
     } else if (newTask.recurrence) {

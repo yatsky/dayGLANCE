@@ -186,7 +186,7 @@ const CalendarHeader = () => {
         return order(a) - order(b);
       });
       const dateStr = dateToString(date);
-      const deadlineTasks = getDeadlineTasksForDate(dateStr);
+      const deadlineTasks = getDeadlineTasksForDate(dateStr).filter(t => !projectFilter || t.projectId === projectFilter);
       const isDragOverThis = dragOverAllDay === dateStr;
       return (
         <div

@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Clock, Cloud, ExternalLink,
   Footprints, FolderOpen, GripVertical, HelpCircle, Key, LayoutGrid,
   Loader, Mic, Moon, Pencil, Plus,
-  RefreshCw, Save, Settings, Sparkles, Sun, Target, Trash2,
+  Flag, RefreshCw, Save, Settings, Sparkles, Sun, Target, Trash2,
   Undo2, Upload, Volume2, VolumeX, Wifi, Zap,
 } from 'lucide-react';
 import { HABIT_ICONS, HABIT_ICON_NAMES, HABIT_COLORS } from '../constants/habits.js';
@@ -27,6 +27,7 @@ const MobileSettingsPanel = () => {
     darkMode, setDarkMode,
     mobileSettingsView, setMobileSettingsView,
     use24HourClock, setUse24HourClock,
+    weekStartDay, setWeekStartDay,
     collapsedSettings,
     soundEnabled, setSoundEnabled,
     setShowHelpModal,
@@ -122,6 +123,13 @@ const MobileSettingsPanel = () => {
         <span className={`text-xs font-medium ${textPrimary}`}>{use24HourClock ? '24h' : '12h'}</span>
       </button>
       <button
+        onClick={() => setWeekStartDay(weekStartDay === 0 ? 1 : 0)}
+        className={`${cardBg} border ${borderClass} rounded-xl p-4 flex flex-col items-center gap-2`}
+      >
+        <CalendarDays size={24} className={textSecondary} />
+        <span className={`text-xs font-medium ${textPrimary}`}>Week: {weekStartDay === 0 ? 'Sun' : 'Mon'}</span>
+      </button>
+      <button
         onClick={() => setMobileSettingsView('habits')}
         className={`${cardBg} border ${borderClass} rounded-xl p-4 flex flex-col items-center gap-2`}
       >
@@ -139,7 +147,7 @@ const MobileSettingsPanel = () => {
         onClick={() => { if (!goalsProjectsEnabled) setOnboardingProgress(prev => ({ ...prev, hasEnabledOptionalFeature: true })); setGoalsProjectsEnabled(!goalsProjectsEnabled); }}
         className={`${cardBg} border ${borderClass} rounded-xl p-4 flex flex-col items-center gap-2`}
       >
-        {goalsProjectsEnabled ? <Target size={24} className="text-blue-500" /> : <Target size={24} className={textSecondary} />}
+        {goalsProjectsEnabled ? <Flag size={24} className="text-blue-500" /> : <Flag size={24} className={textSecondary} />}
         <span className={`text-xs font-medium ${textPrimary}`}>Goals {goalsProjectsEnabled ? 'On' : 'Off'}</span>
       </button>
       <button

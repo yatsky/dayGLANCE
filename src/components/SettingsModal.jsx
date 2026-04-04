@@ -554,9 +554,7 @@ const SettingsModal = () => {
                           </>)}
                         </div>
                       )}
-                      </>)}
-
-                      {/* iCal Import — one-time .ics file import, lives alongside live Calendar Sync */}
+                      {/* iCal Import — one-time .ics file import, lives inside Calendar Sync */}
                       <div className={`pt-2 border-t ${borderClass} space-y-2`}>
                         <p className={`text-sm font-medium ${textPrimary}`}>Import .ics file</p>
                         <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg} text-sm ${textPrimary}`}>
@@ -566,6 +564,7 @@ const SettingsModal = () => {
                         </label>
                         <p className={`text-xs ${textSecondary}`}>Import events from an iCal (.ics) file</p>
                       </div>
+                      </>)}
                     </div>
 
                     <hr className={borderClass} />

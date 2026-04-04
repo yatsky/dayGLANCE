@@ -14,6 +14,8 @@ import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import DeadlinePickerPopover from './DeadlinePickerPopover.jsx';
 import SuggestionAutocomplete from './SuggestionAutocomplete.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
+import { useSyncCtx } from '../context/SyncContext.jsx';
+import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 
 const CalendarHeader = () => {
   const {
@@ -41,13 +43,7 @@ const CalendarHeader = () => {
     newTask, setNewTask,
     dailyNotes,
     dailyNotesModalDate, setDailyNotesModalDate,
-    focusLog, setFocusLogModalDate,
-    habitLogs, activeHabits, habitsEnabled,
-    habitDayPopup, setHabitDayPopup,
-    todayRoutines, routinesEnabled,
     taskWidths,
-    aiConfig,
-    aiSubtasksLoadingForTask,
     scheduledNotifications,
     cardBg, borderClass, textPrimary, textSecondary, hoverBg,
     toggleComplete,
@@ -60,8 +56,6 @@ const CalendarHeader = () => {
     openMobileEditTask,
     postponeTask, postponeDeadlineTask,
     moveToRecycleBin, moveToInbox,
-    goalsProjectsEnabled, projects,
-    projectFilter, setProjectFilter, setInboxProjectFilter,
     getTasksForDate, getDeadlineTasksForDate,
     getTaskCalendarStyle,
     setTaskRef,
@@ -69,16 +63,24 @@ const CalendarHeader = () => {
     setEditingRecurrenceTaskId,
     updateDragAutoScroll,
     updateTaskNotes, addSubtask, toggleSubtask, deleteSubtask, updateSubtaskTitle,
-    generateAISubtasks,
-    loadWikiNote, saveWikiNote,
     editingInputRef,
     playUISound,
     pushUndo,
     setDragPreviewTime,
-    openRoutinesDashboard,
     getNextQuarterHour,
     addTasksFromSelection,
   } = useDayPlannerCtx();
+  const { loadWikiNote, saveWikiNote } = useSyncCtx();
+  const {
+    focusLog, setFocusLogModalDate,
+    habitLogs, activeHabits, habitsEnabled,
+    habitDayPopup, setHabitDayPopup,
+    todayRoutines, routinesEnabled,
+    aiConfig, aiSubtasksLoadingForTask, generateAISubtasks,
+    goalsProjectsEnabled, projects,
+    projectFilter, setProjectFilter, setInboxProjectFilter,
+    openRoutinesDashboard,
+  } = useFeaturesCtx();
 
   return (
     <>

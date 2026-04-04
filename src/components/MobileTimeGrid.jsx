@@ -8,6 +8,7 @@ import { isNativeAndroid, nativeUpdateEvent } from '../native.js';
 import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, isObsidianNoteOnlyTask } from '../utils/textFormatting.jsx';
 import { dateToString, extractWikilinks } from '../utils/taskUtils.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
+import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 
 const MobileTimeGrid = () => {
   const {
@@ -17,20 +18,16 @@ const MobileTimeGrid = () => {
     darkMode, use24HourClock,
     borderClass, textSecondary,
     tasks, setTasks,
-    projects,
-    projectFilter, setProjectFilter, setInboxProjectFilter,
     taskWidths,
     expandedNotesTaskId, setExpandedNotesTaskId,
     expandedTaskMenu, setExpandedTaskMenu,
     taskContextMenu, setTaskContextMenu,
     setTimelineContextMenu,
-    setFrameContextMenu,
     hoverPreviewTime, hoverPreviewDate,
     setHoverPreviewTime, setHoverPreviewDate,
     draggedTask,
     mobileDragPreviewTime, mobileDragPreviewDate, mobileDragTaskIdState,
     currentTimeTop,
-    routinesEnabled, todayRoutines,
     setTaskRef,
     handleDragOver, handleDropOnCalendar,
     handleCalendarMouseMove, handleCalendarMouseLeave,
@@ -40,14 +37,21 @@ const MobileTimeGrid = () => {
     toggleComplete,
     postponeTask,
     formatTime, timeToMinutes, minutesToTime,
-    getTasksForDate, getFrameInstancesForDate,
+    getTasksForDate,
     getTaskCalendarStyle,
-    computeAvailableSlots,
     minutesToPosition, positionToMinutes,
     calculateTaskPosition, calculateConflictPosition,
-    goalsProjectsEnabled,
     getTimeFromCursorPosition,
   } = useDayPlannerCtx();
+  const {
+    projects,
+    projectFilter, setProjectFilter, setInboxProjectFilter,
+    routinesEnabled, todayRoutines,
+    goalsProjectsEnabled,
+    getFrameInstancesForDate,
+    computeAvailableSlots,
+    setFrameContextMenu,
+  } = useFeaturesCtx();
 
   return (
 <div ref={timeGridRef} className="relative">

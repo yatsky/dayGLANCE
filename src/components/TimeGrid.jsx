@@ -10,6 +10,8 @@ import { dateToString, extractTags, extractWikilinks, stripWikilinks } from '../
 import SuggestionAutocomplete from './SuggestionAutocomplete.jsx';
 import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
+import { useSyncCtx } from '../context/SyncContext.jsx';
+import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 
 const TimeGrid = () => {
   const {
@@ -21,9 +23,6 @@ const TimeGrid = () => {
     borderClass, cardBg, textPrimary, textSecondary, hoverBg,
     tasks, setTasks,
     conflicts,
-    goalsProjectsEnabled,
-    projects,
-    projectFilter, setProjectFilter, setInboxProjectFilter,
     taskWidths,
     expandedNotesTaskId, setExpandedNotesTaskId,
     expandedTaskMenu, setExpandedTaskMenu,
@@ -31,9 +30,7 @@ const TimeGrid = () => {
     showSuggestions, suggestions, selectedSuggestionIndex, suggestionContext,
     taskContextMenu, setTaskContextMenu,
     setTimelineContextMenu,
-    setFrameContextMenu,
     currentTimeTop,
-    routinesEnabled, todayRoutines,
     hoverPreviewTime, hoverPreviewDate,
     draggedTask,
     dragPreviewTime, setDragPreviewTime,
@@ -56,15 +53,23 @@ const TimeGrid = () => {
     applySuggestionForEdit,
     moveToInbox, moveToRecycleBin, postponeTask,
     formatTime, timeToMinutes, minutesToTime,
-    getTasksForDate, getFrameInstancesForDate,
+    getTasksForDate,
     getTaskCalendarStyle,
-    computeAvailableSlots,
     minutesToPosition, positionToMinutes,
     calculateTaskPosition, calculateConflictPosition,
     updateTaskNotes, addSubtask, toggleSubtask, deleteSubtask, updateSubtaskTitle,
-    aiConfig, aiSubtasksLoadingForTask, generateAISubtasks,
-    loadWikiNote, saveWikiNote,
   } = useDayPlannerCtx();
+  const { loadWikiNote, saveWikiNote } = useSyncCtx();
+  const {
+    goalsProjectsEnabled,
+    projects,
+    projectFilter, setProjectFilter, setInboxProjectFilter,
+    routinesEnabled, todayRoutines,
+    getFrameInstancesForDate,
+    computeAvailableSlots,
+    setFrameContextMenu,
+    aiConfig, aiSubtasksLoadingForTask, generateAISubtasks,
+  } = useFeaturesCtx();
 
   return (
 <div

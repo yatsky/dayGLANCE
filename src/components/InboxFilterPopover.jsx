@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
+import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { extractTags } from '../utils/taskUtils.js';
 
 /**
@@ -11,14 +12,14 @@ import { extractTags } from '../utils/taskUtils.js';
 const InboxFilterPopover = ({ open, onClose, buttonRef }) => {
   const {
     darkMode, textPrimary, textSecondary, cardBg, borderClass, hoverBg,
-    goalsProjectsEnabled,
-    projects, unscheduledTasks,
+    unscheduledTasks,
     hideCompletedInbox, setHideCompletedInbox,
     hideProjectTasksInbox, setHideProjectTasksInbox,
     hideStandaloneTasksInbox, setHideStandaloneTasksInbox,
     inboxTagFilter, setInboxTagFilter,
     inboxProjectFilter, setInboxProjectFilter,
   } = useDayPlannerCtx();
+  const { goalsProjectsEnabled, projects } = useFeaturesCtx();
 
   const popoverRef = useRef(null);
 

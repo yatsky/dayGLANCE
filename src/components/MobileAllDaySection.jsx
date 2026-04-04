@@ -55,7 +55,7 @@ const MobileAllDaySection = () => {
             return order(a) - order(b);
           });
           const dateStr = dateToString(date);
-          const deadlineTasks = getDeadlineTasksForDate(dateStr).filter(t => !t.isExample);
+          const deadlineTasks = getDeadlineTasksForDate(dateStr).filter(t => !t.isExample && (!projectFilter || t.projectId === projectFilter));
           return (
             <React.Fragment key={dateStr}>
               {dayTasks.map((task) => {

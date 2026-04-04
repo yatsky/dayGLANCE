@@ -58,7 +58,7 @@ const TimeGrid = () => {
     minutesToPosition, positionToMinutes,
     calculateTaskPosition, calculateConflictPosition,
     updateTaskNotes, addSubtask, toggleSubtask, deleteSubtask, updateSubtaskTitle,
-    setInboxProjectFilter,
+    setInboxProjectFilter, setInboxPriorityFilter, setHideCompletedInbox,
   } = useDayPlannerCtx();
   const { loadWikiNote, saveWikiNote } = useSyncCtx();
   const {
@@ -595,8 +595,8 @@ const TimeGrid = () => {
                                   if (!proj) return null;
                                   return (
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); const next = projectFilter === task.projectId ? null : task.projectId; setProjectFilter(next); setInboxProjectFilter(next ? [next] : []); }}
-                                      className={`not-italic inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors flex-shrink-0`}
+                                      onClick={(e) => { e.stopPropagation(); const next = projectFilter === task.projectId ? null : task.projectId; setProjectFilter(next); setInboxProjectFilter(next ? [next] : []); if (next) { setInboxPriorityFilter(0); setHideCompletedInbox(false); } }}
+                                      className={`not-italic inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors flex-shrink-0 ${projectFilter === task.projectId ? 'ring-1 ring-white/60' : ''}`}
                                       title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
                                     >
                                       {proj.title}
@@ -684,8 +684,8 @@ const TimeGrid = () => {
                                   if (!proj) return null;
                                   return (
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); const next = projectFilter === task.projectId ? null : task.projectId; setProjectFilter(next); setInboxProjectFilter(next ? [next] : []); }}
-                                      className={`not-italic inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors flex-shrink-0`}
+                                      onClick={(e) => { e.stopPropagation(); const next = projectFilter === task.projectId ? null : task.projectId; setProjectFilter(next); setInboxProjectFilter(next ? [next] : []); if (next) { setInboxPriorityFilter(0); setHideCompletedInbox(false); } }}
+                                      className={`not-italic inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full bg-white/25 hover:bg-white/40 text-white font-medium transition-colors flex-shrink-0 ${projectFilter === task.projectId ? 'ring-1 ring-white/60' : ''}`}
                                       title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
                                     >
                                       {proj.title}

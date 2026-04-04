@@ -61,6 +61,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
     timeToMinutes,
     selectAllTags, clearTagFilter, toggleTag,
     moveToRecycleBin,
+    setInboxProjectFilter, setInboxPriorityFilter, setHideCompletedInbox,
   } = useDayPlannerCtx();
   const {
     habitLongPressTimer,
@@ -801,7 +802,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
               if (!proj) return null;
               return (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setProjectFilter(prev => prev === task.projectId ? null : task.projectId); }}
+                  onClick={(e) => { e.stopPropagation(); const next = projectFilter === task.projectId ? null : task.projectId; setProjectFilter(next); setInboxProjectFilter(next ? [next] : []); if (next) { setInboxPriorityFilter(0); setHideCompletedInbox(false); } }}
                   className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors ${darkMode ? 'bg-blue-900/50 text-blue-300 hover:bg-blue-800/70' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'} ${projectFilter === task.projectId ? 'ring-1 ring-blue-400' : ''}`}
                   title={projectFilter === task.projectId ? 'Clear project filter' : `Filter: ${proj.title}`}
                 >

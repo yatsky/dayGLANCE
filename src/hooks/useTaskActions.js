@@ -449,6 +449,7 @@ export default function useTaskActions({
       if (!parsed) return;
       const template = recurringTasks.find(t => t.id === parsed.templateId);
       if (!template) return;
+      if (template.recurrence?.type === 'daily') return; // daily tasks recur tomorrow anyway
       const exc = template.exceptions?.[parsed.dateStr] || {};
       const title = exc.title || template.title;
       const startTime = exc.startTime !== undefined ? exc.startTime : (template.startTime || '');

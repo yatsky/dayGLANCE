@@ -330,14 +330,16 @@ const MobileTimeGrid = () => {
                   {isLinkOnlyTask(task) ? <ExternalLink size={14} /> : hasOnlySubtasks(task) ? <CheckSquare size={14} /> : isObsidianNoteOnlyTask(task) ? <BookOpen size={14} /> : <FileText size={14} />}
                   {inMenu && <span className="text-xs">{isLinkOnlyTask(task) ? 'Open Link' : 'Notes'}</span>}
                 </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); postponeTask(task.id); }}
-                  className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-                  title="Postpone to tomorrow"
-                >
-                  <SkipForward size={14} />
-                  {inMenu && <span className="text-xs">Postpone</span>}
-                </button>
+                {task.recurrenceType !== 'daily' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); postponeTask(task.id); }}
+                    className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
+                    title="Postpone to tomorrow"
+                  >
+                    <SkipForward size={14} />
+                    {inMenu && <span className="text-xs">Postpone</span>}
+                  </button>
+                )}
               </>
             );
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Activity, BarChart3, Bell, BookOpen, BrainCircuit, CalendarDays, CheckCircle, CheckSquare, ChevronDown, Clock, Cloud, ExternalLink, FolderOpen, Key, LayoutGrid, Loader, MapPin, Mic, Moon, RefreshCw, Server, Settings, Sparkles, Sun, Target, Upload, Wifi, WifiOff, X, Zap } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
+import { useSyncCtx } from '../context/SyncContext.jsx';
+import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import CloudSyncSettingsForm from './CloudSyncSettingsForm.jsx';
 import { cloudSyncProviders } from '../utils/cloudSyncProviders.js';
 import { getStorageUsage } from '../utils/storage.js';
@@ -17,12 +19,13 @@ const SettingsModal = () => {
     cardBg, borderClass, textPrimary, textSecondary, hoverBg,
     use24HourClock, setUse24HourClock,
     soundEnabled, setSoundEnabled,
-    habitsEnabled, setHabitsEnabled,
-    routinesEnabled, setRoutinesEnabled,
-    goalsProjectsEnabled, setGoalsProjectsEnabled,
     setOnboardingProgress,
     isMobile, isTablet,
     weatherZip, setWeatherZip, fetchWeather, weatherTempUnit, setWeatherTempUnit,
+    setTasks, setUnscheduledTasks,
+    dailyNoteTemplate, setDailyNoteTemplate,
+  } = useDayPlannerCtx();
+  const {
     handleFileUpload,
     cloudSyncConfig, setCloudSyncConfig, cloudSyncTest, cloudSyncLastSynced,
     calSyncConfigured, syncUrl, setSyncUrl,
@@ -32,16 +35,19 @@ const SettingsModal = () => {
     syncRetentionDays, setSyncRetentionDays,
     syncAll, isSyncing, calSyncLastSynced,
     availableCalendars, setAvailableCalendars, calendarFilter, setCalendarFilter,
-    aiConfig, setAiConfig,
-    aiConnectionStatus, setAiConnectionStatus, aiConnectionMessage, setAiConnectionMessage,
-    aiOllamaHelp, setAiOllamaHelp,
     obsidianConfig, setObsidianConfig, obsidianSyncStatus, obsidianLastSynced, setObsidianLastSynced,
     obsidianVaultHandleRef,
     performObsidianSync,
-    setTasks, setUnscheduledTasks,
-    dailyNoteTemplate, setDailyNoteTemplate,
     trmnlConfig, setTrmnlConfig, trmnlSyncStatus, trmnlLastSynced, performTrmnlSync,
-  } = useDayPlannerCtx();
+  } = useSyncCtx();
+  const {
+    habitsEnabled, setHabitsEnabled,
+    routinesEnabled, setRoutinesEnabled,
+    goalsProjectsEnabled, setGoalsProjectsEnabled,
+    aiConfig, setAiConfig,
+    aiConnectionStatus, setAiConnectionStatus, aiConnectionMessage, setAiConnectionMessage,
+    aiOllamaHelp, setAiOllamaHelp,
+  } = useFeaturesCtx();
 
   const currentProvider = cloudSyncConfig?.provider || 'nextcloud';
   const provider = cloudSyncProviders[currentProvider];

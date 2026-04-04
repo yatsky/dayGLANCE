@@ -905,6 +905,14 @@ const DayPlanner = () => {
   }, [expandedTaskMenu, showColorPicker, showDeadlinePicker, expandedNotesTaskId, routineDurationEditId]);
 
 
+  // Close habit day popup on ESC
+  useEffect(() => {
+    if (!habitDayPopup) return;
+    const handleKeyDown = (e) => { if (e.key === 'Escape') { e.preventDefault(); setHabitDayPopup(null); } };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [habitDayPopup]);
+
   // Close notes panel on ESC
   useEffect(() => {
     if (!expandedNotesTaskId) return;

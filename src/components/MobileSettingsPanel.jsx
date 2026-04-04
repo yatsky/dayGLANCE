@@ -16,10 +16,11 @@ import AutoBackupSettingsForm from './AutoBackupSettingsForm.jsx';
 import FrameEditor from './FrameEditor.jsx';
 import SmartSchedulePanel from './SmartSchedulePanel.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
+import { useSyncCtx } from '../context/SyncContext.jsx';
+import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 
 const MobileSettingsPanel = () => {
   const {
-    obsidianVaultHandleRef,
     setTasks, setUnscheduledTasks,
     darkMode, setDarkMode,
     mobileSettingsView, setMobileSettingsView,
@@ -27,6 +28,18 @@ const MobileSettingsPanel = () => {
     collapsedSettings,
     soundEnabled, setSoundEnabled,
     setShowHelpModal,
+    mobileActiveTab, setMobileActiveTab,
+    allTags,
+    unscheduledTasks,
+    getTodayStr,
+    dailyNoteTemplate, setDailyNoteTemplate,
+    setOnboardingProgress,
+    cardBg, borderClass, textPrimary, textSecondary, hoverBg, colors,
+    formatTime,
+    toggleSettingsSection,
+  } = useDayPlannerCtx();
+  const {
+    obsidianVaultHandleRef,
     syncUrl, setSyncUrl,
     taskCalendarUrl, setTaskCalendarUrl,
     taskCalendarAuth, setTaskCalendarAuth,
@@ -43,40 +56,33 @@ const MobileSettingsPanel = () => {
     cloudSyncStatus, cloudSyncLastSynced,
     obsidianConfig, setObsidianConfig,
     obsidianSyncStatus, obsidianSyncError, obsidianLastSynced, setObsidianLastSynced,
+    cloudSyncUpload, cloudSyncTest,
+    syncAll, performObsidianSync, performRemoteBackup,
+    loadAutoBackupHistory,
+    deleteLocalAutoBackup, deleteRemoteAutoBackup,
+    exportBackup, handleFileUpload, handleBackupFileSelect,
+  } = useSyncCtx();
+  const {
     routinesEnabled, setRoutinesEnabled,
     habitsEnabled, setHabitsEnabled,
     goalsProjectsEnabled, setGoalsProjectsEnabled,
-    mobileActiveTab, setMobileActiveTab,
     gtdFrames,
     framesModalTab, setFramesModalTab,
     editingFrame, setEditingFrame,
     saveFrame, deleteFrame,
-    allTags,
-    unscheduledTasks,
     smartScheduleResults, setSmartScheduleResults,
     smartScheduleLoading,
     smartScheduleError, setSmartScheduleError,
     smartScheduleAccepted, setSmartScheduleAccepted,
     runSmartSchedule, applySmartSchedule,
-    getTodayStr,
     aiConfig, setAiConfig,
     aiConnectionStatus, setAiConnectionStatus,
     aiConnectionMessage, setAiConnectionMessage,
     aiOllamaHelp, setAiOllamaHelp,
     setShowWeeklyReviewTimePicker, setShowMorningTimePicker,
     reminderSettings, setReminderSettings,
-    dailyNoteTemplate, setDailyNoteTemplate,
-    setOnboardingProgress,
-    cardBg, borderClass, textPrimary, textSecondary, hoverBg, colors,
-    formatTime,
-    toggleSettingsSection,
     applyReminderPreset, updateCategoryReminder,
-    cloudSyncUpload, cloudSyncTest,
-    syncAll, performObsidianSync, performRemoteBackup,
-    loadAutoBackupHistory,
-    deleteLocalAutoBackup, deleteRemoteAutoBackup,
-    exportBackup, handleFileUpload, handleBackupFileSelect,
-  } = useDayPlannerCtx();
+  } = useFeaturesCtx();
 
   return (
 <div className={`relative overflow-hidden mobile-tab-fade-in flex-1 min-h-0 overflow-y-auto`}>

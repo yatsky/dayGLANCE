@@ -19,13 +19,14 @@
     android:paddingStart="0dp"
     android:paddingEnd="0dp">
 
-    <!-- Amber color bar — same width/style as task_color_bar -->
-    <View
+    <!-- Amber color bar — must be TextView, not View; <View> is not in the RemoteViews supported subset -->
+    <TextView
         android:id="@+id/goal_color_bar"
         android:layout_width="3dp"
         android:layout_height="28dp"
         android:background="#f59e0b"
-        android:layout_marginEnd="7dp" />
+        android:layout_marginEnd="7dp"
+        android:text="" />
 
     <!-- Goal title -->
     <TextView

@@ -128,4 +128,13 @@ class ObsidianBridge(private val context: Context) {
      */
     @JavascriptInterface
     fun writeNote(path: String, content: String): Boolean = repository.writeNote(path, content)
+
+    /**
+     * Builds (or rebuilds) the in-memory note URI index by scanning the vault tree.
+     * After this returns, bare-name getNote() calls are O(1).
+     * Automatically called at the end of getAllDailyNotes(); call explicitly when
+     * the vault has changed outside of a normal sync cycle.
+     */
+    @JavascriptInterface
+    fun buildNoteIndex() = repository.buildNoteIndex()
 }

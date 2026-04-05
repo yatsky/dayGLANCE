@@ -9,6 +9,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Phase 4: Reads and writes markdown files in the user's Obsidian vault via
@@ -23,6 +24,52 @@ import java.time.format.DateTimeParseException
 class ObsidianRepository(private val context: Context) {
 
     private val dataStore = SharedDataStore(context)
+
+    // ── Note URI index ───────────────────────────────────────────────────────
+    //
+    // SAF recursive search (DocumentFile.listFiles + findFile) is expensive:
+    // every call involves IPC with Android's content provider. For a vault
+    // with hundreds of notes, a full tree walk on every wikilink tap can
+    // take several seconds.
+    //
+    // The index maps lowercase note name (no .md extension) → document URI so
+    // bare-name lookups are O(1) after the one-time build. The index is
+    // built automatically at the end of getAllDailyNotes() (which runs on
+    // vault sync) and can be triggered explicitly via buildNoteIndex().
+
+    private val noteUriIndex = ConcurrentHashMap<String, Uri>()
+    @Volatile private var noteIndexBuilt = false
+
+    /**
+     * Scans the vault tree and populates the in-memory note URI index.
+     * Safe to call from any thread; subsequent getNote() bare-name lookups
+     * complete in O(1) without any SAF traversal.
+     */
+    @Synchronized fun buildNoteIndex() {
+        val root = vaultRoot() ?: return
+        val fresh = ConcurrentHashMap<String, Uri>()
+        indexDirectory(root, fresh)
+        noteUriIndex.clear()
+        noteUriIndex.putAll(fresh)
+        noteIndexBuilt = true
+    }
+
+    private fun indexDirectory(dir: DocumentFile, index: ConcurrentHashMap<String, Uri>) {
+        for (file in dir.listFiles()) {
+            val name = file.name ?: continue
+            if (file.isFile && name.endsWith(".md")) {
+                index[name.removeSuffix(".md").lowercase()] = file.uri
+            } else if (file.isDirectory) {
+                indexDirectory(file, index)
+            }
+        }
+    }
+
+    /** Returns the URI for a note by bare name, building the index first if needed. */
+    private fun findNoteUri(noteName: String): Uri? {
+        if (!noteIndexBuilt) buildNoteIndex()
+        return noteUriIndex[noteName.lowercase()]
+    }
 
     // ── Internal helpers ─────────────────────────────────────────────────────
 
@@ -225,6 +272,9 @@ class ObsidianRepository(private val context: Context) {
                     put("text", readText(file))
                 })
             }
+        // Pre-warm the note URI index on the same sync pass so bare-name
+        // wikilink lookups are instant when the user opens a task note panel.
+        if (!noteIndexBuilt) buildNoteIndex()
         return arr.toString()
     }
 
@@ -246,11 +296,14 @@ class ObsidianRepository(private val context: Context) {
 
         val fileName = "${segments.last()}.md"
         val file = if (segments.size > 1) {
+            // Explicit path — navigate directly (no index needed)
             val folderPath = segments.dropLast(1).joinToString("/")
             val dir = root.navigateTo(folderPath) ?: return ""
             dir.findFile(fileName) ?: return ""
         } else {
-            root.findFileRecursive(fileName) ?: return ""
+            // Bare name — use the in-memory index for O(1) lookup
+            val uri = findNoteUri(segments[0]) ?: return ""
+            DocumentFile.fromSingleUri(context, uri) ?: return ""
         }
 
         val text = readText(file)
@@ -277,7 +330,8 @@ class ObsidianRepository(private val context: Context) {
         val segments = path.split("/").filter { it.isNotBlank() }
         if (segments.isEmpty()) return false
 
-        val fileName = "${segments.last()}.md"
+        val noteName = segments.last()
+        val fileName = "$noteName.md"
         val file = if (segments.size > 1) {
             val folderPath = segments.dropLast(1).joinToString("/")
             val dir = root.navigateOrCreate(folderPath) ?: return false
@@ -285,26 +339,19 @@ class ObsidianRepository(private val context: Context) {
                 ?: dir.createFile("text/markdown", fileName)
                 ?: return false
         } else {
-            root.findFileRecursive(fileName)
-                ?: root.createFile("text/markdown", fileName)
-                ?: return false
+            // Use the index to find the existing file; create at vault root if absent
+            val existingUri = findNoteUri(noteName)
+            val existingFile = existingUri?.let { DocumentFile.fromSingleUri(context, it) }
+            existingFile?.takeIf { it.exists() }
+                ?: (root.createFile("text/markdown", fileName) ?: return false).also { created ->
+                    // Keep the index up-to-date so the new file is found on next getNote()
+                    noteUriIndex[noteName.lowercase()] = created.uri
+                }
         }
 
         writeText(file, content)
         true
     }.getOrDefault(false)
-
-    /** Recursively searches this directory tree for a file with the given [fileName]. */
-    private fun DocumentFile.findFileRecursive(fileName: String): DocumentFile? {
-        for (child in listFiles()) {
-            if (child.isFile && child.name == fileName) return child
-            if (child.isDirectory) {
-                val found = child.findFileRecursive(fileName)
-                if (found != null) return found
-            }
-        }
-        return null
-    }
 
     fun getTasksFromNote(path: String): String {
         val root = vaultRoot() ?: return "[]"

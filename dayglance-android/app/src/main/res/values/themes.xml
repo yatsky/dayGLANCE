@@ -16,4 +16,11 @@
         <item name="windowActionBar">true</item>
         <item name="windowNoTitle">false</item>
     </style>
+
+    <!-- Splash screen — shown while WebView loads; transitions to Theme.DayGlance -->
+    <style name="Theme.DayGlance.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0f172a</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.DayGlance</item>
+    </style>
 </resources>

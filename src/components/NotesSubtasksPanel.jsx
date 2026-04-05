@@ -179,8 +179,8 @@ const NotesSubtasksPanel = ({
                       title={`Open "${noteName}" in Obsidian`}
                       className="flex items-center gap-1 opacity-70 hover:opacity-100 active:opacity-100 transition-opacity px-1 py-0.5 rounded hover:bg-white/10 active:bg-white/10"
                     >
-                      <ExternalLink size={11} />
-                      <span className="text-[10px]">Open</span>
+                      <ExternalLink size={12} />
+                      <span className="text-xs">Open in Obsidian</span>
                     </button>
                   )}
                 </div>

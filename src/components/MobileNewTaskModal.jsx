@@ -1,7 +1,8 @@
 import React from 'react';
-import { Calendar, Check, Loader, Sparkles, X } from 'lucide-react';
+import { BookOpen, Calendar, Check, Loader, Sparkles, X } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { useSyncCtx } from '../context/SyncContext.jsx';
 import { dateToString, extractTags, getRecurrenceLabel } from '../utils/taskUtils.js';
 import { getRecurrencePresets } from '../utils/recurrenceEngine.js';
 
@@ -25,6 +26,19 @@ const MobileNewTaskModal = () => {
     handleNewTaskInputChange,
   } = useDayPlannerCtx();
   const { aiConfig, taskAISuggestion, setTaskAISuggestion, taskAISuggestionLoading, goals, projects, goalsProjectsEnabled } = useFeaturesCtx();
+  const { wikilinkCandidates = [] } = useSyncCtx() || {};
+
+  // Wikilink autocomplete: detect [[partial at end of title
+  const wikilinkMatch = newTask.title.match(/\[\[([^\]]*)?$/);
+  const wikilinkQuery = wikilinkMatch ? (wikilinkMatch[1] ?? '') : null;
+  const wikilinkSuggestions = wikilinkQuery !== null && wikilinkCandidates.length > 0
+    ? wikilinkCandidates.filter(c => c.toLowerCase().includes(wikilinkQuery.toLowerCase())).slice(0, 6)
+    : [];
+  const applyWikilinkSuggestion = (noteName) => {
+    const newTitle = newTask.title.replace(/\[\[([^\]]*)?$/, `[[${noteName}]]`);
+    setNewTask(prev => ({ ...prev, title: newTitle }));
+    newTaskInputRef.current?.focus();
+  };
 
   return (
     <>
@@ -57,7 +71,7 @@ const MobileNewTaskModal = () => {
               }}
             >
               {/* Title */}
-              <div>
+              <div className="relative">
                 <input
                   ref={newTaskInputRef}
                   type="text"
@@ -67,6 +81,23 @@ const MobileNewTaskModal = () => {
                   autoFocus={!mobileEditingTask && !newTask.title}
                   className={`w-full px-3 py-3 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white'} text-base`}
                 />
+                {/* Wikilink autocomplete dropdown */}
+                {wikilinkSuggestions.length > 0 && (
+                  <div className={`absolute top-full left-0 mt-1 ${cardBg} rounded-lg p-1 z-50 shadow-xl border ${borderClass} w-full max-h-48 overflow-y-auto`}>
+                    {wikilinkSuggestions.map(name => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); applyWikilinkSuggestion(name); }}
+                        onMouseDown={(e) => e.preventDefault()}
+                        className={`w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 ${textPrimary} ${hoverBg}`}
+                      >
+                        <BookOpen size={14} className="flex-shrink-0 opacity-50" />
+                        <span className="truncate">{name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {/* AI duration + tag suggestion pill */}
                 {aiConfig.enabled && aiConfig.features?.durationEstimate && !mobileEditingTask && (
                   taskAISuggestionLoading ? (

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Calendar, Check, Loader, Sparkles, X } from 'lucide-react';
+import { BookOpen, Calendar, Check, Loader, Sparkles, X } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { useSyncCtx } from '../context/SyncContext.jsx';
 import SuggestionAutocomplete from './SuggestionAutocomplete.jsx';
 import { dateToString, extractTags, getRecurrenceLabel } from '../utils/taskUtils.js';
 import { getRecurrencePresets } from '../utils/recurrenceEngine.js';
@@ -31,6 +32,19 @@ const DesktopNewTaskModal = () => {
     handleNewTaskInputChange, handleNewTaskInputKeyDown,
   } = useDayPlannerCtx();
   const { aiConfig, taskAISuggestion, setTaskAISuggestion, taskAISuggestionLoading, goals, projects, goalsProjectsEnabled } = useFeaturesCtx();
+  const { wikilinkCandidates = [] } = useSyncCtx() || {};
+
+  // Wikilink autocomplete: detect [[partial at end of title
+  const wikilinkMatch = newTask.title.match(/\[\[([^\]]*)?$/);
+  const wikilinkQuery = wikilinkMatch ? (wikilinkMatch[1] ?? '') : null;
+  const wikilinkSuggestions = wikilinkQuery !== null && wikilinkCandidates.length > 0
+    ? wikilinkCandidates.filter(c => c.toLowerCase().includes(wikilinkQuery.toLowerCase())).slice(0, 8)
+    : [];
+  const applyWikilinkSuggestion = (noteName) => {
+    const newTitle = newTask.title.replace(/\[\[([^\]]*)?$/, `[[${noteName}]]`);
+    setNewTask(prev => ({ ...prev, title: newTitle }));
+    newTaskInputRef.current?.focus();
+  };
 
   if (!showAddTask || isMobile) return null;
 
@@ -101,6 +115,23 @@ const DesktopNewTaskModal = () => {
                     textPrimary={textPrimary}
                     hoverBg={hoverBg}
                   />
+                )}
+                {/* Wikilink autocomplete dropdown */}
+                {wikilinkSuggestions.length > 0 && (
+                  <div className={`absolute top-full left-0 mt-1 ${cardBg} rounded-lg p-1 z-50 shadow-xl border ${borderClass} min-w-[200px] max-h-48 overflow-y-auto`}>
+                    {wikilinkSuggestions.map(name => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); applyWikilinkSuggestion(name); }}
+                        onMouseDown={(e) => e.preventDefault()}
+                        className={`w-full text-left px-2 py-1.5 rounded text-sm flex items-center gap-2 ${textPrimary} ${hoverBg}`}
+                      >
+                        <BookOpen size={12} className="flex-shrink-0 opacity-50" />
+                        <span className="truncate">{name}</span>
+                      </button>
+                    ))}
+                  </div>
                 )}
                 {/* AI duration + tag suggestion pill */}
                 {aiConfig.enabled && aiConfig.features?.durationEstimate && !mobileEditingTask && (

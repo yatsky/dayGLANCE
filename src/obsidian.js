@@ -405,6 +405,27 @@ export async function writeWikiNote(vaultHandle, noteName, content, newNotesFold
 }
 
 /**
+ * Return a sorted array of all vault note names (bare, without .md extension).
+ * Used to populate the wikilink autocomplete candidates list.
+ * Scans at most 8 levels deep and ignores hidden directories (starting with '.').
+ */
+export async function listVaultNotes(vaultHandle) {
+  const names = [];
+  async function scan(dir, depth) {
+    if (depth > 8) return;
+    for await (const [name, handle] of dir.entries()) {
+      if (handle.kind === 'file' && name.endsWith('.md')) {
+        names.push(name.slice(0, -3));
+      } else if (handle.kind === 'directory' && !name.startsWith('.')) {
+        await scan(handle, depth + 1);
+      }
+    }
+  }
+  await scan(vaultHandle, 0);
+  return names.sort((a, b) => a.localeCompare(b));
+}
+
+/**
  * Strip leading date / date+time / time prefixes from a raw task line body
  * (the text after `- [x] `) to get the bare title, mirroring
  * parseTasksFromMarkdown.  Returns { bareTitle, datePrefix } where datePrefix

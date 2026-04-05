@@ -852,17 +852,17 @@ const SettingsModal = () => {
                           </div>
                           <div>
                             <label className={`block text-sm ${textSecondary} mb-1`}>
-                              New task heading
+                              New notes folder
                             </label>
                             <input
                               type="text"
-                              placeholder="## Tasks"
-                              value={obsidianConfig.taskHeading || ''}
-                              onChange={(e) => setObsidianConfig(prev => ({ ...prev, taskHeading: e.target.value }))}
+                              placeholder="dayGLANCE"
+                              value={obsidianConfig.newNotesFolder ?? 'dayGLANCE'}
+                              onChange={(e) => setObsidianConfig(prev => ({ ...prev, newNotesFolder: e.target.value }))}
                               className={`w-full px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm`}
                             />
                             <p className={`text-xs ${textSecondary} mt-1`}>
-                              Tasks tagged <code>#obsidian</code> are added under this heading in today's daily note
+                              Where new notes created in dayGLANCE are saved. Leave empty for vault root.
                             </p>
                           </div>
                           <div>
@@ -878,6 +878,21 @@ const SettingsModal = () => {
                             />
                             <p className={`text-xs ${textSecondary} mt-1`}>
                               Date pattern for daily note filenames (without .md). e.g. "yyyy-MM-dd", "dd-MM-yyyy", "MMMM dd, yyyy"
+                            </p>
+                          </div>
+                          <div>
+                            <label className={`block text-sm ${textSecondary} mb-1`}>
+                              Task heading
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="## Tasks"
+                              value={obsidianConfig.taskHeading || ''}
+                              onChange={(e) => setObsidianConfig(prev => ({ ...prev, taskHeading: e.target.value }))}
+                              className={`w-full px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm`}
+                            />
+                            <p className={`text-xs ${textSecondary} mt-1`}>
+                              Tasks tagged <code>#obsidian</code> are added under this heading in today's daily note
                             </p>
                           </div>
                           <div>

@@ -125,6 +125,18 @@ export const nativeUpdateEvent = async (eventJson) => {
 };
 
 /**
+ * Triggers a full vault tree scan to build the in-memory note URI index.
+ * After this completes, bare-name getNote() calls are O(1).
+ * Called automatically by getAllDailyNotes(); use this to rebuild after
+ * external vault changes.
+ */
+export const nativeBuildNoteIndex = () => {
+  const bridge = obsidianBridge();
+  if (!bridge?.buildNoteIndex) return;
+  bridge.buildNoteIndex();
+};
+
+/**
  * Opens [noteName] in the Obsidian app via the obsidian:// URI scheme.
  * No-op when the bridge is unavailable or Obsidian isn't installed.
  */

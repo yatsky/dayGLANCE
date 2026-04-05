@@ -2,6 +2,45 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Loader, Sparkles, X, Check, Plus, ExternalLink } from 'lucide-react';
 import { isOnlyUrl, renderFormattedText } from '../utils/textFormatting.jsx';
 
+/** Format an ISO timestamp as a human-readable relative or absolute string. */
+function formatNoteTimestamp(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+/**
+ * Render note text with [[wikilink]] patterns as clickable buttons.
+ * Non-wikilink segments are passed through renderFormattedText.
+ */
+function renderNoteContent(text, onWikilinkClick) {
+  if (!text) return null;
+  const segments = text.split(/(\[\[[^\]]+\]\])/g);
+  return segments.map((seg, i) => {
+    const m = seg.match(/^\[\[([^\]]+)\]\]$/);
+    if (m) {
+      return (
+        <button
+          key={i}
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onWikilinkClick(m[1]); }}
+          title={`Open "${m[1]}"`}
+          className="text-purple-300 hover:text-purple-200 underline decoration-dashed underline-offset-2 transition-colors"
+        >
+          [[{m[1]}]]
+        </button>
+      );
+    }
+    return <span key={i} style={{ whiteSpace: 'pre-wrap' }}>{renderFormattedText(seg)}</span>;
+  });
+}
+
 const NotesSubtasksPanel = ({
   task,
   isInbox,
@@ -35,29 +74,41 @@ const NotesSubtasksPanel = ({
   const updateTaskNotesRef = useRef(updateTaskNotes);
 
   // Linked wiki note state (desktop Obsidian tasks only)
-  const [linkedNoteStates, setLinkedNoteStates] = useState({}); // { noteName: { text, loading, error } }
+  const [linkedNoteStates, setLinkedNoteStates] = useState({}); // { noteName: { text, lastModified, loading, error } }
   const [linkedNoteEditing, setLinkedNoteEditing] = useState({}); // { noteName: boolean }
   const linkedNoteTextsRef = useRef({}); // { noteName: currentText } — for save-on-unmount
   const linkedNoteOriginalRef = useRef({}); // { noteName: textAtLoad } — to detect changes
   const onSaveWikiNoteRef = useRef(onSaveWikiNote);
   useEffect(() => { onSaveWikiNoteRef.current = onSaveWikiNote; }, [onSaveWikiNote]);
 
+  // Additional notes navigated to via [[wikilink]] clicks inside note content
+  const [additionalNotes, setAdditionalNotes] = useState([]);
+
+  const loadNote = (noteName) => {
+    if (linkedNoteStates[noteName]) return; // already loaded or loading
+    setLinkedNoteStates(prev => ({ ...prev, [noteName]: { text: '', lastModified: null, loading: true, error: null } }));
+    onLoadWikiNote?.(noteName).then(result => {
+      const text = result?.text ?? '';
+      setLinkedNoteStates(prev => ({ ...prev, [noteName]: { text, lastModified: result?.lastModified ?? null, loading: false, error: null } }));
+      setLinkedNoteEditing(prev => ({ ...prev, [noteName]: !text }));
+      linkedNoteTextsRef.current[noteName] = text;
+      linkedNoteOriginalRef.current[noteName] = text;
+    }).catch(err => {
+      setLinkedNoteStates(prev => ({ ...prev, [noteName]: { text: '', lastModified: null, loading: false, error: err.message } }));
+    });
+  };
+
+  const handleContentWikilinkClick = (noteName) => {
+    if (!additionalNotes.includes(noteName)) {
+      setAdditionalNotes(prev => [...prev, noteName]);
+    }
+    loadNote(noteName);
+  };
+
   // Load wiki notes on mount
   useEffect(() => {
     if (!wikilinks || wikilinks.length === 0 || !onLoadWikiNote) return;
-    wikilinks.forEach(async (noteName) => {
-      setLinkedNoteStates(prev => ({ ...prev, [noteName]: { text: '', loading: true, error: null } }));
-      try {
-        const result = await onLoadWikiNote(noteName);
-        const text = result?.text ?? '';
-        setLinkedNoteStates(prev => ({ ...prev, [noteName]: { text, loading: false, error: null } }));
-        setLinkedNoteEditing(prev => ({ ...prev, [noteName]: !text })); // edit mode only if empty
-        linkedNoteTextsRef.current[noteName] = text;
-        linkedNoteOriginalRef.current[noteName] = text;
-      } catch (err) {
-        setLinkedNoteStates(prev => ({ ...prev, [noteName]: { text: '', loading: false, error: err.message } }));
-      }
-    });
+    wikilinks.forEach(noteName => loadNote(noteName));
   }, []); // load only on mount
 
   // Save unsaved linked note changes on unmount
@@ -164,14 +215,16 @@ const NotesSubtasksPanel = ({
       {/* Notes section — replaced by linked vault note for Obsidian wikilink tasks */}
       {wikilinks && wikilinks.length > 0 && onLoadWikiNote ? (
         <div className="mb-3 space-y-3">
-          {wikilinks.map((noteName) => {
-            const state = linkedNoteStates[noteName] || { text: '', loading: true, error: null };
+          {[...(wikilinks || []), ...additionalNotes].map((noteName) => {
+            const state = linkedNoteStates[noteName] || { text: '', lastModified: null, loading: true, error: null };
             const isEditingWiki = linkedNoteEditing[noteName] ?? false;
+            const ts = formatNoteTimestamp(state.lastModified);
             return (
               <div key={noteName}>
                 <div className="text-xs font-semibold opacity-90 mb-1 flex items-center gap-1.5">
                   <BookOpen size={11} />
                   <span className="flex-1">{noteName}</span>
+                  {ts && <span className="opacity-40 font-normal">{ts}</span>}
                   {onOpenInObsidian && (
                     <button
                       type="button"
@@ -225,9 +278,9 @@ const NotesSubtasksPanel = ({
                 ) : (
                   <div
                     onClick={() => setLinkedNoteEditing(prev => ({ ...prev, [noteName]: true }))}
-                    className={`text-sm whitespace-pre-wrap cursor-text p-2 rounded bg-white/10 hover:bg-white/15 ${noteMinH}`}
+                    className={`text-sm cursor-text p-2 rounded bg-white/10 hover:bg-white/15 ${noteMinH}`}
                   >
-                    {renderFormattedText(state.text)}
+                    {renderNoteContent(state.text, handleContentWikilinkClick)}
                   </div>
                 )}
               </div>

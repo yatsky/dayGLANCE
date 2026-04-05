@@ -12,7 +12,7 @@ import { HABIT_ICONS, HABIT_ICON_NAMES, HABIT_COLORS } from '../constants/habits
 import { isNativeAndroid, nativeGetCalendars } from '../native.js';
 import { cloudSyncProviders } from '../utils/cloudSyncProviders.js';
 import { testConnection, PROVIDER_MODELS, PROVIDER_LABELS } from '../ai.js';
-import { isFileSystemAccessSupported, requestVaultAccess, disconnectVault } from '../obsidian.js';
+import { isFileSystemAccessSupported, requestVaultAccess, disconnectVault, listVaultNotes } from '../obsidian.js';
 import CloudSyncSettingsForm from './CloudSyncSettingsForm.jsx';
 import AutoBackupSettingsForm from './AutoBackupSettingsForm.jsx';
 import FrameEditor from './FrameEditor.jsx';
@@ -59,6 +59,7 @@ const MobileSettingsPanel = () => {
     cloudSyncStatus, cloudSyncLastSynced,
     obsidianConfig, setObsidianConfig,
     obsidianSyncStatus, obsidianSyncError, obsidianLastSynced, setObsidianLastSynced,
+    wikilinkCandidates, setWikilinkCandidates,
     cloudSyncUpload, cloudSyncTest,
     syncAll, performObsidianSync, performRemoteBackup,
     loadAutoBackupHistory,
@@ -1150,6 +1151,7 @@ const MobileSettingsPanel = () => {
             if (handle) {
               obsidianVaultHandleRef.current = handle;
               setObsidianConfig({ enabled: true, dailyNotesPath: '', vaultName: handle.name });
+              listVaultNotes(handle).then(names => setWikilinkCandidates(names)).catch(() => {});
             }
           }}
           className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"

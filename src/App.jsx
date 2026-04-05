@@ -45,6 +45,7 @@ import EmptyBinConfirmModal from './components/EmptyBinConfirmModal.jsx';
 import RecurringDeleteModal from './components/RecurringDeleteModal.jsx';
 import EditRecurrenceModal from './components/EditRecurrenceModal.jsx';
 import ReminderToasts from './components/ReminderToasts.jsx';
+import ObsidianSyncToast from './components/ObsidianSyncToast.jsx';
 import MobileNewTaskModal from './components/MobileNewTaskModal.jsx';
 import DesktopNewTaskModal from './components/DesktopNewTaskModal.jsx';
 import useVisibleDays from './hooks/useVisibleDays.js';
@@ -7824,8 +7825,9 @@ const DayPlanner = () => {
       {/* Weekly Review Reminder Toast */}
       <WeeklyReviewReminderCard />
       {/* Reminder Toasts */}
-      {/* Reminder Toasts */}
       <ReminderToasts />
+      {/* Obsidian Sync Toast */}
+      <ObsidianSyncToast />
 
 
       {/* New Task Modals */}

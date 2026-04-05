@@ -182,12 +182,14 @@ export const hasOnlySubtasks = (task) => {
   return (!task.notes || !task.notes.trim()) && task.subtasks && task.subtasks.length > 0;
 };
 
-// Check if task is Obsidian-sourced with only a note (no subtasks, no plain URL)
+// Check if task should show the vault-linked note icon (BookOpen).
+// True for Obsidian-imported tasks OR any task whose title contains [[wikilinks]],
+// as long as it isn't purely a link/URL and has no subtasks.
 export const isObsidianNoteOnlyTask = (task) => {
-  if (task.importSource !== 'obsidian') return false;
   if (task.subtasks && task.subtasks.length > 0) return false;
   if (isLinkOnlyTask(task)) return false;
-  return true;
+  if (task.importSource === 'obsidian') return true;
+  return /\[\[[^\]]+\]\]/.test(task.title || '');
 };
 
 // Strip wikilinks from displayed text; style hashtags

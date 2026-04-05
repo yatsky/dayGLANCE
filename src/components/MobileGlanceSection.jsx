@@ -69,7 +69,7 @@ const MobileGlanceSection = () => {
     updateTaskNotes, addSubtask, toggleSubtask, deleteSubtask, updateSubtaskTitle,
     tagFilterBtnRef,
   } = useDayPlannerCtx();
-  const { loadWikiNote, saveWikiNote } = useSyncCtx();
+  const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
   const {
     habitLongPressTimer,
     dashboardSelectedChips, setDashboardSelectedChips,
@@ -1094,6 +1094,7 @@ const MobileGlanceSection = () => {
                 wikilinks={extractWikilinks(agendaTask.title).length > 0 ? extractWikilinks(agendaTask.title) : undefined}
                 onLoadWikiNote={extractWikilinks(agendaTask.title).length > 0 ? loadWikiNote : undefined}
                 onSaveWikiNote={extractWikilinks(agendaTask.title).length > 0 ? saveWikiNote : undefined}
+                onOpenInObsidian={extractWikilinks(agendaTask.title).length > 0 ? openInObsidian : undefined}
               />
               </div>
             )}

@@ -61,7 +61,7 @@ const TimeGrid = () => {
     setInboxProjectFilter, setInboxPriorityFilter, setHideCompletedInbox,
     setHideProjectTasksInbox, setHideStandaloneTasksInbox,
   } = useDayPlannerCtx();
-  const { loadWikiNote, saveWikiNote } = useSyncCtx();
+  const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
   const {
     goalsProjectsEnabled,
     projects,
@@ -755,6 +755,7 @@ const TimeGrid = () => {
                             wikilinks={extractWikilinks(task.title).length > 0 ? extractWikilinks(task.title) : undefined}
                             onLoadWikiNote={extractWikilinks(task.title).length > 0 ? loadWikiNote : undefined}
                             onSaveWikiNote={extractWikilinks(task.title).length > 0 ? saveWikiNote : undefined}
+                            onOpenInObsidian={extractWikilinks(task.title).length > 0 ? openInObsidian : undefined}
                           />
                         </div>
                       </div>

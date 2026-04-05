@@ -124,6 +124,16 @@ export const nativeUpdateEvent = async (eventJson) => {
   }
 };
 
+/**
+ * Opens [noteName] in the Obsidian app via the obsidian:// URI scheme.
+ * No-op when the bridge is unavailable or Obsidian isn't installed.
+ */
+export const nativeOpenNote = (noteName) => {
+  const bridge = obsidianBridge();
+  if (!bridge?.openNote) return;
+  bridge.openNote(noteName);
+};
+
 export const nativeGetDailyNote = (date) => {
   const bridge = obsidianBridge();
   if (!bridge?.getDailyNote) return null;

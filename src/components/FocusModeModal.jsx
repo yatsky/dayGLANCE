@@ -9,7 +9,7 @@ import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 
 const FocusModeModal = () => {
   const { currentTime, isPhone, isTablet, formatTime, minutesToTime, timeToMinutes } = useDayPlannerCtx();
-  const { loadWikiNote, saveWikiNote } = useSyncCtx();
+  const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
   const {
     exitFocusMode, startFocusTimer, dismissFocusStats,
     focusShowSettings, focusShowStats,
@@ -163,7 +163,7 @@ const FocusModeModal = () => {
                     )}
                   </div>
                   {/* Notes/subtasks panel — full card width */}
-                  {!isDone && ((task.notes && task.notes.trim()) || (task.subtasks && task.subtasks.length > 0) || (!isPhone && task.importSource === 'obsidian' && extractWikilinks(task.title).length > 0)) && (
+                  {!isDone && ((task.notes && task.notes.trim()) || (task.subtasks && task.subtasks.length > 0) || (!isPhone && extractWikilinks(task.title).length > 0)) && (
                     <NotesSubtasksPanel
                       task={task}
                       isInbox={false}
@@ -178,9 +178,10 @@ const FocusModeModal = () => {
                       aiConfig={aiConfig}
                       aiSubtasksLoadingForTask={aiSubtasksLoadingForTask}
                       onGenerateSubtasks={generateAISubtasks}
-                      wikilinks={!isPhone && task.importSource === 'obsidian' ? extractWikilinks(task.title) : undefined}
-                      onLoadWikiNote={!isPhone && task.importSource === 'obsidian' ? loadWikiNote : undefined}
-                      onSaveWikiNote={!isPhone && task.importSource === 'obsidian' ? saveWikiNote : undefined}
+                      wikilinks={!isPhone && extractWikilinks(task.title).length > 0 ? extractWikilinks(task.title) : undefined}
+                      onLoadWikiNote={!isPhone && extractWikilinks(task.title).length > 0 ? loadWikiNote : undefined}
+                      onSaveWikiNote={!isPhone && extractWikilinks(task.title).length > 0 ? saveWikiNote : undefined}
+                      onOpenInObsidian={!isPhone && extractWikilinks(task.title).length > 0 ? openInObsidian : undefined}
                     />
                   )}
                 </div>

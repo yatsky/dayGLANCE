@@ -48,7 +48,7 @@ const MobileTimeGrid = () => {
     setHideProjectTasksInbox, setHideStandaloneTasksInbox,
     updateTaskNotes, addSubtask, toggleSubtask, deleteSubtask, updateSubtaskTitle,
   } = useDayPlannerCtx();
-  const { loadWikiNote, saveWikiNote } = useSyncCtx();
+  const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
   const {
     projects,
     projectFilter, setProjectFilter,
@@ -600,6 +600,7 @@ const MobileTimeGrid = () => {
                           wikilinks={wikilinks.length > 0 ? wikilinks : undefined}
                           onLoadWikiNote={wikilinks.length > 0 ? loadWikiNote : undefined}
                           onSaveWikiNote={wikilinks.length > 0 ? saveWikiNote : undefined}
+                          onOpenInObsidian={wikilinks.length > 0 ? openInObsidian : undefined}
                         />
                       </div>
                     </div>

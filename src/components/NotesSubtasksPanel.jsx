@@ -17,9 +17,10 @@ const NotesSubtasksPanel = ({
   aiSubtasksLoadingForTask,
   onGenerateSubtasks,
   // Wikilink note props (desktop + Obsidian tasks only)
-  wikilinks,       // string[] — note names extracted from task title
-  onLoadWikiNote,  // async (noteName) => { text } | null
-  onSaveWikiNote,  // async (noteName, content) => void
+  wikilinks,          // string[] — note names extracted from task title
+  onLoadWikiNote,     // async (noteName) => { text } | null
+  onSaveWikiNote,     // async (noteName, content) => void
+  onOpenInObsidian,   // (noteName) => void — opens note in Obsidian app/desktop
 }) => {
   const isGeneratingSubtasks = aiSubtasksLoadingForTask === task.id;
   const [editingSubtaskId, setEditingSubtaskId] = useState(null);
@@ -170,7 +171,17 @@ const NotesSubtasksPanel = ({
               <div key={noteName}>
                 <div className="text-xs font-semibold opacity-90 mb-1 flex items-center gap-1.5">
                   <BookOpen size={11} />
-                  <span>{noteName}</span>
+                  <span className="flex-1">{noteName}</span>
+                  {onOpenInObsidian && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenInObsidian(noteName)}
+                      title={`Open "${noteName}" in Obsidian`}
+                      className="opacity-60 hover:opacity-100 transition-opacity"
+                    >
+                      <ExternalLink size={11} />
+                    </button>
+                  )}
                 </div>
                 {state.loading ? (
                   <div className={`flex items-center gap-1.5 py-2 opacity-60 text-xs ${noteMinH}`}>

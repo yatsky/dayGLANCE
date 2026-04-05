@@ -51,7 +51,7 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
     inboxTagFilter, inboxProjectFilter, setInboxProjectFilter,
     handleMobileTaskTouchStart, handleMobileTaskTouchMove, handleMobileTaskTouchEnd,
   } = useDayPlannerCtx();
-  const { loadWikiNote, saveWikiNote } = useSyncCtx();
+  const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
   const {
     aiConfig,
     gtdFrames,
@@ -366,6 +366,7 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
                 wikilinks={extractWikilinks(task.title).length > 0 ? extractWikilinks(task.title) : undefined}
                 onLoadWikiNote={extractWikilinks(task.title).length > 0 ? loadWikiNote : undefined}
                 onSaveWikiNote={extractWikilinks(task.title).length > 0 ? saveWikiNote : undefined}
+                onOpenInObsidian={extractWikilinks(task.title).length > 0 ? openInObsidian : undefined}
               />
             )}
           </div>
@@ -642,9 +643,10 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
               aiConfig={aiConfig}
               aiSubtasksLoadingForTask={aiSubtasksLoadingForTask}
               onGenerateSubtasks={generateAISubtasks}
-              wikilinks={task.importSource === 'obsidian' ? extractWikilinks(task.title) : undefined}
-              onLoadWikiNote={task.importSource === 'obsidian' ? loadWikiNote : undefined}
-              onSaveWikiNote={task.importSource === 'obsidian' ? saveWikiNote : undefined}
+              wikilinks={extractWikilinks(task.title).length > 0 ? extractWikilinks(task.title) : undefined}
+              onLoadWikiNote={extractWikilinks(task.title).length > 0 ? loadWikiNote : undefined}
+              onSaveWikiNote={extractWikilinks(task.title).length > 0 ? saveWikiNote : undefined}
+              onOpenInObsidian={extractWikilinks(task.title).length > 0 ? openInObsidian : undefined}
             />
           )}
           </div>

@@ -42,7 +42,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
     longPressTriggeredRef, longPressTimerRef,
     mobileActiveTab,
   } = useDayPlannerCtx();
-  const { loadWikiNote, saveWikiNote } = useSyncCtx();
+  const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
   const { goals, deleteProject, generateAISubtasks, aiSubtasksLoadingForTask, aiConfig, showGoalsDashboard } = useFeaturesCtx();
 
   const isScheduled = (t) => !!tasks.find(s => s.id === t.id);
@@ -583,6 +583,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
           wikilinks={extractWikilinks(expandedTask.title).length > 0 ? extractWikilinks(expandedTask.title) : undefined}
           onLoadWikiNote={extractWikilinks(expandedTask.title).length > 0 ? loadWikiNote : undefined}
           onSaveWikiNote={extractWikilinks(expandedTask.title).length > 0 ? saveWikiNote : undefined}
+          onOpenInObsidian={extractWikilinks(expandedTask.title).length > 0 ? openInObsidian : undefined}
         />
       </div>,
       document.body

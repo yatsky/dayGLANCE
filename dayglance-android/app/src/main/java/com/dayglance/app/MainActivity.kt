@@ -23,6 +23,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -55,6 +56,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var healthRepository: HealthRepository
     private lateinit var dataStore: com.dayglance.app.data.SharedDataStore
 
+    // Splash screen: held until the WebView finishes its first page load
+    @Volatile private var webViewReady = false
+
     // Shown at most once per session so we don't nag the user repeatedly
     private var exactAlarmPromptShown = false
 
@@ -80,7 +84,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        splashScreen.setKeepOnScreenCondition { !webViewReady }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -157,6 +163,8 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
+                // Release the splash screen now that the WebView has rendered.
+                webViewReady = true
                 // Re-apply status bar appearance after the WebView's first paint,
                 // which can reset the icon colour on Android 15 edge-to-edge mode.
                 applyStatusBarAppearance()

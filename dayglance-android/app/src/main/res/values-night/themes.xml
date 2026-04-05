@@ -8,4 +8,11 @@
         <!-- Dark mode: use light icons (white) so they're visible on dark backgrounds -->
         <item name="android:windowLightStatusBar">false</item>
     </style>
+
+    <!-- Splash screen (dark) -->
+    <style name="Theme.DayGlance.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0f172a</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.DayGlance</item>
+    </style>
 </resources>

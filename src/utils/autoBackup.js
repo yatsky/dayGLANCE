@@ -1,3 +1,5 @@
+import { encryptData, decryptData, isEncryptedEnvelope, hasEncryptionReady } from './crypto.js';
+
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
@@ -100,7 +102,8 @@ export const autoBackupProviders = {
       const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}-${String(now.getSeconds()).padStart(2,'0')}`;
       const filename = `dayglance-backup-${timestamp}.json`;
       const fileUrl = dirUrl + filename;
-      const body = JSON.stringify(data);
+      const payload = hasEncryptionReady() ? await encryptData(data) : data;
+      const body = JSON.stringify(payload);
 
       const doUpload = () =>
         fetch(`/api/webdav-proxy/?url=${fileUrl}`, {
@@ -152,7 +155,9 @@ export const autoBackupProviders = {
         headers: authHeaders
       });
       if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-      return res.json();
+      const parsed = await res.json();
+      if (isEncryptedEnvelope(parsed)) return decryptData(parsed);
+      return parsed;
     },
     async deleteBackup(config, filename) {
       const fileUrl = this._getBackupDirUrl(config) + filename;
@@ -195,7 +200,8 @@ export const autoBackupProviders = {
       const timestamp = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}T${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}-${String(now.getSeconds()).padStart(2,'0')}`;
       const filename = `dayglance-backup-${timestamp}.json`;
       const fileUrl = dirUrl + filename;
-      const body = JSON.stringify(data);
+      const payload = hasEncryptionReady() ? await encryptData(data) : data;
+      const body = JSON.stringify(payload);
       const doUpload = () =>
         fetch(`/api/webdav-proxy/?url=${fileUrl}`, {
           method: 'PUT',
@@ -242,7 +248,9 @@ export const autoBackupProviders = {
         headers: authHeaders
       });
       if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-      return res.json();
+      const parsed = await res.json();
+      if (isEncryptedEnvelope(parsed)) return decryptData(parsed);
+      return parsed;
     },
     async deleteBackup(config, filename) {
       const fileUrl = this._getBackupDirUrl(config) + filename;

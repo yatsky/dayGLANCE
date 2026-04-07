@@ -31,6 +31,7 @@ const SettingsModal = () => {
   const {
     handleFileUpload,
     cloudSyncConfig, setCloudSyncConfig, cloudSyncTest, cloudSyncLastSynced,
+    syncKeyReady, setSyncKeyReady,
     calSyncConfigured, syncUrl, setSyncUrl,
     showCalendarUrlHint, setShowCalendarUrlHint,
     calendarUrlAuth, setCalendarUrlAuth,
@@ -363,6 +364,7 @@ const SettingsModal = () => {
                         currentProvider={currentProvider}
                         onClose={() => setShowSettings(false)}
                         cloudSyncLastSynced={cloudSyncLastSynced}
+                        onSyncKeyReady={(ready) => setSyncKeyReady(ready)}
                       />
                       </>)}
                     </div>

@@ -57,6 +57,7 @@ const MobileSettingsPanel = () => {
     setAutoBackupRestoreConfirm,
     cloudSyncConfig, setCloudSyncConfig,
     cloudSyncStatus, cloudSyncLastSynced,
+    syncKeyReady, setSyncKeyReady,
     obsidianConfig, setObsidianConfig,
     obsidianSyncStatus, obsidianSyncError, obsidianLastSynced, setObsidianLastSynced,
     wikilinkCandidates, setWikilinkCandidates,
@@ -471,6 +472,7 @@ const MobileSettingsPanel = () => {
           currentProvider={currentProvider}
           onClose={() => setMobileSettingsView('main')}
           cloudSyncLastSynced={cloudSyncLastSynced}
+          onSyncKeyReady={(ready) => setSyncKeyReady(ready)}
         />
         </>)}
       </div>

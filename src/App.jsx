@@ -28,6 +28,7 @@ import GettingStartedChecklist from './components/GettingStartedChecklist.jsx';
 import NotesSubtasksPanel from './components/NotesSubtasksPanel.jsx';
 import DailyNotesModal from './components/DailyNotesModal.jsx';
 import CloudSyncSettingsForm from './components/CloudSyncSettingsForm.jsx';
+import SyncPassphraseModal from './components/SyncPassphraseModal.jsx';
 import AutoBackupSettingsForm from './components/AutoBackupSettingsForm.jsx';
 import SettingsModal from './components/SettingsModal.jsx';
 import RemindersSettingsModal from './components/RemindersSettingsModal.jsx';
@@ -396,6 +397,7 @@ const DayPlanner = () => {
     cloudSyncError, setCloudSyncError,
     cloudSyncLastSynced, setCloudSyncLastSynced,
     cloudSyncConflict, setCloudSyncConflict,
+    syncKeyReady, setSyncKeyReady,
     cloudSyncDebounceRef,
     suppressCloudUploadRef,
     suppressTimestampRef,
@@ -406,6 +408,10 @@ const DayPlanner = () => {
     cloudSyncErrorCountRef,
     cloudSyncBackoffUntilRef,
   } = useCloudSync();
+
+  // Ref so interval/timeout callbacks can read the current syncKeyReady without stale closure
+  const syncKeyReadyRef = useRef(syncKeyReady);
+  useEffect(() => { syncKeyReadyRef.current = syncKeyReady; }, [syncKeyReady]);
 
   // Daily Notes state — keyed by date string "YYYY-MM-DD" → { text, lastModified }
   const [dailyNotes, setDailyNotes] = useState(() => {
@@ -1108,21 +1114,23 @@ const DayPlanner = () => {
     return () => { if (cloudSyncDebounceRef.current) clearTimeout(cloudSyncDebounceRef.current); };
   }, [tasks, unscheduledTasks, recycleBin, taskCalendarUrl, completedTaskUids, recurringTasks, routineDefinitions, todayRoutines, routinesDate, removedTodayRoutineIds, use24HourClock, habits, habitLogs, habitsEnabled, routinesEnabled, dailyNotes, gtdFrames, cloudSyncConfig?.enabled]);
 
-  // Cloud sync: download on app load or when sync is first enabled
+  // Cloud sync: download on app load or when sync is first enabled.
+  // If encryption is enabled, wait until the session key is ready (either
+  // restored from IndexedDB or provided by the passphrase modal).
   useEffect(() => {
-    if (dataLoaded && cloudSyncConfig?.enabled) {
+    if (dataLoaded && cloudSyncConfig?.enabled && syncKeyReady) {
       cloudSyncDownload();
     } else if (dataLoaded && !cloudSyncConfig?.enabled) {
       // No cloud sync — allow local-modified timestamps immediately
       cloudSyncInitialDoneRef.current = true;
     }
-  }, [dataLoaded, cloudSyncConfig?.enabled]);
+  }, [dataLoaded, cloudSyncConfig?.enabled, syncKeyReady]);
 
   // Cloud sync: poll for remote changes every 60 seconds
   useEffect(() => {
     if (!cloudSyncConfig?.enabled) return;
     const pollTimer = setInterval(() => {
-      if (Date.now() >= cloudSyncBackoffUntilRef.current) {
+      if (syncKeyReadyRef.current && Date.now() >= cloudSyncBackoffUntilRef.current) {
         cloudSyncDownloadRef.current?.();
       }
     }, 60 * 1000);
@@ -4429,6 +4437,13 @@ const DayPlanner = () => {
       setTimeout(() => setCloudSyncStatus((s) => s === 'success' ? 'idle' : s), 3000);
     } catch (err) {
       console.error('Cloud sync download error:', err);
+      // If the file's encryption salt doesn't match the cached key and no passphrase
+      // is in memory, re-show the passphrase modal so the user can re-enter it.
+      if (err.code === 'PASSPHRASE_REQUIRED') {
+        setSyncKeyReady(false);
+        setCloudSyncStatus('idle');
+        return;
+      }
       cloudSyncErrorCountRef.current += 1;
       // Exponential backoff: 30s, 60s, 2m, 4m … capped at 15 min
       const backoffMs = Math.min(30 * Math.pow(2, cloudSyncErrorCountRef.current - 1), 15 * 60) * 1000;
@@ -6742,6 +6757,7 @@ const DayPlanner = () => {
     cloudSyncError, setCloudSyncError,
     cloudSyncLastSynced, setCloudSyncLastSynced,
     cloudSyncConflict, setCloudSyncConflict,
+    syncKeyReady, setSyncKeyReady,
 
     // ── Obsidian ──────────────────────────────────────────────────────────────
     obsidianConfig, setObsidianConfig,
@@ -8081,6 +8097,18 @@ const DayPlanner = () => {
 
       {/* Keyboard Shortcut Cheat Sheet */}
       {showShortcutHelp && <ShortcutHelpModal />}
+
+      {/* Sync passphrase prompt — shown on app load when encryption is enabled
+          but no cached key was found in device storage (e.g. new device). */}
+      {cloudSyncConfig?.encryptionEnabled && !syncKeyReady && (
+        <SyncPassphraseModal
+          darkMode={darkMode}
+          textPrimary={textPrimary}
+          textSecondary={textSecondary}
+          borderClass={borderClass}
+          onUnlocked={() => setSyncKeyReady(true)}
+        />
+      )}
 
       {/* Frame Context Menu */}
       {frameContextMenu && (() => {

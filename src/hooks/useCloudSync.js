@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { initSessionKey } from '../utils/crypto.js';
 
 const useCloudSync = () => {
   const [cloudSyncConfig, setCloudSyncConfig] = useState(() => {
@@ -11,15 +12,20 @@ const useCloudSync = () => {
     localStorage.getItem('day-planner-cloud-sync-last-synced') || null
   );
   const [cloudSyncConflict, setCloudSyncConflict] = useState(null); // { remoteData, remoteModified }
-  const cloudSyncDebounceRef = useRef(null);
-  const suppressCloudUploadRef = useRef(false);
-  const suppressTimestampRef = useRef(false);
-  const suppressClearPendingRef = useRef(false);
-  const cloudSyncInProgressRef = useRef(false);
-  const cloudSyncInitialDoneRef = useRef(false);
-  const cloudSyncDownloadRef = useRef(null);
-  const cloudSyncErrorCountRef = useRef(0); // consecutive download failures
-  const cloudSyncBackoffUntilRef = useRef(0); // timestamp: skip poll/visibility retries until this time
+
+  // true once initSessionKey() resolves (either key found or not)
+  // false means "encryption enabled but no cached key — show passphrase prompt"
+  const [syncKeyReady, setSyncKeyReady] = useState(false);
+
+  const cloudSyncDebounceRef       = useRef(null);
+  const suppressCloudUploadRef     = useRef(false);
+  const suppressTimestampRef       = useRef(false);
+  const suppressClearPendingRef    = useRef(false);
+  const cloudSyncInProgressRef     = useRef(false);
+  const cloudSyncInitialDoneRef    = useRef(false);
+  const cloudSyncDownloadRef       = useRef(null);
+  const cloudSyncErrorCountRef     = useRef(0);
+  const cloudSyncBackoffUntilRef   = useRef(0);
 
   // Persist cloud sync config
   useEffect(() => {
@@ -30,12 +36,34 @@ const useCloudSync = () => {
     }
   }, [cloudSyncConfig]);
 
+  // On mount: attempt to restore the session encryption key from device storage.
+  // If encryption is enabled but no cached key exists, syncKeyReady stays false
+  // so the app can show the passphrase prompt.
+  useEffect(() => {
+    const config = (() => {
+      const saved = localStorage.getItem('day-planner-cloud-sync-config');
+      return saved ? JSON.parse(saved) : null;
+    })();
+
+    if (config?.encryptionEnabled) {
+      initSessionKey().then((found) => {
+        // found = true  → key restored silently, unlock sync immediately
+        // found = false → passphrase prompt will be shown by App
+        setSyncKeyReady(found);
+      });
+    } else {
+      // Encryption not configured — no passphrase needed.
+      setSyncKeyReady(true);
+    }
+  }, []);
+
   return {
     cloudSyncConfig, setCloudSyncConfig,
     cloudSyncStatus, setCloudSyncStatus,
     cloudSyncError, setCloudSyncError,
     cloudSyncLastSynced, setCloudSyncLastSynced,
     cloudSyncConflict, setCloudSyncConflict,
+    syncKeyReady, setSyncKeyReady,
     cloudSyncDebounceRef,
     suppressCloudUploadRef,
     suppressTimestampRef,

@@ -269,9 +269,18 @@ export async function decryptData(envelope) {
 
   let key = _sessionKey;
 
+  // If the cached key was derived from a different salt (e.g. user re-configured
+  // encryption, generating a new salt), it cannot decrypt this file. Force
+  // re-derivation so the file's embedded salt always dictates which key is used.
+  if (key && _sessionSalt) {
+    const saltMatch = salt.length === _sessionSalt.length &&
+      salt.every((b, i) => b === _sessionSalt[i]);
+    if (!saltMatch) key = null;
+  }
+
   if (!key) {
     if (_sessionPassphrase) {
-      // Cross-device recovery: derive key from passphrase + salt from file.
+      // Cross-device recovery or salt mismatch: derive key from passphrase + salt from file.
       key          = await deriveKey(_sessionPassphrase, salt);
       _sessionKey  = key;
       _sessionSalt = salt;

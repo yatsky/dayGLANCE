@@ -291,7 +291,10 @@ export async function decryptData(envelope) {
         await saveKeyToIndexedDB(key, salt);
       }
     } else {
-      throw new Error('Encryption key not available. Please enter your sync passphrase.');
+      // Signal to the caller that the passphrase must be collected from the user.
+      const err = new Error('Encryption key not available. Please enter your sync passphrase.');
+      err.code = 'PASSPHRASE_REQUIRED';
+      throw err;
     }
   }
 

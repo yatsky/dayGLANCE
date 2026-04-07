@@ -4433,6 +4433,13 @@ const DayPlanner = () => {
       setTimeout(() => setCloudSyncStatus((s) => s === 'success' ? 'idle' : s), 3000);
     } catch (err) {
       console.error('Cloud sync download error:', err);
+      // If the file's encryption salt doesn't match the cached key and no passphrase
+      // is in memory, re-show the passphrase modal so the user can re-enter it.
+      if (err.code === 'PASSPHRASE_REQUIRED') {
+        setSyncKeyReady(false);
+        setCloudSyncStatus('idle');
+        return;
+      }
       cloudSyncErrorCountRef.current += 1;
       // Exponential backoff: 30s, 60s, 2m, 4m … capped at 15 min
       const backoffMs = Math.min(30 * Math.pow(2, cloudSyncErrorCountRef.current - 1), 15 * 60) * 1000;

@@ -25,3 +25,7 @@ Always create a PR after pushing a branch. Use the GitHub MCP tools (`mcp__githu
 3. Apply the changes to the new branch instead.
 
 This check is mandatory — even mid-task, even for "small fixes", even when you just created the PR moments ago. PRs can be merged at any time.
+
+## GitHub Issues
+
+Do **not** post comments to GitHub issues directly. Instead, draft the proposed response and present it to the user so they can review and post it themselves.

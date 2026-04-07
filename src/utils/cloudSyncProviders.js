@@ -1,4 +1,5 @@
 import { nativeHttpRequest } from '../native.js';
+import { encryptData, decryptData, isEncryptedEnvelope } from './crypto.js';
 
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
 const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
@@ -63,7 +64,8 @@ export const cloudSyncProviders = {
       const fileUrl = this.getFileUrl(config);
       const dirUrl = this.getDirUrl(config);
       const authHeaders = this.getAuthHeaders(config);
-      const body = JSON.stringify(data);
+      const payload = config.encryptionEnabled ? await encryptData(data) : data;
+      const body = JSON.stringify(payload);
 
       const doUpload = () =>
         webdavFetch('PUT', fileUrl, authHeaders, body, { 'Content-Type': 'application/json' });
@@ -86,7 +88,9 @@ export const cloudSyncProviders = {
       if (res.status === 404) return null; // No remote file yet
       if (res.status === 403) throw new Error('FORBIDDEN');
       if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
-      return res.json();
+      const parsed = await res.json();
+      if (isEncryptedEnvelope(parsed)) return decryptData(parsed);
+      return parsed;
     },
     async test(config) {
       const dirUrl = this.getDirUrl(config);
@@ -119,7 +123,8 @@ export const cloudSyncProviders = {
       const fileUrl = this.getFileUrl(config);
       const dirUrl = this.getDirUrl(config);
       const authHeaders = this.getAuthHeaders(config);
-      const body = JSON.stringify(data);
+      const payload = config.encryptionEnabled ? await encryptData(data) : data;
+      const body = JSON.stringify(payload);
       const doUpload = () =>
         webdavFetch('PUT', fileUrl, authHeaders, body, { 'Content-Type': 'application/json' });
       let res = await doUpload();
@@ -138,7 +143,9 @@ export const cloudSyncProviders = {
       if (res.status === 404) return null;
       if (res.status === 403) throw new Error('FORBIDDEN');
       if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
-      return res.json();
+      const parsed = await res.json();
+      if (isEncryptedEnvelope(parsed)) return decryptData(parsed);
+      return parsed;
     },
     async test(config) {
       const dirUrl = this.getDirUrl(config);

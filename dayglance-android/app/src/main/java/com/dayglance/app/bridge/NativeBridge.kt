@@ -36,6 +36,7 @@ class NativeBridge(
     private val focus = FocusBridge(context, notifications)
     private val dataStore = SharedDataStore(context)
     private val http = HttpBridge()
+    private val cryptoKey = CryptoKeyBridge(context)
 
     private var mediaRecorder: MediaRecorder? = null
     private var recordingFile: File? = null
@@ -337,6 +338,14 @@ class NativeBridge(
             }
         }
     }
+
+    // ── Sync key (Android Keystore) ───────────────────────────────────────────
+
+    @JavascriptInterface
+    fun storeSyncKey(b64: String?) = cryptoKey.storeSyncKey(b64)
+
+    @JavascriptInterface
+    fun getSyncKey(): String = cryptoKey.getSyncKey()
 
     // ── Settings ─────────────────────────────────────────────────────────────
 

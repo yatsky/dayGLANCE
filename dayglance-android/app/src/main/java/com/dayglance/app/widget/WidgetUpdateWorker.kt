@@ -69,6 +69,12 @@ class WidgetUpdateWorker(
         try {
             UpNextWidget.requestUpdate(context)
         } catch (_: Throwable) { }
+        try {
+            GoalWidget.requestUpdate(context)
+        } catch (_: Throwable) { }
+        try {
+            ProjectWidget.requestUpdate(context)
+        } catch (_: Throwable) { }
 
         Result.success()
     }

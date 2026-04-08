@@ -5947,6 +5947,76 @@ const DayPlanner = () => {
       projectName: getProjectName(nextTaskCandidate),
     } : null;
 
+    // ── All Goals (for Goal widget) ───────────────────────────────────────
+    const allGoalsData = goalsProjectsEnabled
+      ? goals
+          .filter(g => g.status === 'active')
+          .map(g => {
+            const childProjects = projects.filter(p => p.goalId === g.id && p.status !== 'archived');
+            const goalTasks = allTasksCombinedW.filter(
+              t => childProjects.some(p => p.id === t.projectId) && !t.archived
+            );
+            const pct = Math.round(calculateGoalProgress(g.id, projects, allTasksCombinedW) * 100);
+            const goalColorHex = TAILWIND_TO_HEX[g.color] || '#3b82f6';
+            let daysUntilDue = null;
+            if (g.targetDate) {
+              daysUntilDue = Math.round(
+                (new Date(g.targetDate) - new Date(todayStr)) / 86400000
+              );
+            }
+            return {
+              id: g.id,
+              title: g.title,
+              colorHex: goalColorHex,
+              targetDate: g.targetDate || '',
+              daysUntilDue,
+              progressPct: pct,
+              totalTasks: goalTasks.length,
+              completedTasks: goalTasks.filter(t => t.completed).length,
+              projects: childProjects.map(p => {
+                const ptasks = allTasksCombinedW.filter(t => t.projectId === p.id && !t.archived);
+                const pp = ptasks.length > 0
+                  ? Math.round((ptasks.filter(t => t.completed).length / ptasks.length) * 100) : 0;
+                return {
+                  id: p.id,
+                  title: p.title,
+                  status: p.status,
+                  progressPct: pp,
+                  totalTasks: ptasks.length,
+                  completedTasks: ptasks.filter(t => t.completed).length,
+                };
+              }),
+            };
+          })
+      : [];
+
+    // ── All Projects (for Project widget) ─────────────────────────────────
+    const allProjectsData = goalsProjectsEnabled
+      ? projects
+          .filter(p => p.status !== 'archived')
+          .map(p => {
+            const ptasks = allTasksCombinedW.filter(t => t.projectId === p.id && !t.archived);
+            const pp = ptasks.length > 0
+              ? Math.round((ptasks.filter(t => t.completed).length / ptasks.length) * 100) : 0;
+            const parentGoal = goals.find(g => g.id === p.goalId);
+            return {
+              id: p.id,
+              title: p.title,
+              status: p.status,
+              goalId: p.goalId || '',
+              goalTitle: parentGoal?.title || '',
+              goalColorHex: parentGoal ? (TAILWIND_TO_HEX[parentGoal.color] || '#3b82f6') : '',
+              progressPct: pp,
+              totalTasks: ptasks.length,
+              completedTasks: ptasks.filter(t => t.completed).length,
+              tasks: [...ptasks]
+                .sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0))
+                .slice(0, 6)
+                .map(t => ({ id: t.id, title: t.title, completed: !!t.completed })),
+            };
+          })
+      : [];
+
     // ── Steps (from HealthConnect cache if available) ─────────────────────
     let steps = -1;
     try {
@@ -5995,6 +6065,8 @@ const DayPlanner = () => {
       overdueToday: overdueTodayItems,
       habits: habitItems,
       goals: goalItems,
+      allGoals: allGoalsData,
+      allProjects: allProjectsData,
       allDay: allDayItems,
       deadlines: deadlineItems,
       sections,

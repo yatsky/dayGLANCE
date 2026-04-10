@@ -2657,7 +2657,7 @@ const DayPlanner = () => {
     }
     const startTime = isAllDay ? null : startStr.substring(11, 16); // "HH:MM"
     let duration = 60;
-    if (!isAllDay && endStr.length >= 16) {
+    if (!isAllDay && endStr && endStr.length >= 16) {
       const endTime = endStr.substring(11, 16);
       duration = Math.max(15, timeToMinutes(endTime) - timeToMinutes(startTime));
     }

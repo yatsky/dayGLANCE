@@ -5005,6 +5005,7 @@ const DayPlanner = () => {
 
   useAppInit({
     loadData, fetchAllDailyContent, setContentRotation,
+    dailyContentEnabled,
     dataLoaded, hasZeroRealTasks,
     hasCheckedInitialWelcome,
     showWelcome, setShowWelcome,

@@ -51,7 +51,7 @@ const MobileTimeGrid = () => {
   const {
     projects,
     projectFilter, setProjectFilter,
-    routinesEnabled, todayRoutines,
+    routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion,
     goalsProjectsEnabled,
     getFrameInstancesForDate,
     computeAvailableSlots,
@@ -650,8 +650,9 @@ const MobileTimeGrid = () => {
                   <div className={`absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full ${darkMode ? 'bg-teal-700/80' : 'bg-teal-600/80'}`}></div>
                   <div className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1.5 rounded-full ${darkMode ? 'bg-teal-700/80' : 'bg-teal-600/80'}`}></div>
                   <span
-                    className={`relative rounded-full px-3 py-1 text-xs font-medium ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'}`}
+                    className={`relative rounded-full px-3 py-1 text-xs font-medium cursor-pointer ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
                     style={{ touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+                    onClick={() => toggleRoutineCompletion(routine.id)}
                     onTouchStart={(e) => handleMobileTaskTouchStart(e, { ...routine, isRoutineDrag: true }, 'timeline')}
                     onTouchMove={(e) => handleMobileTaskTouchMove(e)}
                     onTouchEnd={(e) => handleMobileTaskTouchEnd(e, routine.id, 'timeline')}

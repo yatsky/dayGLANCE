@@ -66,7 +66,7 @@ const TimeGrid = () => {
     goalsProjectsEnabled,
     projects,
     projectFilter, setProjectFilter,
-    routinesEnabled, todayRoutines,
+    routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion,
     getFrameInstancesForDate,
     computeAvailableSlots,
     setFrameContextMenu,
@@ -894,7 +894,8 @@ const TimeGrid = () => {
                   <div className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1.5 rounded-full ${darkMode ? 'bg-teal-700/80' : 'bg-teal-600/80'}`}></div>
                   {/* Compact pill label centered */}
                   <span
-                    className={`relative rounded-full px-3 py-1 text-xs font-medium ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'}`}
+                    className={`relative rounded-full px-3 py-1 text-xs font-medium cursor-pointer ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
+                    onClick={() => toggleRoutineCompletion(routine.id)}
                     {...(isTablet ? {
                       style: { touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' },
                       onTouchStart: (e) => handleMobileTaskTouchStart(e, { ...routine, isRoutineDrag: true }, 'timeline'),

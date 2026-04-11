@@ -880,25 +880,28 @@ const TimeGrid = () => {
                   onDragEnd={!isTablet ? handleDragEnd : undefined}
                   onDragOver={(e) => handleDragOver(e, date)}
                   onDrop={(e) => handleDropOnCalendar(e, date)}
-                  {...(isTablet ? {
-                    onTouchStart: (e) => handleMobileTaskTouchStart(e, { ...routine, isRoutineDrag: true }, 'timeline'),
-                    onTouchMove: (e) => handleMobileTaskTouchMove(e),
-                    onTouchEnd: (e) => handleMobileTaskTouchEnd(e, routine.id, 'timeline'),
-                  } : {})}
                   className={`absolute pointer-events-auto ${isTablet ? 'cursor-default select-none' : 'cursor-move'} flex items-center justify-center ${isPast ? 'opacity-50' : ''}`}
                   style={{
                     top: `${top}px`,
                     height: `${Math.max(height, 27)}px`,
                     left: `calc(${leftPercent} + 4px)`,
                     width: `calc(${widthPercent} - 8px)`,
-                    ...(isTablet ? { touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' } : {}),
+                    ...(isTablet ? { touchAction: 'pan-y', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' } : {}),
                   }}
                 >
                   {/* Teal cross lines — horizontal + vertical */}
                   <div className={`absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1.5 rounded-full ${darkMode ? 'bg-teal-700/80' : 'bg-teal-600/80'}`}></div>
                   <div className={`absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-1.5 rounded-full ${darkMode ? 'bg-teal-700/80' : 'bg-teal-600/80'}`}></div>
                   {/* Compact pill label centered */}
-                  <span className={`relative rounded-full px-3 py-1 text-xs font-medium ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'}`}>{routine.name}</span>
+                  <span
+                    className={`relative rounded-full px-3 py-1 text-xs font-medium ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'}`}
+                    {...(isTablet ? {
+                      style: { touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' },
+                      onTouchStart: (e) => handleMobileTaskTouchStart(e, { ...routine, isRoutineDrag: true }, 'timeline'),
+                      onTouchMove: (e) => handleMobileTaskTouchMove(e),
+                      onTouchEnd: (e) => handleMobileTaskTouchEnd(e, routine.id, 'timeline'),
+                    } : {})}
+                  >{routine.name}</span>
                   {/* Desktop: Resize handle (drag) */}
                   {!isTablet && (
                     <div

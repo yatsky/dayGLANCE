@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
+import { isNativeAndroid } from '../native.js';
 
 export default function useAppInit({
   loadData, fetchAllDailyContent, setContentRotation,
+  dailyContentEnabled,
   dataLoaded, hasZeroRealTasks,
   hasCheckedInitialWelcome,
   showWelcome, setShowWelcome,
@@ -9,7 +11,9 @@ export default function useAppInit({
   // Load data and fetch daily content on mount; rotate content every 15 minutes
   useEffect(() => {
     loadData();
-    fetchAllDailyContent();
+    if (dailyContentEnabled && !isNativeAndroid()) {
+      fetchAllDailyContent();
+    }
 
     // Rotate content every 15 minutes
     const rotationInterval = setInterval(() => {

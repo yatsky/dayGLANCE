@@ -521,6 +521,7 @@ const DayPlanner = () => {
     routineFocusedChipId, setRoutineFocusedChipId,
     routineDurationEditId, setRoutineDurationEditId,
     routinesEnabled, setRoutinesEnabled,
+    routineCompletions, toggleRoutineCompletion,
     openRoutinesDashboard,
     addRoutineChip,
     deleteRoutineChip,
@@ -5005,6 +5006,7 @@ const DayPlanner = () => {
 
   useAppInit({
     loadData, fetchAllDailyContent, setContentRotation,
+    dailyContentEnabled,
     dataLoaded, hasZeroRealTasks,
     hasCheckedInitialWelcome,
     showWelcome, setShowWelcome,
@@ -6955,6 +6957,7 @@ const DayPlanner = () => {
     routineFocusedChipId, setRoutineFocusedChipId,
     routineDurationEditId, setRoutineDurationEditId,
     routinesEnabled, setRoutinesEnabled,
+    routineCompletions, toggleRoutineCompletion,
 
     // ── Habits ────────────────────────────────────────────────────────────────
     habits, setHabits,
@@ -7075,7 +7078,7 @@ const DayPlanner = () => {
 
     // ── Functions – routines ──────────────────────────────────────────────────
     openRoutinesDashboard, addRoutineChip, deleteRoutineChip,
-    toggleRoutineChipSelection, handleRoutinesDone,
+    toggleRoutineChipSelection, handleRoutinesDone, toggleRoutineCompletion,
 
     // ── Functions – habits ────────────────────────────────────────────────────
     getTodayHabitCount, incrementHabit, setHabitCount,

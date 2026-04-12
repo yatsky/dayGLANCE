@@ -53,6 +53,9 @@ const useWeather = () => {
   const fetchWeather = useCallback(async () => {
     try {
       // Read settings from localStorage to avoid stale closures
+      const enabled = localStorage.getItem('day-planner-weather-enabled');
+      if (enabled !== null && !JSON.parse(enabled)) return;
+
       const zip = localStorage.getItem('day-planner-weather-zip') || '';
       const tempUnit = localStorage.getItem('day-planner-weather-temp-unit') || 'fahrenheit';
 

@@ -73,7 +73,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
     eveningGlanceText, eveningGlanceLoading, eveningGlanceDismissed, eveningGlanceError,
     frameNudgeSuggestion, frameNudgeLoading, frameNudgeError,
     frameNudgeDismissedKey, setFrameNudgeDismissedKey,
-    routinesEnabled, todayRoutines,
+    routinesEnabled, todayRoutines, routineCompletions,
     habitsEnabled,
     activeHabits, habitStreaks,
     habitLongPressId, setHabitLongPressId,
@@ -1066,11 +1066,9 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
 
   {/* Routines row */}
   {routinesEnabled && todayRoutines.length > 0 && (() => {
-    const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
     const visibleRoutines = todayRoutines.filter(r => {
       if (String(r.id).startsWith('example-')) return false;
-      if (!r.startTime || r.isAllDay) return true;
-      return (timeToMinutes(r.startTime) + r.duration + 60) > nowMin;
+      return !routineCompletions[r.id];
     });
     if (visibleRoutines.length === 0) return null;
     return (

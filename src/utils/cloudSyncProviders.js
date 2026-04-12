@@ -112,6 +112,60 @@ export const cloudSyncProviders = {
     ],
     helpText: 'Go to Nextcloud Settings → Security → Devices & sessions → Create new app password'
   },
+  koofr: {
+    name: 'Koofr',
+    getFileUrl: () => 'https://app.koofr.net/dav/Koofr/dayGLANCE/dayglance-sync.json',
+    getDirUrl: () => 'https://app.koofr.net/dav/Koofr/dayGLANCE/',
+    getAuthHeaders: (config) => ({
+      'X-WebDAV-Auth': 'Basic ' + toBase64(config.username + ':' + config.appPassword)
+    }),
+    async upload(config, data) {
+      const fileUrl = this.getFileUrl();
+      const dirUrl = this.getDirUrl();
+      const authHeaders = this.getAuthHeaders(config);
+      const payload = config.encryptionEnabled ? await encryptData(data) : data;
+      const body = JSON.stringify(payload);
+      const doUpload = () =>
+        webdavFetch('PUT', fileUrl, authHeaders, body, { 'Content-Type': 'application/json' });
+      let res = await doUpload();
+      if (res.status === 404 || res.status === 409) {
+        await mkcolWithParents(dirUrl, authHeaders);
+        res = await doUpload();
+      }
+      if (res.status === 403) throw new Error('FORBIDDEN');
+      if (!res.ok) throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
+      return true;
+    },
+    async download(config) {
+      const fileUrl = this.getFileUrl();
+      const authHeaders = this.getAuthHeaders(config);
+      const res = await webdavFetch('GET', fileUrl, authHeaders);
+      if (res.status === 404) return null;
+      if (res.status === 403) throw new Error('FORBIDDEN');
+      if (!res.ok) throw new Error(`Download failed: ${res.status} ${res.statusText}`);
+      const parsed = await res.json();
+      if (isEncryptedEnvelope(parsed)) return decryptData(parsed);
+      return parsed;
+    },
+    async test(config) {
+      const dirUrl = this.getDirUrl();
+      const authHeaders = this.getAuthHeaders(config);
+      const res = await webdavFetch('PROPFIND', dirUrl, authHeaders, undefined, { 'Depth': '0' });
+      if (res.status === 200 || res.status === 207 || res.status === 404) return { success: true };
+      if (res.status === 401) return { success: false, error: 'Invalid credentials. Use your Koofr email and an app password, not your account password.' };
+      if (res.status === 403) {
+        const onAndroid = typeof window !== 'undefined' && !!window.DayGlanceNative;
+        if (!onAndroid) return { success: false, error: 'Koofr is blocking requests from the web app\'s server. Use the Android app — it connects to Koofr directly.' };
+        return { success: false, error: 'Access forbidden. Check that your app password is correct and has not been revoked.' };
+      }
+      return { success: false, error: `Unexpected response: ${res.status}${res.statusText ? ' ' + res.statusText : ''}` };
+    },
+    configFields: [
+      { key: 'username', label: 'Email', type: 'text', placeholder: 'you@example.com' },
+      { key: 'appPassword', label: 'App Password', type: 'password', placeholder: 'your-app-password' },
+    ],
+    helpText: 'Go to Koofr → Preferences → App passwords → New app password. Use your Koofr email as the username. Note: sync works on the Android app (direct connection); the web app may be blocked by Koofr\'s server-side restrictions.',
+  },
   webdav: {
     name: 'Generic WebDAV',
     getFileUrl: (config) =>
@@ -159,10 +213,10 @@ export const cloudSyncProviders = {
       return { success: false, error: `Unexpected response: ${res.status}${res.statusText ? ' ' + res.statusText : ''}` };
     },
     configFields: [
-      { key: 'webdavUrl', label: 'WebDAV URL', type: 'url', placeholder: 'https://app.koofr.net/dav/Koofr/dayGLANCE/' },
+      { key: 'webdavUrl', label: 'WebDAV URL', type: 'url', placeholder: 'https://dav.example.com/dayGLANCE/' },
       { key: 'username', label: 'Username', type: 'text', placeholder: 'your-username' },
       { key: 'appPassword', label: 'Password / App Password', type: 'password', placeholder: 'your-password' }
     ],
-    helpText: 'Enter the full URL of the WebDAV folder where dayGLANCE should store its sync file. Koofr, pCloud, Seafile, and most WebDAV providers are supported.'
+    helpText: 'Enter the full URL of the WebDAV folder where dayGLANCE should store its sync file. pCloud, Seafile, and most self-hosted WebDAV providers are supported.'
   }
 };

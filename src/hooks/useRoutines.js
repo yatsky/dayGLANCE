@@ -6,6 +6,17 @@ const useRoutines = ({ currentTime, onboardingProgress, setOnboardingProgress })
   const [todayRoutines, setTodayRoutines] = useState([]);
   const [routinesDate, setRoutinesDate] = useState('');
   const [removedTodayRoutineIds, setRemovedTodayRoutineIds] = useState({});
+  const [routineCompletions, setRoutineCompletions] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('day-planner-routine-completions') || '{}');
+      const todayStr = dateToString(new Date());
+      const filtered = {};
+      for (const [id, date] of Object.entries(stored)) {
+        if (date === todayStr) filtered[id] = date;
+      }
+      return filtered;
+    } catch (_) { return {}; }
+  });
   const [showRoutinesDashboard, setShowRoutinesDashboard] = useState(false);
   const [dashboardSelectedChips, setDashboardSelectedChips] = useState([]);
   const [routineAddingToBucket, setRoutineAddingToBucket] = useState(null);
@@ -30,6 +41,11 @@ const useRoutines = ({ currentTime, onboardingProgress, setOnboardingProgress })
     return false;
   });
 
+  // Persist completions to localStorage
+  useEffect(() => {
+    localStorage.setItem('day-planner-routine-completions', JSON.stringify(routineCompletions));
+  }, [routineCompletions]);
+
   // Auto-clear today's routines on day rollover
   useEffect(() => {
     const todayStr = dateToString(new Date());
@@ -37,9 +53,24 @@ const useRoutines = ({ currentTime, onboardingProgress, setOnboardingProgress })
       setTodayRoutines([]);
       setRoutinesDate(todayStr);
       setRemovedTodayRoutineIds({});
+      setRoutineCompletions({});
       localStorage.removeItem('day-planner-removed-today-routine-ids');
+      localStorage.removeItem('day-planner-routine-completions');
     }
   }, [currentTime]);
+
+  const toggleRoutineCompletion = (routineId) => {
+    const todayStr = dateToString(new Date());
+    setRoutineCompletions(prev => {
+      const next = { ...prev };
+      if (next[routineId]) {
+        delete next[routineId];
+      } else {
+        next[routineId] = todayStr;
+      }
+      return next;
+    });
+  };
 
   const openRoutinesDashboard = () => {
     // Pre-populate center with chips already placed today
@@ -150,6 +181,8 @@ const useRoutines = ({ currentTime, onboardingProgress, setOnboardingProgress })
     routineFocusedChipId, setRoutineFocusedChipId,
     routineDurationEditId, setRoutineDurationEditId,
     routinesEnabled, setRoutinesEnabled,
+    routineCompletions,
+    toggleRoutineCompletion,
     openRoutinesDashboard,
     addRoutineChip,
     deleteRoutineChip,

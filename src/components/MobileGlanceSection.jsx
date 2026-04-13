@@ -137,19 +137,35 @@ const MobileGlanceSection = () => {
     )}
   </div>
   {/* Habit rings row — pinned to top */}
-  {habitsEnabled && activeHabits.length > 0 && (
+  {habitsEnabled && (
     <div className="mb-4 relative">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className={`text-xs font-semibold uppercase tracking-wide ${textSecondary}`}>Habits</span>
-        <button
-          onClick={() => { setMobileActiveTab('settings'); setMobileSettingsView('habits'); }}
-          className={`p-1 rounded ${hoverBg} ${textSecondary} transition-colors`}
-          title="Manage habits"
-        >
-          <Settings size={13} />
-        </button>
-      </div>
-      <div className="flex items-start gap-1 justify-center">
+      {activeHabits.length === 0 ? (
+        <>
+          <div className="flex items-center justify-between mb-1.5">
+            <span className={`text-xs font-semibold uppercase tracking-wide ${textSecondary}`}>Habits</span>
+            <button
+              onClick={() => { setMobileActiveTab('settings'); setMobileSettingsView('habits'); }}
+              className={`p-1 rounded ${hoverBg} ${textSecondary} transition-colors`}
+              title="Manage habits"
+            >
+              <Settings size={13} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs ${textSecondary} italic`}>None added</span>
+            <button onClick={() => { setMobileActiveTab('settings'); setMobileSettingsView('habits'); }} className="text-xs text-teal-500 font-medium hover:text-teal-400 transition-colors">+ Add</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <button
+            onClick={() => { setMobileActiveTab('settings'); setMobileSettingsView('habits'); }}
+            className={`absolute -top-0.5 -right-0.5 p-1 rounded ${hoverBg} ${textSecondary} transition-colors z-10`}
+            title="Manage habits"
+          >
+            <Settings size={11} />
+          </button>
+          <div className="flex items-start gap-1 justify-center">
         {activeHabits.slice(0, 5).map((habit, habitIdx) => (
           <div key={habit.id} className="relative">
             <HabitRing
@@ -229,6 +245,8 @@ const MobileGlanceSection = () => {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   )}
 

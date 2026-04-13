@@ -4,7 +4,7 @@ import {
   Calendar, CalendarDays, Check, CheckCircle, CheckSquare, ChevronDown,
   ChevronUp, Clock, Filter, Flag, Hash, Inbox, LayoutGrid, Loader,
   Mic, Minus, Moon, Plus, RefreshCw, Search,
-  Sparkles, Sun, Target, Trash2, X,
+  Settings, Sparkles, Sun, Target, Trash2, X,
 } from 'lucide-react';
 import { renderTitle } from '../utils/textFormatting.jsx';
 import { dateToString, extractTags, extractWikilinks, formatDeadlineDate } from '../utils/taskUtils.js';
@@ -210,6 +210,13 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
       </div>
     ) : (
       <div className="relative">
+        <button
+          onClick={() => setShowHabitModal(true)}
+          className={`absolute -top-0.5 -right-0.5 p-1 rounded ${hoverBg} ${textSecondary} transition-colors z-10`}
+          title="Manage habits"
+        >
+          <Settings size={11} />
+        </button>
         <div className="flex items-start gap-1 justify-center">
         {activeHabits.slice(0, 5).map((habit, habitIdx) => (
           <div key={habit.id} className="relative">

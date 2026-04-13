@@ -148,6 +148,13 @@ const MobileGlanceSection = () => {
       </div>
     ) : (
       <div className="mb-4 relative">
+        <button
+          onClick={() => { setMobileActiveTab('settings'); setMobileSettingsView('habits'); }}
+          className={`absolute -top-0.5 -right-0.5 p-1 rounded ${hoverBg} ${textSecondary} transition-colors z-10`}
+          title="Manage habits"
+        >
+          <Settings size={11} />
+        </button>
         <div className="flex items-start gap-1 justify-center">
         {activeHabits.slice(0, 5).map((habit, habitIdx) => (
           <div key={habit.id} className="relative">

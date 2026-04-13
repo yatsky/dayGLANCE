@@ -420,6 +420,18 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
     mergedRoutinesDate = remoteRoutinesDate;
   }
 
+  // Merge routine completions: union both sides, keeping only entries that match mergedRoutinesDate.
+  // If the dates differed above, the losing side's completions are dropped (stale day).
+  const localCompletions = localData.routineCompletions || {};
+  const remoteCompletions = remoteData.routineCompletions || {};
+  const mergedCompletions = {};
+  for (const [id, date] of Object.entries(localCompletions)) {
+    if (date === mergedRoutinesDate) mergedCompletions[id] = date;
+  }
+  for (const [id, date] of Object.entries(remoteCompletions)) {
+    if (date === mergedRoutinesDate) mergedCompletions[id] = date;
+  }
+
   // Merge daily notes by date key
   const dailyNotesMerge = mergeDailyNotes(localData.dailyNotes || {}, remoteData.dailyNotes || {});
 
@@ -737,6 +749,7 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
       routineDefinitions: routineMerge.merged,
       todayRoutines: todayRoutinesMerge.merged,
       routinesDate: mergedRoutinesDate,
+      routineCompletions: mergedCompletions,
       dailyNotes: dailyNotesMerge.merged,
       habits: habitsMerge.merged,
       deletedHabitIds: prunedDeletedHabitIds,

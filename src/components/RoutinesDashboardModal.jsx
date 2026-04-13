@@ -7,7 +7,7 @@ import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 const RoutinesDashboardModal = () => {
   const {
     getDayName, formatTime,
-    isTablet, darkMode, use24HourClock,
+    isTablet, isMobile, darkMode, use24HourClock,
     cardBg, borderClass, textPrimary, textSecondary, hoverBg,
   } = useDayPlannerCtx();
   const {
@@ -110,7 +110,7 @@ const RoutinesDashboardModal = () => {
                           <div
                             key={chip.id}
                             onClick={() => {
-                              if (isTablet) {
+                              if (isMobile || isTablet) {
                                 if (isFocused) {
                                   toggleRoutineChipSelection(chip, bucket);
                                   setRoutineFocusedChipId(null);
@@ -131,7 +131,7 @@ const RoutinesDashboardModal = () => {
                             <button
                               onClick={(e) => { e.stopPropagation(); setRoutineDeleteConfirm({ bucket, chipId: chip.id, chipName: chip.name }); setRoutineFocusedChipId(null); }}
                               className={`absolute ${isTablet ? '-top-2 -right-2' : '-top-1.5 -right-1.5'} transition-opacity bg-red-500 text-white rounded-full ${isTablet ? 'w-5 h-5' : 'w-4 h-4'} flex items-center justify-center ${
-                                isTablet ? (isFocused ? 'opacity-100' : 'opacity-0 pointer-events-none') : 'opacity-0 group-hover:opacity-100'
+                                (isMobile || isTablet) ? (isFocused ? 'opacity-100' : 'opacity-0 pointer-events-none') : 'opacity-0 group-hover:opacity-100'
                               }`}
                               title="Delete"
                             >
@@ -169,7 +169,7 @@ const RoutinesDashboardModal = () => {
                             key={chip.id}
                             className={`group relative rounded-full ${isTablet ? 'px-4 py-2 text-sm' : 'px-3 py-1.5 text-xs'} font-medium cursor-pointer ${darkMode ? 'bg-teal-700/80 text-teal-100' : 'bg-teal-600/80 text-white'}`}
                             onClick={() => {
-                              if (isTablet) {
+                              if (isMobile || isTablet) {
                                 if (isFocused) {
                                   setRoutineTimePickerChipId(chip.id);
                                   setRoutineFocusedChipId(null);
@@ -180,7 +180,7 @@ const RoutinesDashboardModal = () => {
                                 setRoutineTimePickerChipId(chip.id);
                               }
                             }}
-                            title={isTablet ? 'Tap to show options' : 'Click to set time'}
+                            title={(isMobile || isTablet) ? 'Tap to show options' : 'Click to set time'}
                           >
                             <span className="flex items-center gap-1">
                               {chip.name}
@@ -204,7 +204,7 @@ const RoutinesDashboardModal = () => {
                             <button
                               onClick={(e) => { e.stopPropagation(); setDashboardSelectedChips(prev => prev.filter(c => c.id !== chip.id)); setRoutineFocusedChipId(null); }}
                               className={`absolute ${isTablet ? '-top-2 -right-2' : '-top-1.5 -right-1.5'} transition-opacity rounded-full ${isTablet ? 'w-5 h-5' : 'w-4 h-4'} flex items-center justify-center ${darkMode ? 'bg-gray-500 text-white' : 'bg-stone-400 text-white'} ${
-                                isTablet ? (isFocused ? 'opacity-100' : 'opacity-0 pointer-events-none') : 'opacity-0 group-hover:opacity-100'
+                                (isMobile || isTablet) ? (isFocused ? 'opacity-100' : 'opacity-0 pointer-events-none') : 'opacity-0 group-hover:opacity-100'
                               }`}
                               title="Remove from today"
                             >

@@ -58,8 +58,8 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
           className="h-full rounded-full flex items-center justify-center gap-1 opacity-60"
           style={{ backgroundColor: barColor }}
         >
-          <IconComp size={10} style={{ color: 'white', flexShrink: 0 }} />
-          <span className="text-white text-xs font-semibold line-through truncate px-1">{project.title}</span>
+          <IconComp size={14} style={{ color: 'white', flexShrink: 0 }} />
+          <span className="text-white text-sm font-semibold line-through truncate px-1">{project.title}</span>
         </div>
       </div>
     );

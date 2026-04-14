@@ -498,6 +498,7 @@ const DayPlanner = () => {
     habitEditingCountId, setHabitEditingCountId,
     habitDayPopup, setHabitDayPopup,
     habitLongPressTimer,
+    habitLongPressOpenedAt,
     activeHabits,
     habitStreaks,
     getTodayHabitCount,

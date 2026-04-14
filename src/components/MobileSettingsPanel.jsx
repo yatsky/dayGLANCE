@@ -294,7 +294,7 @@ const MobileSettingsPanel = () => {
           Inbox
         </div>
         <div>
-          <label className={`block text-sm ${textSecondary} mb-1`}>Auto-archive completed tasks</label>
+          <label className={`block text-sm ${textSecondary} mb-1`}>Auto-archive completed Inbox tasks</label>
           <select
             value={inboxAutoArchiveDays}
             onChange={(e) => setInboxAutoArchiveDays(Number(e.target.value))}

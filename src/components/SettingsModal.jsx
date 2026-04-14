@@ -337,6 +337,30 @@ const SettingsModal = () => {
                     </div>
                   </div>
 
+                    <hr className={borderClass} />
+
+                    {/* Inbox */}
+                    <div className="space-y-3">
+                      <div className={`font-medium ${textPrimary} flex items-center gap-2`}>
+                        <Archive size={16} className={textSecondary} />
+                        Inbox
+                      </div>
+                      <div>
+                        <label className={`block text-sm ${textSecondary} mb-1`}>Auto-archive completed Inbox tasks</label>
+                        <select
+                          value={inboxAutoArchiveDays}
+                          onChange={(e) => setInboxAutoArchiveDays(Number(e.target.value))}
+                          className={`px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm`}
+                        >
+                          <option value={0}>Never</option>
+                          <option value={7}>After 7 days</option>
+                          <option value={14}>After 14 days</option>
+                          <option value={30}>After 30 days</option>
+                          <option value={60}>After 60 days</option>
+                        </select>
+                      </div>
+                    </div>
+
                   {/* Right column — integrations (side-by-side on desktop, stacked below on tablet) */}
                   <div className={`space-y-6 lg:border-l lg:pl-6 ${borderClass}`}>
                     <hr className={`${borderClass} lg:hidden`} />
@@ -368,30 +392,6 @@ const SettingsModal = () => {
                         onSyncKeyReady={(ready) => setSyncKeyReady(ready)}
                       />
                       </>)}
-                    </div>
-
-                    <hr className={borderClass} />
-
-                    {/* Inbox */}
-                    <div className="space-y-3">
-                      <div className={`font-medium ${textPrimary} flex items-center gap-2`}>
-                        <Archive size={16} className={textSecondary} />
-                        Inbox
-                      </div>
-                      <div>
-                        <label className={`block text-sm ${textSecondary} mb-1`}>Auto-archive completed Inbox tasks</label>
-                        <select
-                          value={inboxAutoArchiveDays}
-                          onChange={(e) => setInboxAutoArchiveDays(Number(e.target.value))}
-                          className={`px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm`}
-                        >
-                          <option value={0}>Never</option>
-                          <option value={7}>After 7 days</option>
-                          <option value={14}>After 14 days</option>
-                          <option value={30}>After 30 days</option>
-                          <option value={60}>After 60 days</option>
-                        </select>
-                      </div>
                     </div>
 
                     <hr className={borderClass} />

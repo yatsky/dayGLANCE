@@ -153,7 +153,8 @@ const TimeGrid = () => {
           const effectiveBarTime = bar.project.hyperglance.scheduledTimeOverrides?.[bar.date] || bar.project.hyperglance.scheduledTime || '0:0';
           const [bh, bm] = effectiveBarTime.split(':').map(Number);
           const bStart = bh * 60 + bm;
-          const bEnd = bStart + (bar.isCompleted ? 15 : (bar.project.hyperglance.scheduledDuration || 60));
+          const effectiveDuration = bar.isCompleted ? 15 : (bar.project.hyperglance.scheduledDurationOverrides?.[bar.date] || bar.project.hyperglance.scheduledDuration || 60);
+          const bEnd = bStart + effectiveDuration;
           return tStart < bEnd && tEnd > bStart;
         });
       };

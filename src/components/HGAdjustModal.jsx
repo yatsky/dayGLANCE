@@ -7,25 +7,60 @@ const HGAdjustModal = () => {
   const { darkMode, isTablet, use24HourClock, cardBg, borderClass, textPrimary, textSecondary, hoverBg } = useDayPlannerCtx();
   const { hgAdjustModal, setHgAdjustModal, hgAdjustTimeField, setHgAdjustTimeField, saveHGAdjust } = useFeaturesCtx();
 
+  const [startH, startM] = hgAdjustModal.time.split(':').map(Number);
+  const startMins = startH * 60 + startM;
+  const endMins = startMins + (hgAdjustModal.duration || 60);
+  const endH = Math.floor(endMins / 60) % 24;
+  const endM = endMins % 60;
+  const endTimeStr = `${endH}:${String(endM).padStart(2, '0')}`;
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70]" onClick={() => setHgAdjustModal(null)}>
       <div className={`${cardBg} rounded-lg shadow-xl p-5 border ${borderClass} w-72`} onClick={(e) => e.stopPropagation()}>
         <h3 className={`font-semibold ${textPrimary} mb-1`}>Adjust Session Time</h3>
         <p className={`text-xs ${textSecondary} mb-4`}>For {hgAdjustModal.date} only</p>
-        <div>
-          <label className={`text-xs font-medium ${textSecondary} block mb-1`}>Start time</label>
-          <button
-            type="button"
-            onClick={() => setHgAdjustTimeField('start')}
-            className={`w-full px-3 py-2 rounded-lg border ${borderClass} ${cardBg} ${textPrimary} text-sm text-left`}
-          >
-            {hgAdjustModal.time}
-          </button>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className={`text-xs font-medium ${textSecondary} block mb-1`}>Start time</label>
+            <button
+              type="button"
+              onClick={() => setHgAdjustTimeField('start')}
+              className={`w-full px-3 py-2 rounded-lg border ${borderClass} ${cardBg} ${textPrimary} text-sm text-left`}
+            >
+              {hgAdjustModal.time}
+            </button>
+          </div>
+          <div className="flex-1">
+            <label className={`text-xs font-medium ${textSecondary} block mb-1`}>End time</label>
+            <button
+              type="button"
+              onClick={() => setHgAdjustTimeField('end')}
+              className={`w-full px-3 py-2 rounded-lg border ${borderClass} ${cardBg} ${textPrimary} text-sm text-left`}
+            >
+              {endTimeStr}
+            </button>
+          </div>
         </div>
-        {hgAdjustTimeField && (
+        {hgAdjustTimeField === 'start' && (
           <ClockTimePicker
             value={hgAdjustModal.time}
-            onChange={(t) => { setHgAdjustModal(prev => ({ ...prev, time: t })); setHgAdjustTimeField(null); }}
+            onChange={(t) => {
+              setHgAdjustModal(prev => ({ ...prev, time: t }));
+              setHgAdjustTimeField(null);
+            }}
+            onClose={() => setHgAdjustTimeField(null)}
+            darkMode={darkMode} isTablet={isTablet} use24HourClock={use24HourClock}
+          />
+        )}
+        {hgAdjustTimeField === 'end' && (
+          <ClockTimePicker
+            value={endTimeStr}
+            onChange={(t) => {
+              const [eh, em] = t.split(':').map(Number);
+              const newDuration = Math.max(15, eh * 60 + em - startMins);
+              setHgAdjustModal(prev => ({ ...prev, duration: newDuration }));
+              setHgAdjustTimeField(null);
+            }}
             onClose={() => setHgAdjustTimeField(null)}
             darkMode={darkMode} isTablet={isTablet} use24HourClock={use24HourClock}
           />

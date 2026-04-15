@@ -686,8 +686,8 @@ const DayPlanner = () => {
   const [taskContextMenu, setTaskContextMenu] = useState(null); // { x, y, taskId, isRecurring, isImported, isAllDay, dateStr }
   const [timelineContextMenu, setTimelineContextMenu] = useState(null); // { x, y, dateStr, timeMinutes }
   const [hgContextMenu, setHgContextMenu] = useState(null); // { x, y, projectId, date, isCompleted }
-  const [hgAdjustModal, setHgAdjustModal] = useState(null); // { projectId, date, time }
-  const [hgAdjustTimeField, setHgAdjustTimeField] = useState(null); // 'start' | null
+  const [hgAdjustModal, setHgAdjustModal] = useState(null); // { projectId, date, time, duration }
+  const [hgAdjustTimeField, setHgAdjustTimeField] = useState(null); // 'start' | 'end' | null
   const [pendingEditProjectId, setPendingEditProjectId] = useState(null);
 
   // Incomplete tasks modal
@@ -3063,18 +3063,29 @@ const DayPlanner = () => {
     const project = projects.find(p => p.id === projectId);
     if (!project) return;
     const hg = project.hyperglance || {};
-    const overrides = hg.scheduledTimeOverrides || {};
-    setHgAdjustModal({ projectId, date, time: overrides[date] || hg.scheduledTime || '9:00' });
+    setHgAdjustModal({
+      projectId,
+      date,
+      time: (hg.scheduledTimeOverrides || {})[date] || hg.scheduledTime || '9:00',
+      duration: (hg.scheduledDurationOverrides || {})[date] || hg.scheduledDuration || 60,
+    });
     setHgContextMenu(null);
   };
 
   const saveHGAdjust = () => {
     if (!hgAdjustModal) return;
-    const { projectId, date, time } = hgAdjustModal;
+    const { projectId, date, time, duration } = hgAdjustModal;
     setProjects(prev => prev.map(p => {
       if (p.id !== projectId) return p;
       const hg = p.hyperglance || {};
-      return { ...p, hyperglance: { ...hg, scheduledTimeOverrides: { ...(hg.scheduledTimeOverrides || {}), [date]: time } } };
+      return {
+        ...p,
+        hyperglance: {
+          ...hg,
+          scheduledTimeOverrides: { ...(hg.scheduledTimeOverrides || {}), [date]: time },
+          scheduledDurationOverrides: { ...(hg.scheduledDurationOverrides || {}), [date]: duration },
+        },
+      };
     }));
     setHgAdjustModal(null);
   };

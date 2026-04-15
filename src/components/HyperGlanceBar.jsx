@@ -21,7 +21,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
   const effectiveTime = hg.scheduledTimeOverrides?.[date] || hg.scheduledTime || '0:0';
   const [startH, startM] = effectiveTime.split(':').map(Number);
   const startMinutes = startH * 60 + startM;
-  const durationMin = hg.scheduledDuration || 60;
+  const durationMin = hg.scheduledDurationOverrides?.[date] || hg.scheduledDuration || 60;
   const endMinutes = startMinutes + durationMin;
 
   const top = Math.round(minutesToPosition(startMinutes));

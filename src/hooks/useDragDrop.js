@@ -213,6 +213,7 @@ export default function useDragDrop({
 
   const handleCalendarMouseMove = (e, targetDate, skipCalendarSlotCheck = false) => {
     if (draggedTask) return;
+    if (frameResizingRef.current) { setHoverPreviewTime(null); setHoverPreviewDate(null); return; }
     if (!skipCalendarSlotCheck && !e.target.classList.contains('calendar-slot')) {
       setHoverPreviewTime(null);
       setHoverPreviewDate(null);

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import * as Icons from 'lucide-react';
 import { Pencil, Zap } from 'lucide-react';
@@ -11,12 +11,11 @@ import { isHGSessionReachable } from '../hooks/useHyperGlance.js';
  * timeline day column. When the session is completed it shrinks to a small pill.
  */
 const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
-  const { minutesToPosition, currentTime, use24HourClock, tasks, unscheduledTasks, getHourHeight, playUISound } = useDayPlannerCtx();
+  const { minutesToPosition, currentTime, use24HourClock, tasks, unscheduledTasks, getHourHeight, playUISound, frameResizingRef, setHoverPreviewTime, setHoverPreviewDate } = useDayPlannerCtx();
   const { enterHyperGlanceMode, setHgContextMenu, setPendingEditProjectId, updateProject } = useFeaturesCtx();
 
   const [showStats, setShowStats] = useState(false);
   const [statsPos, setStatsPos] = useState(null);
-  const hgResizingRef = useRef(false);
 
   const hg = project.hyperglance;
   const effectiveTime = hg.scheduledTimeOverrides?.[date] || hg.scheduledTime || '0:0';
@@ -39,12 +38,14 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
   const handleResizeStart = (edge, e) => {
     e.preventDefault();
     e.stopPropagation();
+    setHoverPreviewTime(null);
+    setHoverPreviewDate(null);
     const origStartMinutes = startMinutes;
     const origDuration = durationMin;
     const startY = e.clientY;
 
     const handleMouseMove = (moveEvent) => {
-      hgResizingRef.current = true;
+      frameResizingRef.current = true;
       const hourHeight = getHourHeight();
       const deltaMinutes = Math.round(((moveEvent.clientY - startY) / hourHeight) * 60 / 15) * 15;
       if (edge === 'top') {
@@ -73,7 +74,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
     const handleMouseUp = () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
-      if (hgResizingRef.current) {
+      if (frameResizingRef.current) {
         playUISound('tick');
         setTimeout(() => { hgResizingRef.current = false; }, 0);
       }
@@ -222,7 +223,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
 
         {/* Edit button — top-right corner */}
         <button
-          onClick={(e) => { e.stopPropagation(); if (hgResizingRef.current) return; setPendingEditProjectId(project.id); }}
+          onClick={(e) => { e.stopPropagation(); if (frameResizingRef.current) return; setPendingEditProjectId(project.id); }}
           className="absolute top-0.5 right-0.5 p-0.5 rounded opacity-40 hover:opacity-90 transition-opacity pointer-events-auto z-10"
           title="Edit project"
         >

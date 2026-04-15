@@ -15,6 +15,7 @@ import ProjectProgress from './ProjectProgress.jsx';
 import NotesSubtasksPanel from '../NotesSubtasksPanel.jsx';
 import { renderTitle, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, getLinkUrl, isObsidianNoteOnlyTask } from '../../utils/textFormatting.jsx';
 import { dateToString, extractWikilinks } from '../../utils/taskUtils.js';
+import { getActiveHGInstance } from '../../hooks/useHyperGlance.js';
 
 const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
 
@@ -35,7 +36,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
     unscheduledTasks, setUnscheduledTasks, reorderUnscheduledTasks,
     openMobileEditTask,
     getTodayStr,
-    darkMode, isMobile,
+    darkMode, isMobile, use24HourClock,
     cardBg, borderClass, textPrimary, textSecondary, hoverBg,
     expandedNotesTaskId, setExpandedNotesTaskId,
     updateTaskNotes, addSubtask, toggleSubtask, deleteSubtask, updateSubtaskTitle,
@@ -352,12 +353,49 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
                 Stalled
               </span>
             )}
-            {project.hyperglance?.enabled && project.status !== 'completed' && (
-              <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-400/20 text-yellow-400 font-semibold flex-shrink-0">
-                <Zap size={9} />
-                hG
-              </span>
-            )}
+            {project.hyperglance?.enabled && project.status !== 'completed' && (() => {
+              const instance = getActiveHGInstance(project);
+              if (!instance) return null;
+              const hg = project.hyperglance;
+              const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime;
+              let timeStr = '';
+              if (effectiveTime) {
+                const [h, m] = effectiveTime.split(':').map(Number);
+                if (use24HourClock) {
+                  timeStr = ` ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                } else {
+                  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                  const ampm = h < 12 ? 'a' : 'p';
+                  timeStr = ` ${h12}${m === 0 ? '' : ':' + String(m).padStart(2, '0')}${ampm}`;
+                }
+              }
+              let dateLabel;
+              if (instance.isOverdue) {
+                dateLabel = 'overdue';
+              } else {
+                const todayStr = dateToString(new Date());
+                if (instance.date === todayStr) {
+                  dateLabel = 'Today';
+                } else {
+                  const d = new Date(instance.date + 'T00:00:00');
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const diffDays = Math.round((d - today) / 86400000);
+                  if (diffDays === 1) dateLabel = 'Tomorrow';
+                  else if (diffDays <= 6) dateLabel = d.toLocaleDateString(undefined, { weekday: 'short' });
+                  else dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                }
+              }
+              return (
+                <span className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${
+                  instance.isOverdue
+                    ? 'bg-orange-400/20 text-orange-400'
+                    : darkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-600'
+                }`}>
+                  <Zap size={9} />
+                  {dateLabel}{timeStr}
+                </span>
+              );
+            })()}
             <button
               onClick={() => onEditClick?.()}
               className={`p-1 rounded-lg transition-colors ${

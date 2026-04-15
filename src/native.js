@@ -401,6 +401,17 @@ export const nativeExitFocusMode = () => {
 };
 
 /**
+ * Hides (enter=true) or restores (enter=false) the system bars without
+ * the DND/alarm side effects of full focus mode. Used by hyperGLANCE.
+ * No-op when running as a PWA.
+ */
+export const nativeSetImmersiveMode = (enter) => {
+  const bridge = nativeBridge();
+  if (!bridge?.setImmersiveMode) return;
+  bridge.setImmersiveMode(enter);
+};
+
+/**
  * Returns true if the user has granted Do Not Disturb access to this app.
  * Always returns false when running as a PWA.
  */

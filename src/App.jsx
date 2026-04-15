@@ -563,7 +563,6 @@ const DayPlanner = () => {
     focusTimerRunning, setFocusTimerRunning,
     focusTaskMinutes, setFocusTaskMinutes,
     focusBlockTasks, setFocusBlockTasks,
-    focusProjectId, setFocusProjectId,
     focusLog, setFocusLog,
     focusLogModalDate, setFocusLogModalDate,
     wakeLockSentinel,
@@ -725,7 +724,6 @@ const DayPlanner = () => {
     actualTodayPlannedMinutes,
     actualTodayFocusMinutes,
     allTimeFocusMinutes,
-    allTimeProjectFocusMinutes,
     inboxCompletedTodayCount,
     inboxCompletedTodayMinutes,
     allTimeInboxCompletedCount,
@@ -2845,33 +2843,6 @@ const DayPlanner = () => {
   };
   enterFocusModeRef.current = enterFocusMode;
 
-  const enterProjectFocusMode = (project, projectTasks) => {
-    setFocusProjectId(project.id);
-    setShowFocusMode(true);
-    setFocusShowSettings(true);
-    setFocusShowStats(false);
-    setFocusPhase('work');
-    setFocusTimerSeconds(0);
-    setFocusCycleCount(0);
-    setFocusSessionStart(null);
-    setFocusCompletedTasks(new Set());
-    setFocusTimerRunning(false);
-    setFocusTaskMinutes({});
-    setFocusBlockTasks(projectTasks);
-    setFocusWorkMinutes(25);
-    setFocusBreakMinutes(5);
-    setFocusLongBreakMinutes(15);
-    try { document.documentElement.requestFullscreen?.(); } catch (e) {}
-    (async () => {
-      try {
-        if (navigator.wakeLock) {
-          wakeLockSentinel.current = await navigator.wakeLock.request('screen');
-        }
-      } catch (e) {}
-    })();
-    nativeEnterFocusMode();
-  };
-
   const startFocusTimer = () => {
     setFocusShowSettings(false);
     setFocusSessionStart(new Date());
@@ -2915,7 +2886,6 @@ const DayPlanner = () => {
       const sessionMinutes = Math.round((new Date() - focusSessionStart) / 60000);
       if (sessionMinutes > 0) {
         const sessionDateStr = dateToString(new Date(focusSessionStart));
-        const sessionProjectId = focusProjectId;
         setFocusLog(prev => {
           const existing = prev[sessionDateStr] || { totalMinutes: 0, sessions: 0, cyclesCompleted: 0, tasksCompleted: 0 };
           const updated = {
@@ -2925,12 +2895,6 @@ const DayPlanner = () => {
             cyclesCompleted: existing.cyclesCompleted + focusCycleCount,
             tasksCompleted: existing.tasksCompleted + focusCompletedTasks.size,
           };
-          if (sessionProjectId) {
-            updated.projectSessions = [
-              ...(existing.projectSessions || []),
-              { projectId: sessionProjectId, minutes: sessionMinutes },
-            ];
-          }
           return { ...prev, [sessionDateStr]: updated };
         });
       }
@@ -6969,7 +6933,7 @@ const DayPlanner = () => {
     totalCompletedMinutes, totalScheduledMinutes,
     actualTodayNonImportedTasks, actualTodayCompletedTasks,
     actualTodayCompletedMinutes, actualTodayPlannedMinutes, actualTodayFocusMinutes,
-    allTimeFocusMinutes, allTimeProjectFocusMinutes,
+    allTimeFocusMinutes,
     inboxCompletedTodayCount, inboxCompletedTodayMinutes,
     allTimeInboxCompletedCount, allTimeInboxCompletedMinutes,
     projectTasksCompletedTodayCount, projectTasksCompletedTodayMinutes,
@@ -7273,8 +7237,8 @@ const DayPlanner = () => {
     addStepsHabit, addSleepHabit,
 
     // ── Functions – focus mode ────────────────────────────────────────────────
-    enterFocusMode, enterProjectFocusMode, exitFocusMode,
-    startFocusTimer, dismissFocusStats, focusProjectId, handleFocusTimerEnd,
+    enterFocusMode, exitFocusMode,
+    startFocusTimer, dismissFocusStats, handleFocusTimerEnd,
     focusCompleteTask, focusToggleSubtask, focusAddSubtask,
     focusDeleteSubtask, focusUpdateSubtaskTitle, focusUpdateTaskNotes,
     computeFocusBlockTasks,
@@ -8152,12 +8116,6 @@ const DayPlanner = () => {
                         <div className="flex items-center gap-2"><Target size={14} className="text-purple-400" /> Focus time</div>
                         <span className={`font-medium ${textPrimary}`}>{Math.floor(allTimeFocusMinutes / 60)}h {Math.round(allTimeFocusMinutes % 60)}m</span>
                       </div>
-                      {goalsProjectsEnabled && allTimeProjectFocusMinutes > 0 && (
-                        <div className="flex items-center justify-between pl-5">
-                          <div className="flex items-center gap-2"><FolderOpen size={12} className="text-purple-300" /> From projects</div>
-                          <span className={`text-xs font-medium ${textSecondary}`}>{Math.floor(allTimeProjectFocusMinutes / 60)}h {Math.round(allTimeProjectFocusMinutes % 60)}m</span>
-                        </div>
-                      )}
                     </>
                   )}
                   {allTimeScheduledCount > 0 && (

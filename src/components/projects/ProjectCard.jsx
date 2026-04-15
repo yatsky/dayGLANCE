@@ -4,7 +4,7 @@ import ConfirmDialog from '../ConfirmDialog.jsx';
 import {
   AlertTriangle, BookOpen, Calendar, CheckCircle2, CheckSquare, ChevronDown,
   Edit2, ExternalLink, FileText, GripVertical, LogIn, Plus,
-  Square, Target, Trash2, X, Zap,
+  Square, Trash2, X, Zap,
 } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../../context/SyncContext.jsx';
@@ -27,10 +27,9 @@ const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
  *
  * Props:
  *   project      — the project object
- *   onFocusClick — called with the project when the "Project Focus" button is clicked
  *   onEditClick  — called to open the project edit form
  */
-const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, dragHandleProps, onMoveToClick }, ref) => {
+const ProjectCard = forwardRef(({ project, onEditClick, compact, dragHandleProps, onMoveToClick }, ref) => {
   const {
     tasks, setTasks,
     unscheduledTasks, setUnscheduledTasks, reorderUnscheduledTasks,
@@ -94,10 +93,6 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
   const stalled = !!project.goalId && isProjectStalled(project.id, allTasks, project);
 
   // All project tasks: unscheduled (in array order) then scheduled (by date), completed last
-  const hasTodayTasks = tasks.some(
-    t => t.projectId === project.id && t.date === getTodayStr() && !t.completed && !t.isAllDay
-  );
-
   const projectUnscheduled = unscheduledTasks.filter(t => t.projectId === project.id && !t.archived);
   const projectScheduled = tasks.filter(t => t.projectId === project.id && !t.archived)
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -424,21 +419,6 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
 
         {/* Progress bar */}
         <ProjectProgress progress={progress} compact />
-
-        {/* Project Focus button — only when there are incomplete tasks scheduled for today */}
-        {hasTodayTasks && (
-          <button
-            onClick={() => onFocusClick?.(project)}
-            className={`flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              darkMode
-                ? 'bg-purple-900/40 hover:bg-purple-900/70 text-purple-400'
-                : 'bg-purple-50 hover:bg-purple-100 text-purple-700'
-            }`}
-          >
-            <Target size={12} />
-            Project Focus
-          </button>
-        )}
 
         {/* Unscheduled task list */}
         {allProjectDisplayTasks.length > 0 && (

@@ -185,7 +185,7 @@ const MobileLayout = () => {
     totalCompletedMinutes, totalScheduledMinutes,
     actualTodayNonImportedTasks, actualTodayCompletedTasks,
     actualTodayCompletedMinutes, actualTodayPlannedMinutes, actualTodayFocusMinutes,
-    allTimeFocusMinutes, allTimeProjectFocusMinutes,
+    allTimeFocusMinutes,
     inboxCompletedTodayCount, inboxCompletedTodayMinutes,
     allTimeInboxCompletedCount, allTimeInboxCompletedMinutes,
     projectTasksCompletedTodayCount, projectTasksCompletedTodayMinutes,

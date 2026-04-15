@@ -102,7 +102,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
         </button>
 
         {isLarge ? (
-          // Large layout: centered icon + title
+          // Large layout: centered icon + title + CTA, time/tasks pinned to bottom
           <>
             <div className="flex-1 flex flex-col items-center justify-center gap-1 w-full px-1 pt-2">
               <IconComp size={20} style={{ color: barColor }} />
@@ -117,10 +117,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
               {isOverdue && (
                 <span className="text-[9px] font-semibold text-orange-500">overdue</span>
               )}
-            </div>
-            {/* CTA at bottom */}
-            <div className="flex-shrink-0 pb-2">
-              {canEnter ? (
+              {canEnter && (
                 <button
                   onClick={() => enterHyperGlanceMode(project.id, date)}
                   className="flex items-center gap-0.5 px-2 py-1 rounded-full text-white text-[9px] font-bold animate-pulse pointer-events-auto"
@@ -130,11 +127,8 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
                   <Zap size={8} />
                   hyperGLANCE
                 </button>
-              ) : !isOverdue ? (
-                <span className="text-[9px] font-bold opacity-30" style={{ color: barColor }}>
-                  {timeLabel}{taskCountLabel ? ` · ${taskCountLabel}` : ''}
-                </span>
-              ) : (
+              )}
+              {isOverdue && !canEnter && (
                 <button
                   onClick={() => enterHyperGlanceMode(project.id, date)}
                   className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white text-[9px] font-bold pointer-events-auto opacity-80"
@@ -144,6 +138,12 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
                   hG
                 </button>
               )}
+            </div>
+            {/* Time + task count always visible at bottom */}
+            <div className="flex-shrink-0 pb-2">
+              <span className="text-[9px] font-bold opacity-30" style={{ color: barColor }}>
+                {timeLabel}{taskCountLabel ? ` · ${taskCountLabel}` : ''}
+              </span>
             </div>
           </>
         ) : (

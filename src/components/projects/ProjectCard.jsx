@@ -385,12 +385,12 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
                   else dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                 }
               }
+              const color = hg.color || '#4f46e5';
               return (
-                <span className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${
-                  instance.isOverdue
-                    ? 'bg-orange-400/20 text-orange-400'
-                    : darkMode ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-100 text-indigo-600'
-                }`}>
+                <span
+                  className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0${instance.isOverdue ? ' bg-orange-400/20 text-orange-400' : ''}`}
+                  style={instance.isOverdue ? {} : { backgroundColor: color + '25', color }}
+                >
                   <Zap size={9} />
                   {dateLabel}{timeStr}
                 </span>

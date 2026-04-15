@@ -344,7 +344,7 @@ const ProjectForm = ({ initial, goals, defaultGoalId, onSave, onCancel, mobile }
   return (
     <form
       onSubmit={handleSubmit}
-      className={`${mobile ? '' : `${cardBg} rounded-2xl shadow-2xl max-w-sm max-h-[90vh] overflow-y-auto`} p-5 w-full flex flex-col gap-4`}
+      className={`${mobile ? '' : `${cardBg} rounded-2xl shadow-2xl max-w-sm`} p-5 w-full flex flex-col gap-4`}
       onClick={e => e.stopPropagation()}
     >
       <h3 className={`text-base font-semibold ${textPrimary}`}>
@@ -708,10 +708,12 @@ const FormOverlay = ({ children, onClose, mobile, cardBg }) => {
   }
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[60] overflow-y-auto bg-black/50"
       onClick={onClose}
     >
-      {children}
+      <div className="min-h-full flex items-center justify-center py-8">
+        {children}
+      </div>
     </div>
   );
 };

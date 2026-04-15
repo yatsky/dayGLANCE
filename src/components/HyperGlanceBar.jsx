@@ -1,6 +1,6 @@
 import React from 'react';
 import * as Icons from 'lucide-react';
-import { Zap } from 'lucide-react';
+import { Pencil, Zap } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { isHGSessionReachable } from '../hooks/useHyperGlance.js';
@@ -11,7 +11,7 @@ import { isHGSessionReachable } from '../hooks/useHyperGlance.js';
  */
 const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
   const { minutesToPosition, currentTime, use24HourClock, tasks, unscheduledTasks } = useDayPlannerCtx();
-  const { enterHyperGlanceMode, setHgContextMenu } = useFeaturesCtx();
+  const { enterHyperGlanceMode, setHgContextMenu, setPendingEditProjectId } = useFeaturesCtx();
 
   const hg = project.hyperglance;
   const effectiveTime = hg.scheduledTimeOverrides?.[date] || hg.scheduledTime || '0:0';
@@ -83,7 +83,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
       onContextMenu={handleContextMenu}
     >
       <div
-        className="h-full rounded-md flex flex-col items-center overflow-hidden select-none"
+        className="h-full rounded-md flex flex-col items-center overflow-hidden select-none relative"
         style={{
           backgroundColor: `${barColor}18`,
           borderLeft: `3px solid ${barColor}`,
@@ -92,6 +92,15 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
           borderBottom: `1px solid ${barColor}30`,
         }}
       >
+        {/* Edit button — top-right corner */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setPendingEditProjectId(project.id); }}
+          className="absolute top-0.5 right-0.5 p-0.5 rounded opacity-40 hover:opacity-90 transition-opacity pointer-events-auto z-10"
+          title="Edit project"
+        >
+          <Pencil size={9} style={{ color: barColor }} />
+        </button>
+
         {isLarge ? (
           // Large layout: centered icon + title
           <>

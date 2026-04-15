@@ -57,6 +57,9 @@ class FocusBridge(
         context.startActivity(intent)
     }
 
+    /** Hides or shows system bars without touching DND or alarms. Used by hyperGLANCE. */
+    fun setImmersive(enter: Boolean) = applyImmersiveMode(enter)
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private fun applyImmersiveMode(enter: Boolean) {

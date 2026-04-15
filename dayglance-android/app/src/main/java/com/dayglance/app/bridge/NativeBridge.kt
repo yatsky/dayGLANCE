@@ -305,6 +305,13 @@ class NativeBridge(
     @JavascriptInterface
     fun exitFocusMode() = focus.exit()
 
+    /**
+     * Enters or exits immersive mode (hides/shows system bars) without the
+     * DND and alarm side effects of full focus mode. Used by hyperGLANCE.
+     */
+    @JavascriptInterface
+    fun setImmersiveMode(enter: Boolean) = focus.setImmersive(enter)
+
     /** Returns true if the user has granted Do Not Disturb access to this app. */
     @JavascriptInterface
     fun isDndPermissionGranted(): Boolean = focus.isDndPermissionGranted()

@@ -19,7 +19,7 @@ function formatNoteTimestamp(iso) {
  * Render note text with [[wikilink]] patterns as clickable buttons.
  * Non-wikilink segments are passed through renderFormattedText.
  */
-function renderNoteContent(text, onWikilinkClick) {
+function renderNoteContent(text, onWikilinkClick, darkMode) {
   if (!text) return null;
   const segments = text.split(/(\[\[[^\]]+\]\])/g);
   return segments.map((seg, i) => {
@@ -31,7 +31,7 @@ function renderNoteContent(text, onWikilinkClick) {
           type="button"
           onClick={(e) => { e.stopPropagation(); onWikilinkClick(m[1]); }}
           title={`Open "${m[1]}"`}
-          className="text-purple-300 hover:text-purple-200 underline decoration-dashed underline-offset-2 transition-colors"
+          className={`underline decoration-dashed underline-offset-2 transition-colors ${darkMode ? 'text-purple-300 hover:text-purple-200' : 'text-purple-600 hover:text-purple-700'}`}
         >
           {m[1]}
         </button>
@@ -84,13 +84,48 @@ const NotesSubtasksPanel = ({
   // Additional notes navigated to via [[wikilink]] clicks inside note content
   const [additionalNotes, setAdditionalNotes] = useState([]);
 
+  // ── Theme tokens ──────────────────────────────────────────────────────────
+  const th = darkMode ? {
+    panel:        'bg-black/50 text-white',
+    label:        'text-white/80',
+    textarea:     'bg-white/10 text-white border-white/20 focus:bg-white/20 focus:border-white/40 placeholder:text-white/40',
+    preview:      'bg-white/10 hover:bg-white/15 text-white',
+    aiBtn:        'text-white/60 hover:text-white/90',
+    checkbox:     'bg-white/20 border-white',
+    checkIcon:    'text-white',
+    subtaskText:  'text-white',
+    deleteBtn:    'hover:bg-white/20 text-white/60',
+    subtaskInput: 'bg-white/20 text-white border-white/30 focus:bg-white/30',
+    addInput:     'text-white placeholder:text-white/40 focus:border-white/30',
+    addIcon:      'text-white/50',
+    addBorder:    'border-transparent focus:border-white/30',
+    url:          'text-blue-300 hover:text-blue-200',
+    obsBtn:       'hover:bg-white/10 active:bg-white/10 text-white/70 hover:text-white',
+    noteTs:       'text-white/40',
+  } : {
+    panel:        'bg-gray-100 text-gray-800 border border-gray-200',
+    label:        'text-gray-500',
+    textarea:     'bg-white text-gray-900 border-gray-300 focus:border-blue-400 placeholder:text-gray-400',
+    preview:      'bg-white hover:bg-gray-50 text-gray-800 border border-gray-200',
+    aiBtn:        'text-gray-400 hover:text-gray-700',
+    checkbox:     'bg-gray-200 border-gray-400',
+    checkIcon:    'text-gray-700',
+    subtaskText:  'text-gray-800',
+    deleteBtn:    'hover:bg-gray-200 text-gray-400',
+    subtaskInput: 'bg-gray-50 text-gray-900 border-gray-300 focus:bg-white',
+    addInput:     'text-gray-800 placeholder:text-gray-400 focus:border-gray-300',
+    addIcon:      'text-gray-400',
+    addBorder:    'border-transparent focus:border-gray-300',
+    url:          'text-blue-600 hover:text-blue-700',
+    obsBtn:       'hover:bg-gray-100 active:bg-gray-100 text-gray-500 hover:text-gray-700',
+    noteTs:       'text-gray-400',
+  };
+
   const loadNote = (noteName) => {
     if (linkedNoteStates[noteName]) return; // already loaded or loading
     setLinkedNoteStates(prev => ({ ...prev, [noteName]: { text: '', lastModified: null, loading: true, error: null } }));
     onLoadWikiNote?.(noteName).then(result => {
       if (result === null) {
-        // Note not found in vault (or vault not configured) — show a clear message rather
-        // than an empty "create new note" textarea that would silently fail to save.
         setLinkedNoteStates(prev => ({ ...prev, [noteName]: { text: '', lastModified: null, loading: false, error: 'not_found' } }));
         return;
       }
@@ -130,27 +165,18 @@ const NotesSubtasksPanel = ({
   }, []);
 
   // Keep refs in sync
-  useEffect(() => {
-    localNotesRef.current = localNotes;
-  }, [localNotes]);
-
-  useEffect(() => {
-    taskNotesRef.current = task.notes || '';
-  }, [task.notes]);
-
+  useEffect(() => { localNotesRef.current = localNotes; }, [localNotes]);
+  useEffect(() => { taskNotesRef.current = task.notes || ''; }, [task.notes]);
   useEffect(() => {
     taskIdRef.current = task.id;
     isInboxRef.current = isInbox;
   }, [task.id, isInbox]);
-
-  useEffect(() => {
-    updateTaskNotesRef.current = updateTaskNotes;
-  }, [updateTaskNotes]);
+  useEffect(() => { updateTaskNotesRef.current = updateTaskNotes; }, [updateTaskNotes]);
 
   // Sync local notes with task notes when task changes (e.g., switching between tasks)
   useEffect(() => {
     setLocalNotes(task.notes || '');
-    setIsEditingNotes(!task.notes); // Edit mode when no content
+    setIsEditingNotes(!task.notes);
   }, [task.id]);
 
   // Save notes on unmount only (e.g., when ESC is pressed or panel closes)
@@ -162,29 +188,18 @@ const NotesSubtasksPanel = ({
     };
   }, []); // Empty deps = only runs on mount/unmount
 
-  const handleNotesChange = (e) => {
-    setLocalNotes(e.target.value);
-  };
+  const handleNotesChange = (e) => setLocalNotes(e.target.value);
 
   const handleNotesKeyDown = (e) => {
-    // SHIFT+ENTER switches to preview mode
     if (e.key === 'Enter' && e.shiftKey) {
       e.preventDefault();
-      // Save notes and switch to preview
-      if (localNotes !== (task.notes || '')) {
-        updateTaskNotes(task.id, localNotes, isInbox);
-      }
-      if (localNotes) {
-        setIsEditingNotes(false);
-      }
+      if (localNotes !== (task.notes || '')) updateTaskNotes(task.id, localNotes, isInbox);
+      if (localNotes) setIsEditingNotes(false);
     }
   };
 
   const handleNotesBlur = () => {
-    // Save notes on blur
-    if (localNotes !== (task.notes || '')) {
-      updateTaskNotes(task.id, localNotes, isInbox);
-    }
+    if (localNotes !== (task.notes || '')) updateTaskNotes(task.id, localNotes, isInbox);
   };
 
   const handleAddSubtask = (e) => {
@@ -211,11 +226,11 @@ const NotesSubtasksPanel = ({
   const urlOnlyNote = isOnlyUrl(localNotes);
   const noteUrl = urlOnlyNote ? localNotes.trim() : null;
   const noteMinH = compact ? 'min-h-[4.5rem]' : 'min-h-[12rem]';
-  const textareaClass = `w-full bg-white/10 text-white text-sm px-2 py-1.5 rounded border border-white/20 outline-none focus:bg-white/20 focus:border-white/40 placeholder:text-white/40 ${noteMinH} ${compact ? 'resize-none' : 'resize-y'}`;
+  const textareaClass = `w-full text-sm px-2 py-1.5 rounded border outline-none ${th.textarea} ${noteMinH} ${compact ? 'resize-none' : 'resize-y'}`;
 
   return (
     <div
-      className={`mt-2 p-3 rounded-lg ${darkMode ? 'bg-black/50' : 'bg-black/25'} text-white`}
+      className={`mt-2 p-3 rounded-lg ${th.panel}`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Notes section — replaced by linked vault note for Obsidian wikilink tasks */}
@@ -227,16 +242,16 @@ const NotesSubtasksPanel = ({
             const ts = formatNoteTimestamp(state.lastModified);
             return (
               <div key={noteName}>
-                <div className="text-xs font-semibold opacity-90 mb-1 flex items-center gap-1.5">
+                <div className={`text-xs font-semibold mb-1 flex items-center gap-1.5 ${th.label}`}>
                   <BookOpen size={11} />
                   <span className="flex-1">{noteName}</span>
-                  {ts && <span className="opacity-40 font-normal">{ts}</span>}
+                  {ts && <span className={`font-normal ${th.noteTs}`}>{ts}</span>}
                   {onOpenInObsidian && (
                     <button
                       type="button"
                       onClick={() => onOpenInObsidian(noteName)}
                       title={`Open "${noteName}" in Obsidian`}
-                      className="flex items-center gap-1 opacity-70 hover:opacity-100 active:opacity-100 transition-opacity px-1 py-0.5 rounded hover:bg-white/10 active:bg-white/10"
+                      className={`flex items-center gap-1 transition-opacity px-1 py-0.5 rounded ${th.obsBtn}`}
                     >
                       <ExternalLink size={12} />
                       <span className="text-xs">Open in Obsidian</span>
@@ -244,12 +259,12 @@ const NotesSubtasksPanel = ({
                   )}
                 </div>
                 {state.loading ? (
-                  <div className={`flex items-center gap-1.5 py-2 opacity-60 text-xs ${noteMinH}`}>
+                  <div className={`flex items-center gap-1.5 py-2 text-xs opacity-60 ${noteMinH} ${th.label}`}>
                     <Loader size={12} className="animate-spin" />
                     Loading…
                   </div>
                 ) : state.error ? (
-                  <div className={`text-xs opacity-60 italic ${noteMinH}`}>
+                  <div className={`text-xs italic opacity-60 ${noteMinH} ${th.label}`}>
                     {state.error === 'not_found'
                       ? 'Note not found in vault — check that your vault is configured and the note exists.'
                       : `Could not load note: ${state.error}`}
@@ -288,9 +303,9 @@ const NotesSubtasksPanel = ({
                 ) : (
                   <div
                     onClick={() => setLinkedNoteEditing(prev => ({ ...prev, [noteName]: true }))}
-                    className={`text-sm cursor-text p-2 rounded bg-white/10 hover:bg-white/15 ${noteMinH}`}
+                    className={`text-sm cursor-text p-2 rounded ${th.preview} ${noteMinH}`}
                   >
-                    {renderNoteContent(state.text, handleContentWikilinkClick)}
+                    {renderNoteContent(state.text, handleContentWikilinkClick, darkMode)}
                   </div>
                 )}
               </div>
@@ -299,7 +314,7 @@ const NotesSubtasksPanel = ({
         </div>
       ) : (
         <div className="mb-3">
-          <div className="text-xs font-semibold opacity-90 mb-1">Notes</div>
+          <div className={`text-xs font-semibold mb-1 ${th.label}`}>Notes</div>
           {isEditingNotes ? (
             <textarea
               value={localNotes}
@@ -313,14 +328,14 @@ const NotesSubtasksPanel = ({
           ) : (
             <div
               onClick={() => setIsEditingNotes(true)}
-              className={`text-sm whitespace-pre-wrap cursor-text p-2 rounded bg-white/10 hover:bg-white/15 ${noteMinH}`}
+              className={`text-sm whitespace-pre-wrap cursor-text p-2 rounded ${th.preview} ${noteMinH}`}
             >
               {urlOnlyNote ? (
                 <a
                   href={noteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-blue-300 hover:text-blue-200 font-medium break-all"
+                  className={`inline-flex items-center gap-2 font-medium break-all ${th.url}`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink size={14} className="flex-shrink-0" />
@@ -336,7 +351,7 @@ const NotesSubtasksPanel = ({
 
       {/* Subtasks section */}
       <div>
-        <div className="text-xs font-semibold opacity-90 mb-1 flex items-center gap-1.5">
+        <div className={`text-xs font-semibold mb-1 flex items-center gap-1.5 ${th.label}`}>
           <span>Subtasks {task.subtasks?.length > 0 && `(${task.subtasks.filter(st => st.completed).length}/${task.subtasks.length})`}</span>
           {aiConfig?.enabled && aiConfig.features?.aiSubtasks && onGenerateSubtasks && (
             <button
@@ -344,7 +359,7 @@ const NotesSubtasksPanel = ({
               onClick={() => onGenerateSubtasks(task.id, task.title, task.notes, isInbox)}
               disabled={isGeneratingSubtasks}
               title="Generate subtasks with AI"
-              className="flex items-center gap-1 text-white/60 hover:text-white/90 transition-colors disabled:opacity-40"
+              className={`flex items-center gap-1 transition-colors disabled:opacity-40 ${th.aiBtn}`}
             >
               {isGeneratingSubtasks
                 ? <Loader size={11} className="animate-spin" />
@@ -358,15 +373,12 @@ const NotesSubtasksPanel = ({
         {task.subtasks?.length > 0 && (
           <div className="space-y-1 mb-2">
             {task.subtasks.map((subtask) => (
-              <div
-                key={subtask.id}
-                className="flex items-center gap-2 group"
-              >
+              <div key={subtask.id} className="flex items-center gap-2 group">
                 <button
                   onClick={() => toggleSubtask(task.id, subtask.id, isInbox)}
-                  className={`rounded flex-shrink-0 ${subtask.completed ? 'bg-white/40' : 'bg-white/20'} border-2 border-white w-4 h-4 flex items-center justify-center hover:bg-white/30 transition-colors`}
+                  className={`rounded flex-shrink-0 border-2 w-4 h-4 flex items-center justify-center transition-colors ${th.checkbox} ${subtask.completed ? 'opacity-60' : ''}`}
                 >
-                  {subtask.completed && <Check size={10} strokeWidth={3} />}
+                  {subtask.completed && <Check size={10} strokeWidth={3} className={th.checkIcon} />}
                 </button>
                 {editingSubtaskId === subtask.id ? (
                   <input
@@ -376,17 +388,14 @@ const NotesSubtasksPanel = ({
                     onBlur={saveSubtaskEdit}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') saveSubtaskEdit();
-                      if (e.key === 'Escape') {
-                        setEditingSubtaskId(null);
-                        setEditingSubtaskText('');
-                      }
+                      if (e.key === 'Escape') { setEditingSubtaskId(null); setEditingSubtaskText(''); }
                     }}
                     autoFocus
-                    className="flex-1 bg-white/20 text-white text-sm px-1 py-0.5 rounded border border-white/30 outline-none focus:bg-white/30"
+                    className={`flex-1 text-sm px-1 py-0.5 rounded border outline-none ${th.subtaskInput}`}
                   />
                 ) : (
                   <span
-                    className={`flex-1 text-sm ${subtask.completed ? 'line-through opacity-60' : ''} cursor-text`}
+                    className={`flex-1 text-sm ${subtask.completed ? 'line-through opacity-50' : ''} cursor-text ${th.subtaskText}`}
                     onDoubleClick={() => startEditingSubtask(subtask)}
                   >
                     {subtask.title}
@@ -399,7 +408,7 @@ const NotesSubtasksPanel = ({
                 )}
                 <button
                   onClick={() => deleteSubtask(task.id, subtask.id, isInbox)}
-                  className="md:opacity-0 md:group-hover:opacity-100 opacity-60 hover:bg-white/20 rounded p-0.5 transition-opacity"
+                  className={`md:opacity-0 md:group-hover:opacity-100 opacity-60 rounded p-0.5 transition-opacity ${th.deleteBtn}`}
                   title="Delete subtask"
                 >
                   <X size={12} />
@@ -411,13 +420,13 @@ const NotesSubtasksPanel = ({
 
         {/* Add subtask input */}
         <form onSubmit={handleAddSubtask} className="flex items-center gap-2">
-          <Plus size={14} className="opacity-50" />
+          <Plus size={14} className={th.addIcon} />
           <input
             type="text"
             value={localSubtaskText}
             onChange={(e) => setLocalSubtaskText(e.target.value)}
             placeholder="Add subtask..."
-            className="flex-1 bg-transparent text-white text-sm px-1 py-0.5 outline-none placeholder:text-white/40 border-b border-transparent focus:border-white/30"
+            className={`flex-1 bg-transparent text-sm px-1 py-0.5 outline-none border-b ${th.addInput} ${th.addBorder}`}
           />
         </form>
       </div>

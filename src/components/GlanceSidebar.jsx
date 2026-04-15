@@ -1040,7 +1040,8 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
 
   {/* Today's hyperGLANCE sessions (scheduled today, not yet started/overdue) */}
   {goalsProjectsEnabled && (() => {
-    const todayHG = getTodayHGInstances(projects);
+    const nowMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    const todayHG = getTodayHGInstances(projects, nowMinutes);
     if (todayHG.length === 0) return null;
     return (
       <div className={isDesktop ? `rounded-lg border ${borderClass} p-3` : `mt-3 pt-3 border-t ${borderClass}`}>
@@ -1078,7 +1079,8 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
 
   {/* Overdue HyperGLANCE projects */}
   {goalsProjectsEnabled && (() => {
-    const overdue = getOverdueHGInstances(projects);
+    const nowMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    const overdue = getOverdueHGInstances(projects, nowMinutes);
     if (overdue.length === 0) return null;
     return (
       <div className={isDesktop ? `rounded-lg border ${borderClass} p-3` : `mt-3 pt-3 border-t ${borderClass}`}>

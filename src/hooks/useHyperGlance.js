@@ -33,7 +33,7 @@ export const HG_COLORS = [
  * Returns null if the project has no hyperglance config, is not enabled,
  * or has no scheduled days.
  */
-export function getActiveHGInstance(project) {
+export function getActiveHGInstance(project, nowMinutes) {
   const hg = project.hyperglance;
   if (!hg?.enabled) return null;
 
@@ -47,6 +47,20 @@ export function getActiveHGInstance(project) {
   const completedDates = new Set((hg.completions || []).map(c => c.date));
   const skippedDates = new Set(hg.skippedDates || []);
 
+  // Returns true if a date+session is overdue, accounting for same-day time if nowMinutes provided
+  const isSessionOverdue = (ds) => {
+    if (ds < todayStr) return true;
+    if (ds === todayStr && nowMinutes !== undefined) {
+      const effectiveTime = hg.scheduledTimeOverrides?.[ds] || hg.scheduledTime;
+      if (effectiveTime) {
+        const [sh, sm] = effectiveTime.split(':').map(Number);
+        const duration = hg.scheduledDurationOverrides?.[ds] || hg.scheduledDuration || 60;
+        return (sh * 60 + sm) + duration <= nowMinutes;
+      }
+    }
+    return false;
+  };
+
   if (!hg.isRecurring) {
     if (!hg.scheduledDate) return null;
     if (completedDates.has(hg.scheduledDate)) return null;
@@ -56,7 +70,7 @@ export function getActiveHGInstance(project) {
     return {
       projectId: project.id,
       date: hg.scheduledDate,
-      isOverdue: hg.scheduledDate < todayStr,
+      isOverdue: isSessionOverdue(hg.scheduledDate),
     };
   }
 
@@ -77,7 +91,7 @@ export function getActiveHGInstance(project) {
       return {
         projectId: project.id,
         date: ds,
-        isOverdue: ds < todayStr,
+        isOverdue: isSessionOverdue(ds),
       };
     }
   }
@@ -129,10 +143,10 @@ export function isHGSessionReachable(instance, hgConfig, currentTime) {
 /**
  * Returns all overdue hyperGLANCE instances (missed sessions from past dates).
  */
-export function getOverdueHGInstances(projects) {
+export function getOverdueHGInstances(projects, nowMinutes) {
   return projects
     .filter(p => p.hyperglance?.enabled)
-    .map(p => ({ project: p, instance: getActiveHGInstance(p) }))
+    .map(p => ({ project: p, instance: getActiveHGInstance(p, nowMinutes) }))
     .filter(({ instance }) => instance?.isOverdue);
 }
 
@@ -140,12 +154,12 @@ export function getOverdueHGInstances(projects) {
  * Returns hyperGLANCE instances scheduled for today that are not yet overdue.
  * Used to surface upcoming sessions in the GLANCE panel alongside tasks.
  */
-export function getTodayHGInstances(projects) {
+export function getTodayHGInstances(projects, nowMinutes) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = dateToString(today);
   return projects
     .filter(p => p.hyperglance?.enabled)
-    .map(p => ({ project: p, instance: getActiveHGInstance(p) }))
+    .map(p => ({ project: p, instance: getActiveHGInstance(p, nowMinutes) }))
     .filter(({ instance }) => instance && instance.date === todayStr && !instance.isOverdue);
 }

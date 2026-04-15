@@ -68,6 +68,7 @@ import useCloudSync from './hooks/useCloudSync.js';
 import useCalendarSync from './hooks/useCalendarSync.js';
 import useBackup from './hooks/useBackup.js';
 import useGTDFrames from './hooks/useGTDFrames.js';
+import { getGlanceHGInstances } from './hooks/useHyperGlance.js';
 import useVoiceAI from './hooks/useVoiceAI.js';
 import useNavigation from './hooks/useNavigation.js';
 import useStats from './hooks/useStats.js';
@@ -6211,6 +6212,24 @@ const DayPlanner = () => {
       };
     }
 
+    // ── hyperGLANCE sessions (today + overdue) ────────────────────────────
+    const hyperGlanceItems = goalsProjectsEnabled
+      ? getGlanceHGInstances(projects, nowMinW).map(({ project, instance }) => {
+          const hg = project.hyperglance;
+          const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
+          const duration = hg.scheduledDurationOverrides?.[instance.date] || hg.scheduledDuration || 60;
+          return {
+            id: project.id,
+            title: project.title,
+            colorHex: hg.color || '#4f46e5',
+            startTime: effectiveTime,
+            duration,
+            isOverdue: instance.isOverdue,
+            date: instance.date,
+          };
+        })
+      : [];
+
     const snapshot = {
       date: todayStr,
       dateLabel: today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
@@ -6226,6 +6245,7 @@ const DayPlanner = () => {
       deadlines: deadlineItems,
       sections,
       routines: routineItems,
+      hyperGlance: hyperGlanceItems,
       glanceAhead: glanceAheadData,
       nextTask: nextTaskItem,
       updatedAt: Date.now(),

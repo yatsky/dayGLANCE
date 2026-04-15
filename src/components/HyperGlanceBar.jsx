@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import * as Icons from 'lucide-react';
 import { Pencil, Zap } from 'lucide-react';
@@ -11,11 +11,12 @@ import { isHGSessionReachable } from '../hooks/useHyperGlance.js';
  * timeline day column. When the session is completed it shrinks to a small pill.
  */
 const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
-  const { minutesToPosition, currentTime, use24HourClock, tasks, unscheduledTasks } = useDayPlannerCtx();
-  const { enterHyperGlanceMode, setHgContextMenu, setPendingEditProjectId } = useFeaturesCtx();
+  const { minutesToPosition, currentTime, use24HourClock, tasks, unscheduledTasks, getHourHeight, playUISound } = useDayPlannerCtx();
+  const { enterHyperGlanceMode, setHgContextMenu, setPendingEditProjectId, updateProject } = useFeaturesCtx();
 
   const [showStats, setShowStats] = useState(false);
   const [statsPos, setStatsPos] = useState(null);
+  const hgResizingRef = useRef(false);
 
   const hg = project.hyperglance;
   const effectiveTime = hg.scheduledTimeOverrides?.[date] || hg.scheduledTime || '0:0';
@@ -34,6 +35,53 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
   const barColor = hg.color || '#4f46e5';
   const IconComp = Icons[hg.icon] || Icons.Sparkles;
   const canEnter = !isCompleted && isHGSessionReachable({ date, isOverdue: false }, hg, currentTime);
+
+  const handleResizeStart = (edge, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const origStartMinutes = startMinutes;
+    const origDuration = durationMin;
+    const startY = e.clientY;
+
+    const handleMouseMove = (moveEvent) => {
+      hgResizingRef.current = true;
+      const hourHeight = getHourHeight();
+      const deltaMinutes = Math.round(((moveEvent.clientY - startY) / hourHeight) * 60 / 15) * 15;
+      if (edge === 'top') {
+        const newStartMinutes = Math.max(0, Math.min(origStartMinutes + origDuration - 15, origStartMinutes + deltaMinutes));
+        const newDuration = origStartMinutes + origDuration - newStartMinutes;
+        const newH = Math.floor(newStartMinutes / 60);
+        const newM = newStartMinutes % 60;
+        updateProject(project.id, {
+          hyperglance: {
+            ...hg,
+            scheduledTimeOverrides: { ...(hg.scheduledTimeOverrides || {}), [date]: `${newH}:${newM}` },
+            scheduledDurationOverrides: { ...(hg.scheduledDurationOverrides || {}), [date]: newDuration },
+          },
+        });
+      } else {
+        const newDuration = Math.max(15, Math.min(1440 - origStartMinutes, origDuration + deltaMinutes));
+        updateProject(project.id, {
+          hyperglance: {
+            ...hg,
+            scheduledDurationOverrides: { ...(hg.scheduledDurationOverrides || {}), [date]: newDuration },
+          },
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      if (hgResizingRef.current) {
+        playUISound('tick');
+        setTimeout(() => { hgResizingRef.current = false; }, 0);
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   const handleContextMenu = (e) => {
     e.preventDefault();
@@ -162,9 +210,19 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
           borderBottom: `1px solid ${barColor}30`,
         }}
       >
+        {/* Resize handles */}
+        <div
+          className="absolute top-0 left-0 right-0 h-2 cursor-n-resize z-10"
+          onMouseDown={(e) => handleResizeStart('top', e)}
+        />
+        <div
+          className="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize z-10"
+          onMouseDown={(e) => handleResizeStart('bottom', e)}
+        />
+
         {/* Edit button — top-right corner */}
         <button
-          onClick={(e) => { e.stopPropagation(); setPendingEditProjectId(project.id); }}
+          onClick={(e) => { e.stopPropagation(); if (hgResizingRef.current) return; setPendingEditProjectId(project.id); }}
           className="absolute top-0.5 right-0.5 p-0.5 rounded opacity-40 hover:opacity-90 transition-opacity pointer-events-auto z-10"
           title="Edit project"
         >

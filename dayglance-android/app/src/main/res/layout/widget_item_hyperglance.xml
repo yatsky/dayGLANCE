@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget list item: a hyperGLANCE session (today's or overdue).
+
+  Structure:
+    [project color bar 3dp] [Project Title — flex]      [OVERDUE badge (amber, if overdue)]
+                            [start – end time range]
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/hg_item_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp"
+    android:paddingStart="0dp"
+    android:paddingEnd="0dp">
+
+    <!-- Project color bar — must be TextView, not View; <View> is not in the RemoteViews supported subset -->
+    <TextView
+        android:id="@+id/hg_color_bar"
+        android:layout_width="3dp"
+        android:layout_height="36dp"
+        android:background="#4f46e5"
+        android:layout_marginEnd="7dp"
+        android:text="" />
+
+    <!-- Text content: title + time range -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_hg_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Project title"
+            android:textColor="@color/widget_text_primary"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/tv_hg_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="9:00 – 10:00"
+            android:textColor="@color/widget_text_secondary"
+            android:textSize="11sp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- Overdue badge — amber, hidden when not overdue -->
+    <TextView
+        android:id="@+id/tv_hg_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="OVERDUE"
+        android:textColor="#f59e0b"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.06"
+        android:layout_marginStart="4dp"
+        android:visibility="gone" />
+
+</LinearLayout>

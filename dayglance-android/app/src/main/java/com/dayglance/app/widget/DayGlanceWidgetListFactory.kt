@@ -46,6 +46,7 @@ class DayGlanceWidgetListFactory(
         const val TYPE_EMPTY = 5
         const val TYPE_GLANCEAHEAD = 6
         const val TYPE_GOAL = 7
+        const val TYPE_HYPERGLANCE = 8
 
         private val TWELVE_HR = DateTimeFormatter.ofPattern("h:mm a")
         private val TWELVE_HR_SHORT = DateTimeFormatter.ofPattern("h:mm")
@@ -87,6 +88,13 @@ class DayGlanceWidgetListFactory(
             val totalTasks: Int,
             val completedTasks: Int,
         ) : AgendaItem(TYPE_GOAL)
+        class HyperGLANCE(
+            val title: String,
+            val colorHex: String,
+            val startTime: String,
+            val duration: Int,
+            val isOverdue: Boolean,
+        ) : AgendaItem(TYPE_HYPERGLANCE)
     }
 
     data class HabitData(
@@ -118,7 +126,7 @@ class DayGlanceWidgetListFactory(
     override fun onDestroy() { items.clear() }
 
     override fun getCount(): Int = items.size.coerceAtLeast(1)
-    override fun getViewTypeCount(): Int = 8
+    override fun getViewTypeCount(): Int = 9
     override fun getItemId(position: Int): Long = position.toLong()
     override fun hasStableIds(): Boolean = false
     override fun getLoadingView(): RemoteViews? = null
@@ -159,6 +167,22 @@ class DayGlanceWidgetListFactory(
                     progressPct = g.optInt("progressPct", 0).coerceIn(0, 100),
                     totalTasks = g.optInt("totalTasks", 0),
                     completedTasks = g.optInt("completedTasks", 0),
+                )
+            }
+        }
+
+        // 1.75 hyperGLANCE sessions — today's + overdue project sessions
+        val hyperGlanceArray = snapshot.optJSONArray("hyperGlance")
+        if (hyperGlanceArray != null && hyperGlanceArray.length() > 0) {
+            items += AgendaItem.Section("hyperGLANCE")
+            for (i in 0 until hyperGlanceArray.length()) {
+                val hg = hyperGlanceArray.optJSONObject(i) ?: continue
+                items += AgendaItem.HyperGLANCE(
+                    title = hg.optString("title", "Untitled"),
+                    colorHex = hg.optString("colorHex", "#4f46e5"),
+                    startTime = hg.optString("startTime", ""),
+                    duration = hg.optInt("duration", 60),
+                    isOverdue = hg.optBoolean("isOverdue", false),
                 )
             }
         }
@@ -420,6 +444,7 @@ class DayGlanceWidgetListFactory(
         is AgendaItem.RoutineGroup -> buildRoutineGroupView(item)
         is AgendaItem.GlanceAhead -> buildGlanceAheadView(item)
         is AgendaItem.Goal -> buildGoalView(item)
+        is AgendaItem.HyperGLANCE -> buildHyperGLANCEView(item)
         AgendaItem.Empty -> buildEmptyView()
     }
 
@@ -480,6 +505,41 @@ class DayGlanceWidgetListFactory(
         rv.boostTextSizeForOneUi(R.id.tv_goal_badge, 11f)
         rv.boostTextSizeForOneUi(R.id.tv_goal_stats, 11f)
         rv.setOnClickFillInIntent(R.id.goal_item_root, android.content.Intent())
+        return rv
+    }
+
+    private fun buildHyperGLANCEView(item: AgendaItem.HyperGLANCE): RemoteViews {
+        val rv = RemoteViews(context.packageName, R.layout.widget_item_hyperglance)
+        rv.setTextViewText(R.id.tv_hg_title, item.title)
+        val color = safeParseColor(item.colorHex, "#4f46e5")
+        rv.setInt(R.id.hg_color_bar, "setBackgroundColor", color)
+
+        // Time range
+        if (item.startTime.isNotEmpty() && item.duration > 0) {
+            try {
+                val parts = item.startTime.split(":").map { it.toInt() }
+                val startMin = parts[0] * 60 + (parts.getOrNull(1) ?: 0)
+                val endMin = startMin + item.duration
+                val s = LocalTime.of(parts[0], parts.getOrNull(1) ?: 0)
+                val e = LocalTime.of(endMin / 60 % 24, endMin % 60)
+                val fmt = if (use24Hour) TWENTY_FOUR_HR else TWELVE_HR
+                val fmtShort = if (use24Hour) TWENTY_FOUR_HR else TWELVE_HR_SHORT
+                rv.setTextViewText(R.id.tv_hg_time, "${s.format(fmtShort)} – ${e.format(fmt)}")
+                rv.setViewVisibility(R.id.tv_hg_time, View.VISIBLE)
+            } catch (_: Throwable) {
+                rv.setViewVisibility(R.id.tv_hg_time, View.GONE)
+            }
+        } else {
+            rv.setViewVisibility(R.id.tv_hg_time, View.GONE)
+        }
+
+        // Overdue badge
+        rv.setViewVisibility(R.id.tv_hg_badge, if (item.isOverdue) View.VISIBLE else View.GONE)
+
+        rv.boostTextSizeForOneUi(R.id.tv_hg_title, 13f)
+        rv.boostTextSizeForOneUi(R.id.tv_hg_time, 11f)
+        rv.boostTextSizeForOneUi(R.id.tv_hg_badge, 11f)
+        rv.setOnClickFillInIntent(R.id.hg_item_root, android.content.Intent())
         return rv
     }
 

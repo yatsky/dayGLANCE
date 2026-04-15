@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import * as Icons from 'lucide-react';
 import { Pencil, Zap } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
@@ -12,6 +12,9 @@ import { isHGSessionReachable } from '../hooks/useHyperGlance.js';
 const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
   const { minutesToPosition, currentTime, use24HourClock, tasks, unscheduledTasks } = useDayPlannerCtx();
   const { enterHyperGlanceMode, setHgContextMenu, setPendingEditProjectId } = useFeaturesCtx();
+
+  const [showStats, setShowStats] = useState(false);
+  const [statsPos, setStatsPos] = useState(null);
 
   const hg = project.hyperglance;
   const effectiveTime = hg.scheduledTimeOverrides?.[date] || hg.scheduledTime || '0:0';
@@ -56,20 +59,84 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
     : null;
 
   if (isCompleted) {
+    const completion = (hg.completions || []).find(c => c.date === date);
+    const completedAt = completion?.completedAt;
+    const completedTimeLabel = (() => {
+      if (!completedAt) return null;
+      const d = new Date(completedAt);
+      const h = d.getHours(), m = d.getMinutes();
+      if (use24HourClock) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      const ampm = h < 12 ? 'am' : 'pm';
+      return `${h12}:${String(m).padStart(2, '0')}${ampm}`;
+    })();
+
+    const allProjectTasks = [...(tasks || []), ...(unscheduledTasks || [])].filter(
+      t => t.projectId === project.id && !t.archived
+    );
+    const completedTaskCount = allProjectTasks.filter(t => t.completed).length;
+    const totalTaskCount = allProjectTasks.length + (hg.templateTasks?.length || 0);
+
     return (
-      <div
-        className="absolute pointer-events-auto"
-        style={{ top: `${top}px`, left: 2, right: 2, height: `${pillHeight}px`, zIndex: 6 }}
-        onContextMenu={handleContextMenu}
-      >
+      <>
         <div
-          className="h-full rounded-full flex items-center justify-center gap-1 opacity-60"
-          style={{ backgroundColor: barColor }}
+          className="absolute pointer-events-auto"
+          style={{ top: `${top}px`, left: 2, right: 2, height: `${pillHeight}px`, zIndex: 6 }}
+          onContextMenu={handleContextMenu}
         >
-          <IconComp size={14} style={{ color: 'white', flexShrink: 0 }} />
-          <span className="text-white text-sm font-semibold line-through truncate px-1">{project.title}</span>
+          <div
+            className="h-full rounded-full flex items-center gap-0.5 opacity-60 px-2 overflow-hidden"
+            style={{ backgroundColor: barColor }}
+          >
+            <IconComp size={12} style={{ color: 'white', flexShrink: 0 }} />
+            <span className="text-white text-xs font-semibold line-through truncate flex-1 min-w-0 ml-0.5">
+              {project.title}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = e.currentTarget.closest('.absolute')?.getBoundingClientRect();
+                setStatsPos(rect ? { x: rect.left, y: rect.top, width: rect.width } : null);
+                setShowStats(s => !s);
+              }}
+              className="flex-shrink-0 ml-0.5 pointer-events-auto opacity-80 hover:opacity-100"
+              title="View session stats"
+            >
+              <Zap size={10} style={{ color: 'white' }} />
+            </button>
+          </div>
         </div>
-      </div>
+        {showStats && statsPos && (
+          <>
+            <div className="fixed inset-0 z-[69]" onClick={() => setShowStats(false)} />
+            <div
+              className="fixed z-[70] rounded-xl shadow-2xl p-3 min-w-[170px]"
+              style={{
+                left: Math.min(statsPos.x, window.innerWidth - 190),
+                top: statsPos.y - 8,
+                transform: 'translateY(-100%)',
+                backgroundColor: '#18181b',
+                border: `1px solid ${barColor}50`,
+              }}
+            >
+              <div className="flex items-center gap-1.5 mb-2">
+                <IconComp size={14} style={{ color: barColor }} />
+                <span className="text-sm font-semibold" style={{ color: barColor }}>{project.title}</span>
+              </div>
+              {completedTimeLabel && (
+                <div className="text-xs text-gray-400 mb-1">
+                  Completed at <span className="text-white font-medium">{completedTimeLabel}</span>
+                </div>
+              )}
+              {totalTaskCount > 0 && (
+                <div className="text-xs text-gray-400">
+                  Tasks <span className="text-white font-medium">{completedTaskCount}/{totalTaskCount}</span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </>
     );
   }
 

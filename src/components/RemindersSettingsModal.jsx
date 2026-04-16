@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, BarChart3 } from 'lucide-react';
+import { BarChart3, Bell, Zap } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import ClockTimePicker from './ClockTimePicker.jsx';
@@ -227,6 +227,48 @@ const RemindersSettingsModal = () => {
                     >
                       {formatTime(reminderSettings.weeklyReview.time)}
                     </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* hyperGLANCE Sessions */}
+            <div className={`border-t ${borderClass} mt-4 pt-4`}>
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={16} className="text-indigo-500" />
+                <span className={`text-sm font-semibold ${textPrimary}`}>hyperGLANCE Sessions</span>
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer mb-3">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={reminderSettings.hyperGlance?.enabled !== false}
+                    onChange={(e) => setReminderSettings(prev => ({ ...prev, hyperGlance: { ...prev.hyperGlance, enabled: e.target.checked } }))}
+                    className="sr-only"
+                  />
+                  <div className={`w-10 h-6 rounded-full transition-colors ${reminderSettings.hyperGlance?.enabled !== false ? 'bg-blue-600' : darkMode ? 'bg-gray-600' : 'bg-stone-300'}`}>
+                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${reminderSettings.hyperGlance?.enabled !== false ? 'translate-x-5' : 'translate-x-1'}`} />
+                  </div>
+                </div>
+                <span className={`text-sm ${textPrimary}`}>Notify me for sessions</span>
+              </label>
+              {reminderSettings.hyperGlance?.enabled !== false && (
+                <div>
+                  <p className={`text-xs ${textSecondary} mb-1.5`}>Up next reminder</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[[0, 'Off'], [5, '5m before'], [10, '10m before'], [15, '15m before'], [30, '30m before']].map(([mins, label]) => (
+                      <button
+                        key={mins}
+                        onClick={() => setReminderSettings(prev => ({ ...prev, hyperGlance: { ...prev.hyperGlance, upNextMinutes: mins } }))}
+                        className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                          (reminderSettings.hyperGlance?.upNextMinutes ?? 10) === mins
+                            ? 'bg-blue-600 text-white'
+                            : `${darkMode ? 'bg-gray-700 text-gray-400' : 'bg-stone-200 text-stone-500'} ${hoverBg}`
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}

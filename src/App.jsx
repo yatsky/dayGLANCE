@@ -5253,6 +5253,24 @@ const DayPlanner = () => {
   }, [recurringTasks, visibleDates]);
   expandedRecurringTasksRef.current = expandedRecurringTasks;
 
+  // Build today's non-overdue HG sessions for the reminder engine.
+  // Only sessions with an explicit scheduled time are included (skips time-unset sessions).
+  const hgSessionsForReminders = React.useMemo(() => {
+    if (!goalsProjectsEnabled) return [];
+    const todayStr = dateToString(new Date());
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+    return getGlanceHGInstances(projects, nowMin)
+      .filter(({ instance }) => !instance.isOverdue && instance.date === todayStr)
+      .flatMap(({ project, instance }) => {
+        const hg = project.hyperglance;
+        const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
+        if (!effectiveTime || effectiveTime === '0:0') return [];
+        const [startH, startM] = effectiveTime.split(':').map(Number);
+        if (!Number.isFinite(startH) || !Number.isFinite(startM)) return [];
+        return [{ id: project.id, title: project.title, date: instance.date, startMinutes: startH * 60 + startM }];
+      });
+  }, [projects, goalsProjectsEnabled]);
+
   const {
     activeReminders, setActiveReminders,
     snoozeReminder,
@@ -5263,6 +5281,7 @@ const DayPlanner = () => {
     reminderSettings,
     tasks,
     expandedRecurringTasks,
+    hgSessions: hgSessionsForReminders,
     playUISound,
     pushUndo,
     setTasks,
@@ -6290,13 +6309,44 @@ const DayPlanner = () => {
     } catch (_) {}
 
     // ── Up Next lock screen / drawer notification ─────────────────────────
+    // Consider both the next scheduled task and the next HG session; show whichever is sooner.
     try {
-      if (nextTaskItem) {
+      // Find the soonest non-overdue HG session that hasn't ended yet
+      const nextHGItem = hyperGlanceItems
+        .filter(s => !s.isOverdue && s.startTime && s.startTime !== '0:0')
+        .map(s => { const [h, m] = s.startTime.split(':').map(Number); return { ...s, startMin: h * 60 + m }; })
+        .filter(s => nowMinW < s.startMin + s.duration)
+        .sort((a, b) => a.startMin - b.startMin)[0] || null;
+
+      // Pick whichever is sooner; HG wins on tie
+      const taskStartMin = nextTaskItem ? timeToMinutes(nextTaskItem.startTime) : Infinity;
+      const hgStartMin = nextHGItem ? nextHGItem.startMin : Infinity;
+      const showHG = nextHGItem && hgStartMin <= taskStartMin;
+
+      if (showHG) {
+        const endMin2 = nextHGItem.startMin + nextHGItem.duration;
+        let bodyText;
+        if (nowMinW < nextHGItem.startMin) {
+          const diff = nextHGItem.startMin - nowMinW;
+          bodyText = `${nextHGItem.title} · Starts in ${diff >= 60 ? `${Math.floor(diff / 60)}h${diff % 60 > 0 ? ` ${diff % 60}m` : ''}` : `${diff}m`}`;
+        } else {
+          const endH = Math.floor(endMin2 / 60) % 24;
+          const endM = (endMin2 % 60).toString().padStart(2, '0');
+          const endStr = use24HourClock
+            ? `${endH}:${endM}`
+            : `${endH > 12 ? endH - 12 : (endH || 12)}:${endM} ${endH >= 12 ? 'PM' : 'AM'}`;
+          bodyText = `${nextHGItem.title} · In progress · ends at ${endStr}`;
+        }
+        window.DayGlanceNative?.updateUpNextNotification?.(JSON.stringify({
+          title: 'hyperGLANCE',
+          bodyText,
+        }));
+      } else if (nextTaskItem) {
         const startMin2 = timeToMinutes(nextTaskItem.startTime);
         const endMin2 = startMin2 + nextTaskItem.duration;
         let bodyText;
-        if (nowMin < startMin2) {
-          const diff = startMin2 - nowMin;
+        if (nowMinW < startMin2) {
+          const diff = startMin2 - nowMinW;
           bodyText = diff >= 60
             ? `Starts in ${Math.floor(diff / 60)}h${diff % 60 > 0 ? ` ${diff % 60}m` : ''}`
             : `Starts in ${diff}m`;

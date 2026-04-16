@@ -225,9 +225,9 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
         style={{
           backgroundColor: hexToRgba(barColor, 0.09),
           borderLeft: `3px solid ${barColor}`,
-          borderTop: `1px solid ${barColor}30`,
-          borderRight: `1px solid ${barColor}30`,
-          borderBottom: `1px solid ${barColor}30`,
+          borderTop: `1px solid ${hexToRgba(barColor, 0.19)}`,
+          borderRight: `1px solid ${hexToRgba(barColor, 0.19)}`,
+          borderBottom: `1px solid ${hexToRgba(barColor, 0.19)}`,
         }}
       >
         {/* Resize handles */}

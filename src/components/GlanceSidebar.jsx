@@ -15,7 +15,7 @@ import GettingStartedChecklist from './GettingStartedChecklist.jsx';
 import FrameNudgeCard from './FrameNudgeCard.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
-import { getGlanceHGInstances } from '../hooks/useHyperGlance.js';
+import { getGlanceHGInstances, isHGSessionReachable } from '../hooks/useHyperGlance.js';
 
 const GlanceSidebar = ({ variant = 'desktop' }) => {
   const {
@@ -1052,6 +1052,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
             const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '0:0';
             const [sh, sm] = effectiveTime.split(':').map(Number);
             const barColor = hg.color || '#4f46e5';
+            const canEnter = isHGSessionReachable(instance, hg, currentTime);
             const timeLabel = (() => {
               if (!hg.scheduledTime && !hg.scheduledTimeOverrides?.[instance.date]) return '';
               if (use24HourClock) return effectiveTime;
@@ -1067,9 +1068,12 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
               >
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: barColor }}></div>
                 <span className={`text-sm font-medium min-w-0 truncate ${darkMode ? 'text-gray-200' : 'text-stone-800'}`}>{project.title}</span>
-                {instance.isOverdue && <span className="text-xs font-semibold text-amber-500 flex-shrink-0">{new Date(instance.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · Overdue</span>}
-                {timeLabel && <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-400' : 'text-stone-500'}`}>{timeLabel}</span>}
-                <Zap size={12} style={{ color: barColor, flexShrink: 0 }} />
+                {!canEnter && instance.isOverdue && <span className="text-xs font-semibold text-amber-500 flex-shrink-0">{new Date(instance.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · Overdue</span>}
+                {!canEnter && timeLabel && <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-400' : 'text-stone-500'}`}>{timeLabel}</span>}
+                {canEnter
+                  ? <span className="ml-auto flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white text-[9px] font-bold animate-pulse flex-shrink-0" style={{ backgroundColor: barColor }}><Zap size={9} />hyperGLANCE</span>
+                  : <Zap size={12} style={{ color: barColor, flexShrink: 0 }} />
+                }
               </button>
             );
           })}

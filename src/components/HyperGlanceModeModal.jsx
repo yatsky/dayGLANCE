@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { Check, CheckCircle, ChevronDown, ChevronUp, Pause, Play, Plus, SkipForward, Trophy, X, Zap } from 'lucide-react';
+import { Check, CheckCircle, ChevronDown, ChevronUp, Pause, Play, SkipForward, X, Zap } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';

@@ -337,7 +337,6 @@ export const ProjectForm = ({ initial, goals, defaultGoalId, onSave, onCancel, m
       scheduledDuration: Math.max(60, Math.round(hgDuration / 15) * 15),
       templateTasks: hgTemplateTasks,
       completions: initHG.completions || [],
-      activeSession: initHG.activeSession || null,
       createdAt: initHG.createdAt || new Date().toISOString(),
     } : null;
     onSave({ title: title.trim(), description: description.trim(), goalId: goalId || undefined, status, hyperglance });

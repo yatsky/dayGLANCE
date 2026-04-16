@@ -6113,6 +6113,7 @@ const DayPlanner = () => {
       name: r.name,
       startTime: r.startTime || '',
       isAllDay: !r.startTime || r.isAllDay || false,
+      completed: !!routineCompletions[r.id],
     }));
 
     // ── Goals due today ───────────────────────────────────────────────────
@@ -6375,6 +6376,7 @@ const DayPlanner = () => {
     habitsEnabled,
     habitLogs,
     todayRoutines,
+    routineCompletions,
     tasks,
     unscheduledTasks,
     glanceAhead,

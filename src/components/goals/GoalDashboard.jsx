@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../../context/FeaturesContext.jsx';
-import { TASK_COLORS, TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
+import { TASK_COLORS, TAILWIND_TO_HEX, hexToRgba } from '../../utils/colorUtils.js';
 import { HG_ICON_GROUPS, HG_COLORS, HG_DAYS } from '../../hooks/useHyperGlance.js';
 import { calculateGoalProgress } from '../../utils/goalProgress.js';
 import { isProjectStalled } from '../../utils/projectProgress.js';
@@ -62,9 +62,7 @@ const sortByOrder = (projs) =>
 /** Returns a light background for a Tailwind bg-* class. */
 const toLightBg = (bgClass, dark) => {
   const hex = toHex(bgClass);
-  return dark
-    ? `${hex}22` // ~13% opacity
-    : `${hex}18`; // ~9% opacity
+  return dark ? hexToRgba(hex, 0.13) : hexToRgba(hex, 0.09);
 };
 
 // ─── Goal sorting helpers ─────────────────────────────────────────────────────
@@ -482,7 +480,7 @@ export const ProjectForm = ({ initial, goals, defaultGoalId, onSave, onCancel, m
                               ? 'ring-2'
                               : `${hoverBg} opacity-60 hover:opacity-100`
                           }`}
-                          style={hgIcon === iconName ? { ringColor: hgColor, backgroundColor: `${hgColor}20` } : {}}
+                          style={hgIcon === iconName ? { ringColor: hgColor, backgroundColor: hexToRgba(hgColor, 0.125) } : {}}
                           title={iconName}
                         >
                           <Ic size={15} style={{ color: hgIcon === iconName ? hgColor : undefined }} className={hgIcon === iconName ? '' : textSecondary} />

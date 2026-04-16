@@ -32,6 +32,17 @@ export const TAILWIND_TO_HEX = {
   'bg-lime-500': '#84cc16', 'bg-fuchsia-500': '#d946ef',
 };
 
+/**
+ * Converts a 6-digit hex color + alpha to an rgba() string safe for Android WebView.
+ * Android WebView does not support 8-digit hex (#RRGGBBAA).
+ */
+export const hexToRgba = (hex, alpha) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+};
+
 /** Converts a task's .color field (Tailwind class or native hex) to a hex string. */
 export const taskColorToHex = (color, nativeCalendarColor) => {
   if (nativeCalendarColor) return nativeCalendarColor;

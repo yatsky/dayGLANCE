@@ -10,7 +10,7 @@ import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../../context/FeaturesContext.jsx';
 import { calculateProjectProgress, isProjectStalled } from '../../utils/projectProgress.js';
-import { TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
+import { TAILWIND_TO_HEX, hexToRgba } from '../../utils/colorUtils.js';
 import ProjectProgress from './ProjectProgress.jsx';
 import NotesSubtasksPanel from '../NotesSubtasksPanel.jsx';
 import { renderTitle, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, getLinkUrl, isObsidianNoteOnlyTask } from '../../utils/textFormatting.jsx';
@@ -359,7 +359,7 @@ const ProjectCard = forwardRef(({ project, onEditClick, compact, dragHandleProps
                 <button
                   onClick={() => enterHyperGlanceMode(project.id, instance.date)}
                   className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0${instance.isOverdue ? ' bg-orange-400/20 text-orange-400' : ''}`}
-                  style={instance.isOverdue ? {} : { backgroundColor: color + '25', color }}
+                  style={instance.isOverdue ? {} : { backgroundColor: hexToRgba(color, 0.15), color }}
                 >
                   <Zap size={9} />
                   {dateLabel}{timeStr}

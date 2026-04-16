@@ -6,6 +6,7 @@ import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import { extractWikilinks, stripWikilinks } from '../utils/taskUtils.js';
+import { hexToRgba } from '../utils/colorUtils.js';
 import { isNativeAndroid, nativeIsDndPermissionGranted, nativeRequestDndPermission } from '../native.js';
 
 const HyperGlanceModeModal = () => {
@@ -209,7 +210,7 @@ const HyperGlanceModeModal = () => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${barColor}30` }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: hexToRgba(barColor, 0.19) }}>
                 <IconComp size={24} style={{ color: barColor }} />
               </div>
               <div>
@@ -304,7 +305,7 @@ const HyperGlanceModeModal = () => {
     return (
       <div className="fixed inset-0 z-[200] bg-gray-950 flex flex-col items-center justify-center">
         <div className="w-full max-w-sm px-6 py-8 flex flex-col items-center gap-6">
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ backgroundColor: `${barColor}30` }}>
+          <div className="w-20 h-20 rounded-2xl flex items-center justify-center" style={{ backgroundColor: hexToRgba(barColor, 0.19) }}>
             <IconComp size={40} style={{ color: barColor }} />
           </div>
           <div className="text-center">
@@ -391,7 +392,7 @@ const HyperGlanceModeModal = () => {
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${barColor}30` }}>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: hexToRgba(barColor, 0.19) }}>
             <IconComp size={14} style={{ color: barColor }} />
           </div>
           <span className="text-white font-semibold text-sm truncate max-w-[160px]">{project.title}</span>

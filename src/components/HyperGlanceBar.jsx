@@ -5,6 +5,7 @@ import { Pencil, Zap } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { isHGSessionReachable } from '../hooks/useHyperGlance.js';
+import { hexToRgba } from '../utils/colorUtils.js';
 
 /**
  * Renders a single hyperGLANCE project bar inside the left half of a
@@ -144,7 +145,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
             top: (statsPos.y + 6 + 130 > window.innerHeight)
               ? Math.max(statsPos.y - 130 - 6, 8)
               : statsPos.y + 6,
-            borderColor: `${barColor}50`,
+            borderColor: hexToRgba(barColor, 0.31),
           }}
         >
           <div className="flex items-center gap-1.5 mb-2">
@@ -222,7 +223,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
       <div
         className="h-full rounded-md flex flex-col items-center overflow-hidden select-none relative"
         style={{
-          backgroundColor: `${barColor}18`,
+          backgroundColor: hexToRgba(barColor, 0.09),
           borderLeft: `3px solid ${barColor}`,
           borderTop: `1px solid ${barColor}30`,
           borderRight: `1px solid ${barColor}30`,

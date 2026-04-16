@@ -3036,22 +3036,22 @@ const DayPlanner = () => {
 
   const completeHyperGlanceSession = () => {
     if (!hyperGlanceProjectId || !hyperGlanceSessionDate) return;
-    setProjects(prev => prev.map(p => {
-      if (p.id !== hyperGlanceProjectId) return p;
-      const hg = p.hyperglance || {};
-      const completions = hg.completions || [];
-      if (completions.some(c => c.date === hyperGlanceSessionDate)) return p;
-      return {
-        ...p,
-        hyperglance: {
-          ...hg,
-          completions: [
-            ...completions,
-            { date: hyperGlanceSessionDate, completedAt: new Date().toISOString() },
-          ],
-        },
-      };
-    }));
+    const project = projects.find(p => p.id === hyperGlanceProjectId);
+    if (!project) return;
+    const hg = project.hyperglance || {};
+    const completions = hg.completions || [];
+    if (completions.some(c => c.date === hyperGlanceSessionDate)) return;
+    // Use updateProject so updatedAt is bumped — cloud sync uses updatedAt for
+    // conflict resolution, so a raw setProjects would let stale remote copies win.
+    updateProject(hyperGlanceProjectId, {
+      hyperglance: {
+        ...hg,
+        completions: [
+          ...completions,
+          { date: hyperGlanceSessionDate, completedAt: new Date().toISOString() },
+        ],
+      },
+    });
     setHgTimerRunning(false);
     setHgExitConfirm(false);
     // Don't close the modal here — the modal handles showing the summary screen
@@ -3074,32 +3074,31 @@ const DayPlanner = () => {
   const saveHGAdjust = () => {
     if (!hgAdjustModal) return;
     const { projectId, date, time, duration } = hgAdjustModal;
-    setProjects(prev => prev.map(p => {
-      if (p.id !== projectId) return p;
-      const hg = p.hyperglance || {};
-      return {
-        ...p,
-        hyperglance: {
-          ...hg,
-          scheduledTimeOverrides: { ...(hg.scheduledTimeOverrides || {}), [date]: time },
-          scheduledDurationOverrides: { ...(hg.scheduledDurationOverrides || {}), [date]: duration },
-        },
-      };
-    }));
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const hg = project.hyperglance || {};
+    updateProject(projectId, {
+      hyperglance: {
+        ...hg,
+        scheduledTimeOverrides: { ...(hg.scheduledTimeOverrides || {}), [date]: time },
+        scheduledDurationOverrides: { ...(hg.scheduledDurationOverrides || {}), [date]: duration },
+      },
+    });
     setHgAdjustModal(null);
   };
 
   const cancelHGSession = (projectId, date) => {
-    setProjects(prev => prev.map(p => {
-      if (p.id !== projectId) return p;
-      const hg = p.hyperglance || {};
-      if (!hg.isRecurring) {
-        return { ...p, hyperglance: { ...hg, enabled: false } };
-      }
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const hg = project.hyperglance || {};
+    if (!hg.isRecurring) {
+      updateProject(projectId, { hyperglance: { ...hg, enabled: false } });
+    } else {
       const skipped = hg.skippedDates || [];
-      if (skipped.includes(date)) return p;
-      return { ...p, hyperglance: { ...hg, skippedDates: [...skipped, date] } };
-    }));
+      if (!skipped.includes(date)) {
+        updateProject(projectId, { hyperglance: { ...hg, skippedDates: [...skipped, date] } });
+      }
+    }
     setHgContextMenu(null);
   };
 

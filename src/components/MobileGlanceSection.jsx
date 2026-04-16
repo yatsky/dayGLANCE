@@ -1076,8 +1076,8 @@ const MobileGlanceSection = () => {
               } else {
                 const [h, m] = r.startTime.split(':').map(Number);
                 const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                const ampm = h < 12 ? 'a' : 'p';
-                timeLabel = m === 0 ? `${hour12}${ampm}` : `${hour12}:${String(m).padStart(2, '0')}${ampm}`;
+                const ampm = h < 12 ? 'AM' : 'PM';
+                timeLabel = `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
               }
             }
             return (
@@ -1114,23 +1114,22 @@ const MobileGlanceSection = () => {
               if (!hg.scheduledTime && !hg.scheduledTimeOverrides?.[instance.date]) return '';
               if (use24HourClock) return effectiveTime;
               const h12 = sh === 0 ? 12 : sh > 12 ? sh - 12 : sh;
-              const ampm = sh < 12 ? 'a' : 'p';
-              return sm === 0 ? `${h12}${ampm}` : `${h12}:${String(sm).padStart(2, '0')}${ampm}`;
+              const ampm = sh < 12 ? 'AM' : 'PM';
+              return `${h12}:${String(sm).padStart(2, '0')} ${ampm}`;
             })();
+            const isFuture = !canEnter && !instance.isOverdue;
             return (
               <button
                 key={project.id}
-                onClick={() => enterHyperGlanceMode(project.id, instance.date)}
+                onClick={() => isFuture ? setMobileActiveTab('goals') : enterHyperGlanceMode(project.id, instance.date)}
                 className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left active:opacity-70 transition-opacity ${darkMode ? 'bg-white/5' : 'bg-stone-50'}`}
               >
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: barColor }}></div>
                 <span className={`text-sm font-medium min-w-0 truncate ${darkMode ? 'text-gray-200' : 'text-stone-800'}`}>{project.title}</span>
-                {!canEnter && instance.isOverdue && <span className="text-xs font-semibold text-amber-500 flex-shrink-0">{new Date(instance.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · Overdue</span>}
-                {!canEnter && timeLabel && <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-400' : 'text-stone-500'}`}>{timeLabel}</span>}
-                {canEnter
-                  ? <span className="ml-auto flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white text-[9px] font-bold animate-pulse flex-shrink-0" style={{ backgroundColor: barColor }}><Zap size={9} />hyperGLANCE</span>
-                  : <Zap size={12} style={{ color: barColor, flexShrink: 0 }} />
-                }
+                {canEnter && <span className="text-xs font-medium text-green-500 flex-shrink-0">In progress</span>}
+                {instance.isOverdue && !canEnter && <span className="text-xs font-semibold text-amber-500 flex-shrink-0">{new Date(instance.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · Overdue</span>}
+                {isFuture && timeLabel && <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-400' : 'text-stone-500'}`}>{timeLabel}</span>}
+                {!isFuture && <span className="ml-auto flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white text-[9px] font-bold animate-pulse flex-shrink-0" style={{ backgroundColor: barColor }}><Zap size={9} />hyperGLANCE</span>}
               </button>
             );
           })}

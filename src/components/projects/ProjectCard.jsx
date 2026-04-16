@@ -334,8 +334,8 @@ const ProjectCard = forwardRef(({ project, onEditClick, compact, dragHandleProps
                   timeStr = ` ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                 } else {
                   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                  const ampm = h < 12 ? 'a' : 'p';
-                  timeStr = ` ${h12}${m === 0 ? '' : ':' + String(m).padStart(2, '0')}${ampm}`;
+                  const ampm = h < 12 ? 'AM' : 'PM';
+                  timeStr = ` ${h12}:${String(m).padStart(2, '0')} ${ampm}`;
                 }
               }
               let dateLabel;

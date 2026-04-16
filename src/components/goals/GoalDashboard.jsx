@@ -588,8 +588,8 @@ export const ProjectForm = ({ initial, goals, defaultGoalId, onSave, onCancel, m
                     const [h, m] = (hgScheduledTime || '09:00').split(':').map(Number);
                     if (use24HourClock) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                     const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                    const ampm = h < 12 ? 'a' : 'p';
-                    return m === 0 ? `${h12}${ampm}` : `${h12}:${String(m).padStart(2, '0')}${ampm}`;
+                    const ampm = h < 12 ? 'AM' : 'PM';
+                    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
                   })()}
                 </button>
                 {showHgTimePicker && (

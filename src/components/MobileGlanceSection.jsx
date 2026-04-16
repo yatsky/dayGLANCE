@@ -1056,15 +1056,11 @@ const MobileGlanceSection = () => {
       );
     }
     return (
-      <div className={`relative mt-3 pt-3 border-t ${borderClass}`}>
-        <button
-          onClick={openRoutinesSettings}
-          className={`absolute -bottom-0.5 -right-0.5 p-1 rounded ${hoverBg} ${darkMode ? 'text-gray-700' : 'text-stone-300'} transition-colors z-10`}
-          title="Manage routines"
-        >
-          <Settings size={11} />
-        </button>
-        <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>Routines</div>
+      <div className={`mt-3 pt-3 border-t ${borderClass}`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className={`text-xs font-semibold uppercase tracking-wide ${textSecondary}`}>Routines</div>
+          <button onClick={openRoutinesSettings} className="text-xs text-teal-500 font-medium active:opacity-70 transition-opacity">+ Add</button>
+        </div>
         <div className="flex flex-wrap gap-1.5">
           {[...visibleRoutines].sort((a, b) => {
             if (a.isAllDay && !b.isAllDay) return -1;

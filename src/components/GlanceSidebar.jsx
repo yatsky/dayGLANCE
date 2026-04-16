@@ -1153,15 +1153,11 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
       );
     }
     return (
-      <div className={`relative ${isDesktop ? `rounded-lg border ${borderClass} p-3` : `mt-3 pt-3 border-t ${borderClass}`}`}>
-        <button
-          onClick={() => openRoutinesDashboard()}
-          className={`absolute -bottom-0.5 -right-0.5 p-1 rounded ${hoverBg} ${darkMode ? 'text-gray-700' : 'text-stone-300'} transition-colors z-10`}
-          title="Manage routines"
-        >
-          <Settings size={11} />
-        </button>
-        <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>Routines</div>
+      <div className={`${isDesktop ? `rounded-lg border ${borderClass} p-3` : `mt-3 pt-3 border-t ${borderClass}`}`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className={`text-xs font-semibold uppercase tracking-wide ${textSecondary}`}>Routines</div>
+          <button onClick={() => openRoutinesDashboard()} className="text-xs text-teal-500 font-medium hover:text-teal-400 transition-colors">+ Add</button>
+        </div>
         <div className={`flex flex-wrap ${isDesktop ? "gap-1" : "gap-1.5"}`}>
           {[...visibleRoutines].sort((a, b) => {
             if (a.isAllDay && !b.isAllDay) return -1;

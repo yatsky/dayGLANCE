@@ -6294,6 +6294,24 @@ const DayPlanner = () => {
         })
       : [];
 
+    // Unified "Up Next" entry for the native background notification.
+    // The native UpNextNotificationUpdater reads this so it correctly handles
+    // HG sessions (not just tasks) when the WebView is backgrounded.
+    const nextHGForUpNext = hyperGlanceItems
+      .filter(s => !s.isOverdue && s.startTime && s.startTime !== '0:0')
+      .map(s => { const [h, m] = s.startTime.split(':').map(Number); return { ...s, startMin: h * 60 + m }; })
+      .filter(s => nowMinW < s.startMin + s.duration)
+      .sort((a, b) => a.startMin - b.startMin)[0] || null;
+    const nextUpNext = (() => {
+      const taskMin = nextTaskItem ? timeToMinutes(nextTaskItem.startTime) : Infinity;
+      const hgMin = nextHGForUpNext ? nextHGForUpNext.startMin : Infinity;
+      if (nextHGForUpNext && hgMin <= taskMin)
+        return { title: 'hyperGLANCE', startTime: nextHGForUpNext.startTime, duration: nextHGForUpNext.duration, bodyPrefix: `${nextHGForUpNext.title} · ` };
+      if (nextTaskItem)
+        return { title: nextTaskItem.title, startTime: nextTaskItem.startTime, duration: nextTaskItem.duration, bodyPrefix: '' };
+      return null;
+    })();
+
     const snapshot = {
       date: todayStr,
       dateLabel: today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
@@ -6312,6 +6330,7 @@ const DayPlanner = () => {
       hyperGlance: hyperGlanceItems,
       glanceAhead: glanceAheadData,
       nextTask: nextTaskItem,
+      nextUpNext,
       updatedAt: Date.now(),
     };
 

@@ -3034,7 +3034,7 @@ const DayPlanner = () => {
     nativeExitFocusMode();
   };
 
-  const completeHyperGlanceSession = () => {
+  const completeHyperGlanceSession = (stats = {}) => {
     if (!hyperGlanceProjectId || !hyperGlanceSessionDate) return;
     const project = projects.find(p => p.id === hyperGlanceProjectId);
     if (!project) return;
@@ -3048,7 +3048,7 @@ const DayPlanner = () => {
         ...hg,
         completions: [
           ...completions,
-          { date: hyperGlanceSessionDate, completedAt: new Date().toISOString() },
+          { date: hyperGlanceSessionDate, completedAt: new Date().toISOString(), ...stats },
         ],
       },
     });

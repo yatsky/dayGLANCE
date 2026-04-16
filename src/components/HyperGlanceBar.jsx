@@ -121,11 +121,12 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
       return `${h12}:${String(m).padStart(2, '0')}${ampm}`;
     })();
 
-    const allProjectTasks = [...(tasks || []), ...(unscheduledTasks || [])].filter(
-      t => t.projectId === project.id && !t.archived
-    );
-    const completedTaskCount = allProjectTasks.filter(t => t.completed).length;
-    const totalTaskCount = allProjectTasks.length;
+    const formatElapsed = (seconds) => {
+      if (!seconds) return null;
+      const h = Math.floor(seconds / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    };
 
     const statsCard = showStats && statsPos && ReactDOM.createPortal(
       <>
@@ -134,8 +135,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
           className="fixed z-[70] rounded-xl shadow-2xl p-3 min-w-[170px] bg-white dark:bg-gray-900 border"
           style={{
             left: Math.min(statsPos.x, window.innerWidth - 190),
-            top: statsPos.y - 8,
-            transform: 'translateY(-100%)',
+            top: Math.min(statsPos.y + 6, window.innerHeight - 120),
             borderColor: `${barColor}50`,
           }}
         >
@@ -148,9 +148,19 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
               Completed at <span className="font-medium text-gray-900 dark:text-white">{completedTimeLabel}</span>
             </div>
           )}
-          {totalTaskCount > 0 && (
+          {(completion?.tasksTotal > 0) && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Tasks <span className="font-medium text-gray-900 dark:text-white">{completion.tasksCompleted}/{completion.tasksTotal}</span>
+            </div>
+          )}
+          {completion?.elapsedSeconds > 0 && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Duration <span className="font-medium text-gray-900 dark:text-white">{formatElapsed(completion.elapsedSeconds)}</span>
+            </div>
+          )}
+          {completion?.cycleCount > 0 && (
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Tasks <span className="font-medium text-gray-900 dark:text-white">{completedTaskCount}/{totalTaskCount}</span>
+              Cycles <span className="font-medium text-gray-900 dark:text-white">{completion.cycleCount}</span>
             </div>
           )}
         </div>
@@ -177,7 +187,7 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
               onClick={(e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.closest('.absolute')?.getBoundingClientRect();
-                setStatsPos(rect ? { x: rect.left, y: rect.top, width: rect.width } : null);
+                setStatsPos(rect ? { x: rect.left, y: rect.bottom, width: rect.width } : null);
                 setShowStats(s => !s);
               }}
               className="flex-shrink-0 ml-0.5 pointer-events-auto opacity-80 hover:opacity-100"

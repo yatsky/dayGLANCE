@@ -107,8 +107,8 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
     if (!hg.scheduledTime) return '';
     if (use24HourClock) return hg.scheduledTime;
     const hour12 = startH === 0 ? 12 : startH > 12 ? startH - 12 : startH;
-    const ampm = startH < 12 ? 'a' : 'p';
-    return startM === 0 ? `${hour12}${ampm}` : `${hour12}:${String(startM).padStart(2, '0')}${ampm}`;
+    const ampm = startH < 12 ? 'AM' : 'PM';
+    return `${hour12}:${String(startM).padStart(2, '0')} ${ampm}`;
   })();
 
   const taskCountLabel = incompleteTaskCount > 0

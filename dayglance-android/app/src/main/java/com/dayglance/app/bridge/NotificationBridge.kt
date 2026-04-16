@@ -157,14 +157,18 @@ class NotificationBridge(private val context: Context) {
      */
     @JavascriptInterface
     fun syncReminders(remindersJson: String) {
-        // Build a map of currently scheduled alarms: id → triggerAtMillis
-        val oldMap = mutableMapOf<String, Long>()
+        // Build a map of currently scheduled alarms: id → (triggerAtMillis, body)
+        data class OldMeta(val triggerMs: Long, val body: String)
+        val oldMap = mutableMapOf<String, OldMeta>()
         dataStore.scheduledRemindersJson?.let { oldJson ->
             runCatching {
                 val arr = JSONArray(oldJson)
                 for (i in 0 until arr.length()) {
                     val obj = arr.getJSONObject(i)
-                    oldMap[obj.getString("id")] = obj.getLong("triggerAtMillis")
+                    oldMap[obj.getString("id")] = OldMeta(
+                        obj.getLong("triggerAtMillis"),
+                        obj.optString("body", ""),
+                    )
                 }
             }
         }
@@ -181,10 +185,12 @@ class NotificationBridge(private val context: Context) {
 
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        // Cancel alarms that were removed or whose trigger time changed
-        for ((id, oldTrigger) in oldMap) {
-            val newTrigger = newMap[id]?.optLong("triggerAtMillis", -1L) ?: -1L
-            if (newTrigger == oldTrigger) continue // unchanged — leave it alone
+        // Cancel alarms that were removed or whose trigger time or body changed
+        for ((id, oldMeta) in oldMap) {
+            val newObj = newMap[id]
+            val newTrigger = newObj?.optLong("triggerAtMillis", -1L) ?: -1L
+            val newBody = newObj?.optString("body", "") ?: ""
+            if (newTrigger == oldMeta.triggerMs && newBody == oldMeta.body) continue // unchanged
             val pi = PendingIntent.getBroadcast(
                 context, id.hashCode(),
                 Intent(context, ReminderReceiver::class.java),
@@ -200,8 +206,10 @@ class NotificationBridge(private val context: Context) {
         // Schedule only new or changed alarms
         runCatching {
             for ((id, newObj) in newMap) {
-                val oldTrigger = oldMap[id]
-                if (oldTrigger == newObj.getLong("triggerAtMillis")) continue // unchanged — skip
+                val oldMeta = oldMap[id]
+                val newTrigger = newObj.getLong("triggerAtMillis")
+                val newBody = newObj.optString("body", "")
+                if (oldMeta != null && oldMeta.triggerMs == newTrigger && oldMeta.body == newBody) continue // unchanged
                 scheduleFromJson(newObj)
             }
         }

@@ -4,17 +4,18 @@ import ConfirmDialog from '../ConfirmDialog.jsx';
 import {
   AlertTriangle, BookOpen, Calendar, CheckCircle2, CheckSquare, ChevronDown,
   Edit2, ExternalLink, FileText, GripVertical, LogIn, Plus,
-  Square, Target, Trash2, X,
+  Square, Trash2, X, Zap,
 } from 'lucide-react';
 import { useDayPlannerCtx } from '../../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../../context/FeaturesContext.jsx';
 import { calculateProjectProgress, isProjectStalled } from '../../utils/projectProgress.js';
-import { TAILWIND_TO_HEX } from '../../utils/colorUtils.js';
+import { TAILWIND_TO_HEX, hexToRgba } from '../../utils/colorUtils.js';
 import ProjectProgress from './ProjectProgress.jsx';
 import NotesSubtasksPanel from '../NotesSubtasksPanel.jsx';
 import { renderTitle, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, getLinkUrl, isObsidianNoteOnlyTask } from '../../utils/textFormatting.jsx';
 import { dateToString, extractWikilinks } from '../../utils/taskUtils.js';
+import { getActiveHGInstance } from '../../hooks/useHyperGlance.js';
 
 const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
 
@@ -26,16 +27,15 @@ const toHex = (bgClass) => TAILWIND_TO_HEX[bgClass] || '#3b82f6';
  *
  * Props:
  *   project      — the project object
- *   onFocusClick — called with the project when the "Project Focus" button is clicked
  *   onEditClick  — called to open the project edit form
  */
-const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, dragHandleProps, onMoveToClick }, ref) => {
+const ProjectCard = forwardRef(({ project, onEditClick, compact, dragHandleProps, onMoveToClick }, ref) => {
   const {
     tasks, setTasks,
     unscheduledTasks, setUnscheduledTasks, reorderUnscheduledTasks,
     openMobileEditTask,
-    getTodayStr,
-    darkMode, isMobile,
+    getTodayStr, currentTimeMinutes,
+    darkMode, isMobile, use24HourClock,
     cardBg, borderClass, textPrimary, textSecondary, hoverBg,
     expandedNotesTaskId, setExpandedNotesTaskId,
     updateTaskNotes, addSubtask, toggleSubtask, deleteSubtask, updateSubtaskTitle,
@@ -43,7 +43,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
     mobileActiveTab,
   } = useDayPlannerCtx();
   const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
-  const { goals, deleteProject, generateAISubtasks, aiSubtasksLoadingForTask, aiConfig, showGoalsDashboard } = useFeaturesCtx();
+  const { goals, deleteProject, generateAISubtasks, aiSubtasksLoadingForTask, aiConfig, showGoalsDashboard, enterHyperGlanceMode } = useFeaturesCtx();
 
   const isScheduled = (t) => !!tasks.find(s => s.id === t.id);
 
@@ -90,13 +90,10 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
   const completedCount = projectTasks.filter(t => t.completed).length;
   const totalCount = projectTasks.length;
   const progress = calculateProjectProgress(project.id, allTasks);
-  const stalled = !!project.goalId && isProjectStalled(project.id, allTasks, project);
+  const hasHGSession = !!getActiveHGInstance(project, currentTimeMinutes);
+  const stalled = !!project.goalId && !hasHGSession && isProjectStalled(project.id, allTasks, project);
 
   // All project tasks: unscheduled (in array order) then scheduled (by date), completed last
-  const hasTodayTasks = tasks.some(
-    t => t.projectId === project.id && t.date === getTodayStr() && !t.completed && !t.isAllDay
-  );
-
   const projectUnscheduled = unscheduledTasks.filter(t => t.projectId === project.id && !t.archived);
   const projectScheduled = tasks.filter(t => t.projectId === project.id && !t.archived)
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
@@ -316,7 +313,7 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
       {/* Card body */}
       <div className="flex flex-col gap-2 p-3">
         {/* Header: title + badges + edit + delete */}
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
           {dragHandleProps && (
             <div {...dragHandleProps} className={`flex-shrink-0 mt-0.5 cursor-grab active:cursor-grabbing ${textSecondary} opacity-30 hover:opacity-60 transition-opacity touch-none select-none`} title="Drag to reorder">
               <GripVertical size={14} />
@@ -325,6 +322,50 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
           <span className={`text-sm font-semibold ${textPrimary} leading-tight flex-1 min-w-0`}>
             {project.title}
           </span>
+          {project.hyperglance?.enabled && project.status !== 'completed' && !project.archived && (() => {
+              const instance = getActiveHGInstance(project, currentTimeMinutes);
+              if (!instance) return null;
+              const hg = project.hyperglance;
+              const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime;
+              let timeStr = '';
+              if (effectiveTime) {
+                const [h, m] = effectiveTime.split(':').map(Number);
+                if (use24HourClock) {
+                  timeStr = ` ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                } else {
+                  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+                  const ampm = h < 12 ? 'AM' : 'PM';
+                  timeStr = ` ${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+                }
+              }
+              let dateLabel;
+              if (instance.isOverdue) {
+                dateLabel = 'overdue';
+              } else {
+                const todayStr = dateToString(new Date());
+                if (instance.date === todayStr) {
+                  dateLabel = 'Today';
+                } else {
+                  const d = new Date(instance.date + 'T00:00:00');
+                  const today = new Date(); today.setHours(0, 0, 0, 0);
+                  const diffDays = Math.round((d - today) / 86400000);
+                  if (diffDays === 1) dateLabel = 'Tomorrow';
+                  else if (diffDays <= 6) dateLabel = d.toLocaleDateString(undefined, { weekday: 'short' });
+                  else dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                }
+              }
+              const color = hg.color || '#4f46e5';
+              return (
+                <button
+                  onClick={() => enterHyperGlanceMode(project.id, instance.date)}
+                  className={`flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0${instance.isOverdue ? ' bg-orange-400/20 text-orange-400' : ''}`}
+                  style={instance.isOverdue ? {} : { backgroundColor: hexToRgba(color, 0.15), color }}
+                >
+                  <Zap size={9} />
+                  {dateLabel}{timeStr}
+                </button>
+              );
+            })()}
           <div className="flex items-center gap-1 flex-shrink-0">
             {onMoveToClick && (
               <button
@@ -380,21 +421,6 @@ const ProjectCard = forwardRef(({ project, onFocusClick, onEditClick, compact, d
 
         {/* Progress bar */}
         <ProjectProgress progress={progress} compact />
-
-        {/* Project Focus button — only when there are incomplete tasks scheduled for today */}
-        {hasTodayTasks && (
-          <button
-            onClick={() => onFocusClick?.(project)}
-            className={`flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              darkMode
-                ? 'bg-purple-900/40 hover:bg-purple-900/70 text-purple-400'
-                : 'bg-purple-50 hover:bg-purple-100 text-purple-700'
-            }`}
-          >
-            <Target size={12} />
-            Project Focus
-          </button>
-        )}
 
         {/* Unscheduled task list */}
         {allProjectDisplayTasks.length > 0 && (

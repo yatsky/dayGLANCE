@@ -74,15 +74,8 @@ export default function useStats({ tasks, unscheduledTasks, recurringTasks, goal
   const actualTodayPlannedMinutes = actualTodayNonImportedTasks.reduce((sum, task) => sum + (task.duration || 0), 0);
   const actualTodayFocusMinutes = actualTodayNonImportedTasks.reduce((sum, t) => sum + (t.focusMinutes || 0), 0);
 
-  // Project task focus (unscheduled tasks with a projectId)
-  const allTimeProjectFocusMinutes = useMemo(
-    () => unscheduledTasks.filter(t => t.projectId).reduce((sum, t) => sum + (t.focusMinutes || 0), 0),
-    [unscheduledTasks]
-  );
-
   const allTimeFocusMinutes = nonImportedTasks.reduce((sum, t) => sum + (t.focusMinutes || 0), 0)
-    + deadlineInboxTasks.reduce((sum, t) => sum + (t.focusMinutes || 0), 0)
-    + allTimeProjectFocusMinutes;
+    + deadlineInboxTasks.reduce((sum, t) => sum + (t.focusMinutes || 0), 0);
 
   // Inbox completion stats — pure inbox only (no projectId, no deadline)
   const inboxCompletedToday = unscheduledTasks.filter(t => t.completed && !t.deadline && !t.projectId && t.completedAt && t.completedAt.startsWith(todayStr));
@@ -199,7 +192,6 @@ export default function useStats({ tasks, unscheduledTasks, recurringTasks, goal
     actualTodayPlannedMinutes,
     actualTodayFocusMinutes,
     allTimeFocusMinutes,
-    allTimeProjectFocusMinutes,
     inboxCompletedTodayCount,
     inboxCompletedTodayMinutes,
     allTimeInboxCompletedCount,

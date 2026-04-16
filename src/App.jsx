@@ -68,6 +68,7 @@ import useCloudSync from './hooks/useCloudSync.js';
 import useCalendarSync from './hooks/useCalendarSync.js';
 import useBackup from './hooks/useBackup.js';
 import useGTDFrames from './hooks/useGTDFrames.js';
+import { getGlanceHGInstances } from './hooks/useHyperGlance.js';
 import useVoiceAI from './hooks/useVoiceAI.js';
 import useNavigation from './hooks/useNavigation.js';
 import useStats from './hooks/useStats.js';
@@ -101,8 +102,11 @@ import DesktopLayout from './components/DesktopLayout.jsx';
 import MobileLayout from './components/MobileLayout.jsx';
 import ShortcutHelpModal from './components/ShortcutHelpModal.jsx';
 import FocusModeModal from './components/FocusModeModal.jsx';
+import HyperGlanceModeModal from './components/HyperGlanceModeModal.jsx';
+import HGAdjustModal from './components/HGAdjustModal.jsx';
 import RoutinesDashboardModal from './components/RoutinesDashboardModal.jsx';
 import FrameAdjustModal from './components/FrameAdjustModal.jsx';
+import { ProjectForm, FormOverlay } from './components/goals/GoalDashboard.jsx';
 import FrameScheduleModal from './components/FrameScheduleModal.jsx';
 import FramesModal from './components/FramesModal.jsx';
 import MobileWelcomeModal from './components/MobileWelcomeModal.jsx';
@@ -560,7 +564,6 @@ const DayPlanner = () => {
     focusTimerRunning, setFocusTimerRunning,
     focusTaskMinutes, setFocusTaskMinutes,
     focusBlockTasks, setFocusBlockTasks,
-    focusProjectId, setFocusProjectId,
     focusLog, setFocusLog,
     focusLogModalDate, setFocusLogModalDate,
     wakeLockSentinel,
@@ -569,6 +572,22 @@ const DayPlanner = () => {
     exitFocusModeRef,
     focusModeAvailableRef,
   } = useFocusMode();
+
+  // ── HyperGLANCE state ────────────────────────────────────────────────────
+  const [showHyperGlanceMode, setShowHyperGlanceMode] = React.useState(false);
+  const [hyperGlanceProjectId, setHyperGlanceProjectId] = React.useState(null);
+  const [hyperGlanceSessionDate, setHyperGlanceSessionDate] = React.useState(null);
+  const [hgTimerSeconds, setHgTimerSeconds] = React.useState(0);
+  const [hgTimerRunning, setHgTimerRunning] = React.useState(false);
+  const [hgTimerPhase, setHgTimerPhase] = React.useState('work'); // 'work' | 'break'
+  const [hgWorkMinutes, setHgWorkMinutes] = React.useState(25);
+  const [hgBreakMinutes, setHgBreakMinutes] = React.useState(5);
+  const [hgLongBreakMinutes, setHgLongBreakMinutes] = React.useState(15);
+  const [hgCycleCount, setHgCycleCount] = React.useState(0);
+  const [hgExitConfirm, setHgExitConfirm] = React.useState(false);
+  const [hgShowSettings, setHgShowSettings] = React.useState(true);
+  const hgTimerRef = React.useRef(null);
+
   const {
     trmnlConfig, setTrmnlConfig,
     trmnlSyncStatus, setTrmnlSyncStatus,
@@ -666,6 +685,10 @@ const DayPlanner = () => {
   } = useGTDFrames();
   const [taskContextMenu, setTaskContextMenu] = useState(null); // { x, y, taskId, isRecurring, isImported, isAllDay, dateStr }
   const [timelineContextMenu, setTimelineContextMenu] = useState(null); // { x, y, dateStr, timeMinutes }
+  const [hgContextMenu, setHgContextMenu] = useState(null); // { x, y, projectId, date, isCompleted }
+  const [hgAdjustModal, setHgAdjustModal] = useState(null); // { projectId, date, time, duration }
+  const [hgAdjustTimeField, setHgAdjustTimeField] = useState(null); // 'start' | 'end' | null
+  const [pendingEditProjectId, setPendingEditProjectId] = useState(null);
 
   // Incomplete tasks modal
   const [showIncompleteTasks, setShowIncompleteTasks] = useState(null); // null | 'today' | 'allTime'
@@ -702,7 +725,6 @@ const DayPlanner = () => {
     actualTodayPlannedMinutes,
     actualTodayFocusMinutes,
     allTimeFocusMinutes,
-    allTimeProjectFocusMinutes,
     inboxCompletedTodayCount,
     inboxCompletedTodayMinutes,
     allTimeInboxCompletedCount,
@@ -1696,6 +1718,7 @@ const DayPlanner = () => {
     mobileDragPreviewTime, setMobileDragPreviewTime,
     mobileDragPreviewDate, setMobileDragPreviewDate,
     mobileDragTaskIdState, setMobileDragTaskIdState,
+    mobileDragIsRoutine,
     // mobile swipe refs
     swipeTouchStartX,
     swipeTouchStartY,
@@ -2822,33 +2845,6 @@ const DayPlanner = () => {
   };
   enterFocusModeRef.current = enterFocusMode;
 
-  const enterProjectFocusMode = (project, projectTasks) => {
-    setFocusProjectId(project.id);
-    setShowFocusMode(true);
-    setFocusShowSettings(true);
-    setFocusShowStats(false);
-    setFocusPhase('work');
-    setFocusTimerSeconds(0);
-    setFocusCycleCount(0);
-    setFocusSessionStart(null);
-    setFocusCompletedTasks(new Set());
-    setFocusTimerRunning(false);
-    setFocusTaskMinutes({});
-    setFocusBlockTasks(projectTasks);
-    setFocusWorkMinutes(25);
-    setFocusBreakMinutes(5);
-    setFocusLongBreakMinutes(15);
-    try { document.documentElement.requestFullscreen?.(); } catch (e) {}
-    (async () => {
-      try {
-        if (navigator.wakeLock) {
-          wakeLockSentinel.current = await navigator.wakeLock.request('screen');
-        }
-      } catch (e) {}
-    })();
-    nativeEnterFocusMode();
-  };
-
   const startFocusTimer = () => {
     setFocusShowSettings(false);
     setFocusSessionStart(new Date());
@@ -2892,7 +2888,6 @@ const DayPlanner = () => {
       const sessionMinutes = Math.round((new Date() - focusSessionStart) / 60000);
       if (sessionMinutes > 0) {
         const sessionDateStr = dateToString(new Date(focusSessionStart));
-        const sessionProjectId = focusProjectId;
         setFocusLog(prev => {
           const existing = prev[sessionDateStr] || { totalMinutes: 0, sessions: 0, cyclesCompleted: 0, tasksCompleted: 0 };
           const updated = {
@@ -2902,17 +2897,10 @@ const DayPlanner = () => {
             cyclesCompleted: existing.cyclesCompleted + focusCycleCount,
             tasksCompleted: existing.tasksCompleted + focusCompletedTasks.size,
           };
-          if (sessionProjectId) {
-            updated.projectSessions = [
-              ...(existing.projectSessions || []),
-              { projectId: sessionProjectId, minutes: sessionMinutes },
-            ];
-          }
           return { ...prev, [sessionDateStr]: updated };
         });
       }
     }
-    setFocusProjectId(null);
     if (showStats) {
       setFocusShowStats(true);
     } else {
@@ -2933,6 +2921,23 @@ const DayPlanner = () => {
     nativeExitFocusMode();
     setFocusShowStats(false);
     setShowFocusMode(false);
+  };
+
+  const skipFocusPhase = () => {
+    if (focusPhase === 'work') {
+      const newCycle = focusCycleCount + 1;
+      setFocusCycleCount(newCycle);
+      if (newCycle % 4 === 0) {
+        setFocusPhase('longBreak');
+        setFocusTimerSeconds(focusLongBreakMinutes * 60);
+      } else {
+        setFocusPhase('shortBreak');
+        setFocusTimerSeconds(focusBreakMinutes * 60);
+      }
+    } else {
+      setFocusPhase('work');
+      setFocusTimerSeconds(focusWorkMinutes * 60);
+    }
   };
 
   const handleFocusTimerEnd = () => {
@@ -2969,6 +2974,159 @@ const DayPlanner = () => {
     setFocusTimerRunning(true);
   };
   handleFocusTimerEndRef.current = handleFocusTimerEnd;
+
+  // ── HyperGLANCE functions ──────────────────────────────────────────────────
+  const instantiateHGTemplateTasks = (project, sessionDate) => {
+    const templates = project.hyperglance?.templateTasks || [];
+    if (templates.length === 0) return;
+    // Avoid duplicate instantiation for the same session date
+    const alreadyInstantiated = unscheduledTasks.some(
+      t => t.projectId === project.id && t.hyperglanceSessionDate === sessionDate
+    );
+    if (alreadyInstantiated) return;
+    const parentGoal = project.goalId ? goals.find(g => g.id === project.goalId) : null;
+    const taskColor = parentGoal?.color || 'bg-blue-500';
+    const newTasks = templates.map(tmpl => ({
+      id: `hg-${project.id}-${sessionDate}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: tmpl.name,
+      ...(tmpl.notes ? { notes: tmpl.notes } : {}),
+      color: taskColor,
+      projectId: project.id,
+      hyperglanceSessionDate: sessionDate,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    }));
+    setUnscheduledTasks(prev => [...prev, ...newTasks]);
+  };
+
+  const enterHyperGlanceMode = (projectId, date) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    instantiateHGTemplateTasks(project, date);
+    setHyperGlanceProjectId(projectId);
+    setHyperGlanceSessionDate(date);
+    setHgTimerSeconds(0);
+    setHgTimerRunning(false);
+    setHgTimerPhase('work');
+    setHgCycleCount(0);
+    setHgExitConfirm(false);
+    setHgShowSettings(true);
+    setShowHyperGlanceMode(true);
+    // Request fullscreen (web fallback; Android uses native immersive mode below)
+    try { document.documentElement.requestFullscreen?.(); } catch (e) {}
+    // Request wake lock
+    (async () => {
+      try {
+        if (navigator.wakeLock) {
+          wakeLockSentinel.current = await navigator.wakeLock.request('screen');
+        }
+      } catch (e) {}
+    })();
+    // Android: immersive mode + pause notifications + DND (same as Focus Mode)
+    nativeEnterFocusMode();
+  };
+
+  const exitHyperGlanceMode = () => {
+    // Pause: close the modal but leave the session open (bar stays on timeline)
+    setHgTimerRunning(false);
+    setHgExitConfirm(false);
+    setShowHyperGlanceMode(false);
+    // Exit fullscreen and release wake lock
+    try { if (document.fullscreenElement) document.exitFullscreen?.(); } catch (e) {}
+    try { wakeLockSentinel.current?.release(); wakeLockSentinel.current = null; } catch (e) {}
+    // Android: restore system bars + DND + reschedule notifications
+    nativeExitFocusMode();
+  };
+
+  const completeHyperGlanceSession = (stats = {}) => {
+    if (!hyperGlanceProjectId || !hyperGlanceSessionDate) return;
+    const project = projects.find(p => p.id === hyperGlanceProjectId);
+    if (!project) return;
+    const hg = project.hyperglance || {};
+    const completions = hg.completions || [];
+    if (completions.some(c => c.date === hyperGlanceSessionDate)) return;
+    // Use updateProject so updatedAt is bumped — cloud sync uses updatedAt for
+    // conflict resolution, so a raw setProjects would let stale remote copies win.
+    updateProject(hyperGlanceProjectId, {
+      hyperglance: {
+        ...hg,
+        completions: [
+          ...completions,
+          { date: hyperGlanceSessionDate, completedAt: new Date().toISOString(), ...stats },
+        ],
+      },
+    });
+    setHgTimerRunning(false);
+    setHgExitConfirm(false);
+    // Don't close the modal here — the modal handles showing the summary screen
+    // and the user dismisses it via the "Done" button (exitHyperGlanceMode).
+  };
+
+  const openHGAdjust = (projectId, date) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const hg = project.hyperglance || {};
+    setHgAdjustModal({
+      projectId,
+      date,
+      time: (hg.scheduledTimeOverrides || {})[date] || hg.scheduledTime || '9:00',
+      duration: (hg.scheduledDurationOverrides || {})[date] || hg.scheduledDuration || 60,
+    });
+    setHgContextMenu(null);
+  };
+
+  const saveHGAdjust = () => {
+    if (!hgAdjustModal) return;
+    const { projectId, date, time, duration } = hgAdjustModal;
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const hg = project.hyperglance || {};
+    updateProject(projectId, {
+      hyperglance: {
+        ...hg,
+        scheduledTimeOverrides: { ...(hg.scheduledTimeOverrides || {}), [date]: time },
+        scheduledDurationOverrides: { ...(hg.scheduledDurationOverrides || {}), [date]: duration },
+      },
+    });
+    setHgAdjustModal(null);
+  };
+
+  const cancelHGSession = (projectId, date) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+    const hg = project.hyperglance || {};
+    if (!hg.isRecurring) {
+      updateProject(projectId, { hyperglance: { ...hg, enabled: false } });
+    } else {
+      const skipped = hg.skippedDates || [];
+      if (!skipped.includes(date)) {
+        updateProject(projectId, { hyperglance: { ...hg, skippedDates: [...skipped, date] } });
+      }
+    }
+    setHgContextMenu(null);
+  };
+
+  const saveEditProjectFromBar = (fields) => {
+    if (!pendingEditProjectId) return;
+    const projectId = pendingEditProjectId;
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      const wasArchived = project.status === 'archived';
+      const nowArchived = fields.status === 'archived';
+      if (nowArchived && !wasArchived) {
+        const cascadeTask = t => {
+          if (t.projectId !== projectId) return t;
+          if (t.completed) return { ...t, archived: true };
+          const { projectId: _removed, ...rest } = t;
+          return rest;
+        };
+        setTasks(prev => prev.map(cascadeTask));
+        setUnscheduledTasks(prev => prev.map(cascadeTask));
+      }
+      updateProject(projectId, fields);
+    }
+    setPendingEditProjectId(null);
+  };
 
   const parseICS = (icsContent) => {
     // Unfold iCal line continuations (RFC 5545: lines starting with space/tab are continuations)
@@ -5098,6 +5256,31 @@ const DayPlanner = () => {
   }, [recurringTasks, visibleDates]);
   expandedRecurringTasksRef.current = expandedRecurringTasks;
 
+  // Build today's non-overdue HG sessions for the reminder engine.
+  // Only sessions with an explicit scheduled time are included (skips time-unset sessions).
+  const hgSessionsForReminders = React.useMemo(() => {
+    if (!goalsProjectsEnabled) return [];
+    const todayStr = dateToString(new Date());
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+    return getGlanceHGInstances(projects, nowMin)
+      .filter(({ instance }) => !instance.isOverdue && instance.date === todayStr)
+      .flatMap(({ project, instance }) => {
+        const hg = project.hyperglance;
+        const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
+        if (!effectiveTime || effectiveTime === '0:0') return [];
+        const [startH, startM] = effectiveTime.split(':').map(Number);
+        if (!Number.isFinite(startH) || !Number.isFinite(startM)) return [];
+        const allProjectTasks = [...tasks, ...unscheduledTasks];
+        const alreadyInstantiated = allProjectTasks.some(
+          t => t.projectId === project.id && t.hyperglanceSessionDate === instance.date
+        );
+        const taskCount = allProjectTasks.filter(
+          t => t.projectId === project.id && !t.archived && !t.completed
+        ).length + (alreadyInstantiated ? 0 : (hg.templateTasks?.length || 0));
+        return [{ id: project.id, title: project.title, date: instance.date, startMinutes: startH * 60 + startM, taskCount }];
+      });
+  }, [projects, goalsProjectsEnabled, tasks, unscheduledTasks]);
+
   const {
     activeReminders, setActiveReminders,
     snoozeReminder,
@@ -5108,6 +5291,7 @@ const DayPlanner = () => {
     reminderSettings,
     tasks,
     expandedRecurringTasks,
+    hgSessions: hgSessionsForReminders,
     playUISound,
     pushUndo,
     setTasks,
@@ -5939,6 +6123,7 @@ const DayPlanner = () => {
       name: r.name,
       startTime: r.startTime || '',
       isAllDay: !r.startTime || r.isAllDay || false,
+      completed: !!routineCompletions[r.id],
     }));
 
     // ── Goals due today ───────────────────────────────────────────────────
@@ -6091,6 +6276,53 @@ const DayPlanner = () => {
       };
     }
 
+    // ── hyperGLANCE sessions (today + overdue) ────────────────────────────
+    const hyperGlanceItems = goalsProjectsEnabled
+      ? getGlanceHGInstances(projects, nowMinW).map(({ project, instance }) => {
+          const hg = project.hyperglance;
+          const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
+          const duration = hg.scheduledDurationOverrides?.[instance.date] || hg.scheduledDuration || 60;
+          const allProjectTasks = [...tasks, ...unscheduledTasks];
+          const alreadyInstantiated = allProjectTasks.some(
+            t => t.projectId === project.id && t.hyperglanceSessionDate === instance.date
+          );
+          const taskCount = allProjectTasks.filter(
+            t => t.projectId === project.id && !t.archived && !t.completed
+          ).length + (alreadyInstantiated ? 0 : (hg.templateTasks?.length || 0));
+          return {
+            id: project.id,
+            title: project.title,
+            colorHex: hg.color || '#4f46e5',
+            startTime: effectiveTime,
+            duration,
+            isOverdue: instance.isOverdue,
+            date: instance.date,
+            taskCount,
+          };
+        })
+      : [];
+
+    // Unified "Up Next" entry for the native background notification.
+    // The native UpNextNotificationUpdater reads this so it correctly handles
+    // HG sessions (not just tasks) when the WebView is backgrounded.
+    const nextHGForUpNext = hyperGlanceItems
+      .filter(s => !s.isOverdue && s.startTime && s.startTime !== '0:0')
+      .map(s => { const [h, m] = s.startTime.split(':').map(Number); return { ...s, startMin: h * 60 + m }; })
+      .filter(s => nowMinW < s.startMin + s.duration)
+      .sort((a, b) => a.startMin - b.startMin)[0] || null;
+    const nextUpNext = (() => {
+      const taskMin = nextTaskItem ? timeToMinutes(nextTaskItem.startTime) : Infinity;
+      const hgMin = nextHGForUpNext ? nextHGForUpNext.startMin : Infinity;
+      if (nextHGForUpNext && hgMin <= taskMin) {
+        const tc = nextHGForUpNext.taskCount;
+        const tcLabel = tc > 0 ? ` · ${tc} task${tc !== 1 ? 's' : ''}` : '';
+        return { title: 'hyperGLANCE', startTime: nextHGForUpNext.startTime, duration: nextHGForUpNext.duration, bodyPrefix: `${nextHGForUpNext.title}${tcLabel} · ` };
+      }
+      if (nextTaskItem)
+        return { title: nextTaskItem.title, startTime: nextTaskItem.startTime, duration: nextTaskItem.duration, bodyPrefix: '' };
+      return null;
+    })();
+
     const snapshot = {
       date: todayStr,
       dateLabel: today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
@@ -6106,43 +6338,15 @@ const DayPlanner = () => {
       deadlines: deadlineItems,
       sections,
       routines: routineItems,
+      hyperGlance: hyperGlanceItems,
       glanceAhead: glanceAheadData,
       nextTask: nextTaskItem,
+      nextUpNext,
       updatedAt: Date.now(),
     };
 
     try {
       window.DayGlanceNative.updateWidgetSnapshot(JSON.stringify(snapshot));
-    } catch (_) {}
-
-    // ── Up Next lock screen / drawer notification ─────────────────────────
-    try {
-      if (nextTaskItem) {
-        const startMin2 = timeToMinutes(nextTaskItem.startTime);
-        const endMin2 = startMin2 + nextTaskItem.duration;
-        let bodyText;
-        if (nowMin < startMin2) {
-          const diff = startMin2 - nowMin;
-          bodyText = diff >= 60
-            ? `Starts in ${Math.floor(diff / 60)}h${diff % 60 > 0 ? ` ${diff % 60}m` : ''}`
-            : `Starts in ${diff}m`;
-        } else if (nextTaskItem.duration === 0) {
-          bodyText = 'Starting now';
-        } else {
-          const endH = Math.floor(endMin2 / 60) % 24;
-          const endM = (endMin2 % 60).toString().padStart(2, '0');
-          const endStr = use24HourClock
-            ? `${endH}:${endM}`
-            : `${endH > 12 ? endH - 12 : (endH || 12)}:${endM} ${endH >= 12 ? 'PM' : 'AM'}`;
-          bodyText = `In progress · ends at ${endStr}`;
-        }
-        window.DayGlanceNative?.updateUpNextNotification?.(JSON.stringify({
-          title: nextTaskItem.title,
-          bodyText,
-        }));
-      } else {
-        window.DayGlanceNative?.cancelUpNextNotification?.();
-      }
     } catch (_) {}
   }, [
     dataLoaded,
@@ -6151,6 +6355,7 @@ const DayPlanner = () => {
     habitsEnabled,
     habitLogs,
     todayRoutines,
+    routineCompletions,
     tasks,
     unscheduledTasks,
     glanceAhead,
@@ -6785,6 +6990,7 @@ const DayPlanner = () => {
     hoverPreviewDate, setHoverPreviewDate,
     isResizing, setIsResizing,
     mobileDragTaskIdState, setMobileDragTaskIdState,
+    mobileDragIsRoutine,
     mobileDragPreviewTime, setMobileDragPreviewTime,
     mobileDragPreviewDate, setMobileDragPreviewDate,
     timelineScrolledAway, setTimelineScrolledAway,
@@ -6813,7 +7019,7 @@ const DayPlanner = () => {
     totalCompletedMinutes, totalScheduledMinutes,
     actualTodayNonImportedTasks, actualTodayCompletedTasks,
     actualTodayCompletedMinutes, actualTodayPlannedMinutes, actualTodayFocusMinutes,
-    allTimeFocusMinutes, allTimeProjectFocusMinutes,
+    allTimeFocusMinutes,
     inboxCompletedTodayCount, inboxCompletedTodayMinutes,
     allTimeInboxCompletedCount, allTimeInboxCompletedMinutes,
     projectTasksCompletedTodayCount, projectTasksCompletedTodayMinutes,
@@ -7109,7 +7315,7 @@ const DayPlanner = () => {
 
     // ── Functions – routines ──────────────────────────────────────────────────
     openRoutinesDashboard, addRoutineChip, deleteRoutineChip,
-    toggleRoutineChipSelection, handleRoutinesDone, toggleRoutineCompletion,
+    toggleRoutineChipSelection, handleRoutinesDone,
 
     // ── Functions – habits ────────────────────────────────────────────────────
     getTodayHabitCount, incrementHabit, setHabitCount,
@@ -7117,11 +7323,31 @@ const DayPlanner = () => {
     addStepsHabit, addSleepHabit,
 
     // ── Functions – focus mode ────────────────────────────────────────────────
-    enterFocusMode, enterProjectFocusMode, exitFocusMode,
-    startFocusTimer, dismissFocusStats, focusProjectId, handleFocusTimerEnd,
+    enterFocusMode, exitFocusMode, skipFocusPhase,
+    startFocusTimer, dismissFocusStats, handleFocusTimerEnd,
     focusCompleteTask, focusToggleSubtask, focusAddSubtask,
     focusDeleteSubtask, focusUpdateSubtaskTitle, focusUpdateTaskNotes,
     computeFocusBlockTasks,
+
+    // ── HyperGLANCE ───────────────────────────────────────────────────────────
+    showHyperGlanceMode, setShowHyperGlanceMode,
+    hyperGlanceProjectId, setHyperGlanceProjectId,
+    hyperGlanceSessionDate, setHyperGlanceSessionDate,
+    hgTimerSeconds, setHgTimerSeconds,
+    hgTimerRunning, setHgTimerRunning,
+    hgTimerPhase, setHgTimerPhase,
+    hgWorkMinutes, setHgWorkMinutes,
+    hgBreakMinutes, setHgBreakMinutes,
+    hgLongBreakMinutes, setHgLongBreakMinutes,
+    hgCycleCount, setHgCycleCount,
+    hgExitConfirm, setHgExitConfirm,
+    hgShowSettings, setHgShowSettings,
+    enterHyperGlanceMode, exitHyperGlanceMode, completeHyperGlanceSession,
+    hgContextMenu, setHgContextMenu,
+    hgAdjustModal, setHgAdjustModal,
+    hgAdjustTimeField, setHgAdjustTimeField,
+    openHGAdjust, saveHGAdjust, cancelHGSession,
+    pendingEditProjectId, setPendingEditProjectId,
 
     // ── Functions – GTD / AI ──────────────────────────────────────────────────
     saveFrame, deleteFrame, skipFrameForDay,
@@ -7976,12 +8202,6 @@ const DayPlanner = () => {
                         <div className="flex items-center gap-2"><Target size={14} className="text-purple-400" /> Focus time</div>
                         <span className={`font-medium ${textPrimary}`}>{Math.floor(allTimeFocusMinutes / 60)}h {Math.round(allTimeFocusMinutes % 60)}m</span>
                       </div>
-                      {goalsProjectsEnabled && allTimeProjectFocusMinutes > 0 && (
-                        <div className="flex items-center justify-between pl-5">
-                          <div className="flex items-center gap-2"><FolderOpen size={12} className="text-purple-300" /> From projects</div>
-                          <span className={`text-xs font-medium ${textSecondary}`}>{Math.floor(allTimeProjectFocusMinutes / 60)}h {Math.round(allTimeProjectFocusMinutes % 60)}m</span>
-                        </div>
-                      )}
                     </>
                   )}
                   {allTimeScheduledCount > 0 && (
@@ -8105,6 +8325,9 @@ const DayPlanner = () => {
 
       {/* Focus Mode Overlay */}
       {showFocusMode && <FocusModeModal />}
+
+      {/* HyperGLANCE Overlay */}
+      {showHyperGlanceMode && <HyperGlanceModeModal />}
 
       {/* Spotlight Search */}
       {showSpotlight && <SpotlightModal />}
@@ -8498,6 +8721,78 @@ const DayPlanner = () => {
 
       {/* Frame Manually Schedule Modal */}
       {frameScheduleModal && <FrameScheduleModal />}
+
+      {/* HyperGLANCE bar context menu */}
+      {hgContextMenu && (() => {
+        const { x, y, projectId, date, isCompleted } = hgContextMenu;
+        const proj = projects.find(p => p.id === projectId);
+        if (!proj) return null;
+        const itemCount = isCompleted ? 2 : 4;
+        const cmX = Math.min(x, window.innerWidth - 176);
+        const cmY = Math.min(y, window.innerHeight - itemCount * 36 - 16);
+        return (
+          <div className="fixed inset-0 z-[70]" onClick={() => setHgContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setHgContextMenu(null); }}>
+            <div
+              className={`absolute ${cardBg} rounded-lg shadow-xl border ${borderClass} py-1 min-w-[168px]`}
+              style={{ left: `${cmX}px`, top: `${cmY}px` }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {!isCompleted && (
+                <button
+                  className={`w-full text-left px-3 py-2 text-sm ${textPrimary} ${hoverBg} transition-colors flex items-center gap-2`}
+                  onClick={() => { enterHyperGlanceMode(projectId, date); setHgContextMenu(null); }}
+                >
+                  <Zap size={14} />
+                  hyperGLANCE
+                </button>
+              )}
+              <button
+                className={`w-full text-left px-3 py-2 text-sm ${textPrimary} ${hoverBg} transition-colors flex items-center gap-2`}
+                onClick={() => { setPendingEditProjectId(projectId); setHgContextMenu(null); }}
+              >
+                <Pencil size={14} />
+                Edit
+              </button>
+              <button
+                className={`w-full text-left px-3 py-2 text-sm ${textPrimary} ${hoverBg} transition-colors flex items-center gap-2`}
+                onClick={() => openHGAdjust(projectId, date)}
+              >
+                <Clock size={14} />
+                Adjust time
+              </button>
+              {!isCompleted && (
+                <button
+                  className={`w-full text-left px-3 py-2 text-sm text-red-500 ${hoverBg} transition-colors flex items-center gap-2`}
+                  onClick={() => cancelHGSession(projectId, date)}
+                >
+                  <X size={14} />
+                  Cancel session
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* HyperGLANCE Adjust Session Time Modal */}
+      {hgAdjustModal && <HGAdjustModal />}
+
+      {/* HyperGLANCE Edit Project (triggered from bar context menu) */}
+      {pendingEditProjectId && (() => {
+        const proj = projects.find(p => p.id === pendingEditProjectId);
+        if (!proj) return null;
+        return (
+          <FormOverlay onClose={() => setPendingEditProjectId(null)} mobile={isMobile} cardBg={cardBg}>
+            <ProjectForm
+              initial={proj}
+              goals={goals}
+              onSave={saveEditProjectFromBar}
+              onCancel={() => setPendingEditProjectId(null)}
+              mobile={isMobile}
+            />
+          </FormOverlay>
+        );
+      })()}
 
       {/* Goals & Projects Dashboard */}
       <GoalDashboard />

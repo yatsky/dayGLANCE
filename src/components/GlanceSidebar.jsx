@@ -4,7 +4,7 @@ import {
   Calendar, CalendarDays, Check, CheckCircle, CheckSquare, ChevronDown,
   ChevronUp, Clock, Filter, Flag, Hash, Inbox, LayoutGrid, Loader,
   Mic, Minus, Moon, Plus, RefreshCw, Search,
-  Settings, Sparkles, Sun, Target, Trash2, X,
+  Settings, Sparkles, Sun, Target, Trash2, X, Zap,
 } from 'lucide-react';
 import { renderTitle } from '../utils/textFormatting.jsx';
 import { dateToString, extractTags, extractWikilinks, formatDeadlineDate } from '../utils/taskUtils.js';
@@ -15,6 +15,7 @@ import GettingStartedChecklist from './GettingStartedChecklist.jsx';
 import FrameNudgeCard from './FrameNudgeCard.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { getGlanceHGInstances, isHGSessionReachable } from '../hooks/useHyperGlance.js';
 
 const GlanceSidebar = ({ variant = 'desktop' }) => {
   const {
@@ -93,6 +94,8 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
     generateFrameNudge, generateMorningSummary, generateEveningReflection,
     dismissMorningGlance, dismissEveningGlance,
     openRoutinesDashboard,
+    enterHyperGlanceMode,
+    showGoalsDashboard, setShowGoalsDashboard,
     getFrameInstancesForDate,
     computeAvailableSlots,
     showVoiceInput, setShowVoiceInput,
@@ -1036,6 +1039,49 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
     </div>
   ); })()}
 
+  {/* hyperGLANCE sessions — today + overdue */}
+  {goalsProjectsEnabled && (() => {
+    const nowMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+    const hgItems = getGlanceHGInstances(projects, nowMinutes);
+    if (hgItems.length === 0) return null;
+    return (
+      <div className={isDesktop ? `rounded-lg border ${borderClass} p-3` : `mt-3 pt-3 border-t ${borderClass}`}>
+        <div className="text-xs font-semibold tracking-wide mb-2" style={{ color: '#4f46e5' }}>hyperGLANCE</div>
+        <div className="space-y-1.5">
+          {hgItems.map(({ project, instance }) => {
+            const hg = project.hyperglance;
+            const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '0:0';
+            const [sh, sm] = effectiveTime.split(':').map(Number);
+            const barColor = hg.color || '#4f46e5';
+            const canEnter = isHGSessionReachable(instance, hg, currentTime);
+            const timeLabel = (() => {
+              if (!hg.scheduledTime && !hg.scheduledTimeOverrides?.[instance.date]) return '';
+              if (use24HourClock) return effectiveTime;
+              const h12 = sh === 0 ? 12 : sh > 12 ? sh - 12 : sh;
+              const ampm = sh < 12 ? 'AM' : 'PM';
+              return `${h12}:${String(sm).padStart(2, '0')} ${ampm}`;
+            })();
+            const isFuture = !canEnter && !instance.isOverdue;
+            return (
+              <button
+                key={project.id}
+                onClick={() => isFuture ? setShowGoalsDashboard(true) : enterHyperGlanceMode(project.id, instance.date)}
+                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-opacity ${isDesktop ? 'hover:opacity-80' : 'active:opacity-70'} ${darkMode ? 'bg-white/5' : 'bg-stone-50'}`}
+              >
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: barColor }}></div>
+                <span className={`text-sm font-medium min-w-0 truncate ${darkMode ? 'text-gray-200' : 'text-stone-800'}`}>{project.title}</span>
+                {canEnter && <span className="text-xs font-medium text-green-500 flex-shrink-0">In progress</span>}
+                {instance.isOverdue && !canEnter && <span className="text-xs font-semibold text-amber-500 flex-shrink-0">{instance.date === getTodayStr() ? 'Today' : new Date(instance.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · Overdue</span>}
+                {isFuture && timeLabel && <span className={`text-xs flex-shrink-0 ${darkMode ? 'text-gray-400' : 'text-stone-500'}`}>{timeLabel}</span>}
+                {!isFuture && <span className="ml-auto flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white text-[9px] font-bold animate-pulse flex-shrink-0" style={{ backgroundColor: barColor }}><Zap size={9} />hyperGLANCE</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  })()}
+
   {/* GLANCEahead — tomorrow preview */}
   {(() => {
     const isDayDone = (todayAgenda.length > 0 && !agendaNowMarker.insideTask && agendaNowMarker.insertAfterIndex >= todayAgenda.length - 1) || todayAgenda.length === 0;
@@ -1111,15 +1157,11 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
       );
     }
     return (
-      <div className={`relative ${isDesktop ? `rounded-lg border ${borderClass} p-3` : `mt-3 pt-3 border-t ${borderClass}`}`}>
-        <button
-          onClick={() => openRoutinesDashboard()}
-          className={`absolute -bottom-0.5 -right-0.5 p-1 rounded ${hoverBg} ${darkMode ? 'text-gray-700' : 'text-stone-300'} transition-colors z-10`}
-          title="Manage routines"
-        >
-          <Settings size={11} />
-        </button>
-        <div className={`text-xs font-semibold uppercase tracking-wide mb-2 ${textSecondary}`}>Routines</div>
+      <div className={`${isDesktop ? `rounded-lg border ${borderClass} p-3` : `mt-3 pt-3 border-t ${borderClass}`}`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className={`text-xs font-semibold uppercase tracking-wide ${textSecondary}`}>Routines</div>
+          <button onClick={() => openRoutinesDashboard()} className="text-xs text-teal-500 font-medium hover:text-teal-400 transition-colors">+ Add</button>
+        </div>
         <div className={`flex flex-wrap ${isDesktop ? "gap-1" : "gap-1.5"}`}>
           {[...visibleRoutines].sort((a, b) => {
             if (a.isAllDay && !b.isAllDay) return -1;
@@ -1135,8 +1177,8 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
               } else {
                 const [h, m] = r.startTime.split(':').map(Number);
                 const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-                const ampm = h < 12 ? 'a' : 'p';
-                timeLabel = m === 0 ? `${hour12}${ampm}` : `${hour12}:${String(m).padStart(2, '0')}${ampm}`;
+                const ampm = h < 12 ? 'AM' : 'PM';
+                timeLabel = `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
               }
             }
             return (
@@ -1153,6 +1195,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
       </div>
     );
   })()}
+
 
 </div>
   );

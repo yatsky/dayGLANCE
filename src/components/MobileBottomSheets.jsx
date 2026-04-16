@@ -31,7 +31,7 @@ const MobileBottomSheets = () => {
     dailyStatsHabitsCollapsed, setDailyStatsHabitsCollapsed,
     actualTodayNonImportedTasks, actualTodayCompletedTasks,
     actualTodayCompletedMinutes, actualTodayPlannedMinutes, actualTodayFocusMinutes,
-    allTimeFocusMinutes, allTimeProjectFocusMinutes,
+    allTimeFocusMinutes,
     inboxCompletedTodayCount, inboxCompletedTodayMinutes,
     allTimeInboxCompletedCount, allTimeInboxCompletedMinutes,
     projectTasksCompletedTodayCount,
@@ -471,12 +471,6 @@ const MobileBottomSheets = () => {
                     <div className="flex items-center gap-2"><Target size={14} className="text-purple-400" /> Focus time</div>
                     <span className={`font-medium ${textPrimary}`}>{Math.floor(allTimeFocusMinutes / 60)}h {Math.round(allTimeFocusMinutes % 60)}m</span>
                   </div>
-                  {goalsProjectsEnabled && allTimeProjectFocusMinutes > 0 && (
-                    <div className="flex items-center justify-between pl-5">
-                      <div className="flex items-center gap-2"><FolderOpen size={12} className="text-purple-300" /> From projects</div>
-                      <span className={`text-xs font-medium ${textSecondary}`}>{Math.floor(allTimeProjectFocusMinutes / 60)}h {Math.round(allTimeProjectFocusMinutes % 60)}m</span>
-                    </div>
-                  )}
                 </>
               )}
               {allTimeScheduledCount > 0 && (

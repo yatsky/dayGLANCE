@@ -10,6 +10,8 @@ import { dateToString, extractWikilinks } from '../utils/taskUtils.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { getHGBarsForDate } from '../hooks/useHyperGlance.js';
+import HyperGlanceBar from './HyperGlanceBar.jsx';
 
 const MobileTimeGrid = () => {
   const {
@@ -116,6 +118,22 @@ const MobileTimeGrid = () => {
       const isDateToday = dateStr === dateToString(new Date());
       const dayTasks = getTasksForDate(date).filter(t => !t.isAllDay && !t.isExample && (!projectFilter || t.projectId === projectFilter));
       const frameInstances = getFrameInstancesForDate(date);
+      const hgBars = getHGBarsForDate(projects, dateStr, isDateToday ? new Date().getHours() * 60 + new Date().getMinutes() : undefined);
+      const hasBars = hgBars.length > 0;
+      const taskOverlapsHG = (task) => {
+        if (!task.startTime || !hasBars) return false;
+        const [th, tm] = (task.startTime || '0:0').split(':').map(Number);
+        const tStart = th * 60 + tm;
+        const tEnd = tStart + (task.duration || 30);
+        return hgBars.some(bar => {
+          const effectiveBarTime = bar.project.hyperglance.scheduledTimeOverrides?.[bar.date] || bar.project.hyperglance.scheduledTime || '0:0';
+          const [bh, bm] = effectiveBarTime.split(':').map(Number);
+          const bStart = bh * 60 + bm;
+          const effectiveDuration = bar.isCompleted ? 15 : (bar.project.hyperglance.scheduledDurationOverrides?.[bar.date] || bar.project.hyperglance.scheduledDuration || 60);
+          const bEnd = bStart + effectiveDuration;
+          return tStart < bEnd && tEnd > bStart;
+        });
+      };
 
       return (
         <div
@@ -261,6 +279,17 @@ const MobileTimeGrid = () => {
             </div>
           )}
 
+          {/* HyperGLANCE project bars (left half of column) */}
+          {hasBars && (
+            <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: 0, width: '50%' }}>
+              {hgBars.map(bar => (
+                <HyperGlanceBar key={bar.project.id} {...bar} />
+              ))}
+            </div>
+          )}
+
+          {/* Task + routine layer — full width; individual tasks shift right if they overlap an HG bar */}
+          <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: 0, right: 0 }}>
           {/* Task blocks */}
           {dayTasks.map(task => {
             const { top, height } = calculateTaskPosition(task);
@@ -364,9 +393,9 @@ const MobileTimeGrid = () => {
                   top: `${top}px`,
                   height: `${height}px`,
                   minHeight: isMicroHeight ? '27px' : '39px',
-                  left: conflictPos.left,
-                  right: conflictPos.right,
-                  width: conflictPos.width,
+                  ...(taskOverlapsHG(task)
+                    ? { left: '50%', right: 0, width: undefined }
+                    : { left: conflictPos.left, right: conflictPos.right, width: conflictPos.width }),
                   visibility: isMeasured ? 'visible' : 'hidden',
                   transition: mobileDragTaskIdState === task.id ? 'transform 0.15s, box-shadow 0.15s' : undefined,
                 }}
@@ -669,6 +698,7 @@ const MobileTimeGrid = () => {
               );
             });
           })()}
+          </div>{/* end task+routine layer */}
         </div>
       );
     })}

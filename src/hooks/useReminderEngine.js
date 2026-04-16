@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { dateToString, stripWikilinks } from '../utils/taskUtils.js';
-import { isNativeAndroid, nativeShowTaskNotification, nativeSyncReminders } from '../native.js';
+import { isNativeAndroid, nativeShowNotification, nativeShowTaskNotification, nativeSyncReminders } from '../native.js';
 
 // Pure local helpers
 const timeToMinutes = (time) => {
@@ -45,6 +45,7 @@ export default function useReminderEngine({
   reminderSettings,
   tasks,
   expandedRecurringTasks,
+  hgSessions = [],
   playUISound,
   pushUndo,
   setTasks,
@@ -101,6 +102,59 @@ export default function useReminderEngine({
       }
     } else {
       setShowWeeklyReviewReminder(false);
+    }
+
+    // ── hyperGLANCE session notifications ─────────────────────────────────────
+    // Independent of the global enabled toggle (same pattern as Weekly Review).
+    const hgNotifEnabled = reminderSettings.hyperGlance?.enabled !== false;
+    if (hgNotifEnabled && hgSessions.length > 0) {
+      const upNextMinutes = reminderSettings.hyperGlance?.upNextMinutes ?? 10;
+      const nowMinHG = currentTime.getHours() * 60 + currentTime.getMinutes();
+      const todayStrHG = dateToString(currentTime);
+      const hgFires = [];
+
+      for (const session of hgSessions) {
+        if (session.date !== todayStrHG) continue;
+
+        // "Up next" — fires upNextMinutes before session start
+        if (upNextMinutes > 0) {
+          const upNextKey = `hg-upnext-${session.id}-${session.date}`;
+          const triggerMin = session.startMinutes - upNextMinutes;
+          if (!firedRemindersRef.current.has(upNextKey) && triggerMin >= 0 &&
+              nowMinHG >= triggerMin && nowMinHG < triggerMin + 2) {
+            firedRemindersRef.current.add(upNextKey);
+            hgFires.push({
+              title: 'hyperGLANCE',
+              body: `${session.title}${session.taskCount > 0 ? ` · ${session.taskCount} task${session.taskCount !== 1 ? 's' : ''}` : ''} · Starts in ${upNextMinutes}m`,
+              tag: `hg-session-${session.id}`,
+            });
+          }
+        }
+
+        // "Session start" — fires at the scheduled start time
+        const startKey = `hg-start-${session.id}-${session.date}`;
+        if (!firedRemindersRef.current.has(startKey) &&
+            nowMinHG >= session.startMinutes && nowMinHG < session.startMinutes + 2) {
+          firedRemindersRef.current.add(startKey);
+          hgFires.push({
+            title: 'hyperGLANCE',
+            body: `${session.title} · Starting now`,
+            tag: `hg-session-${session.id}`,
+          });
+        }
+      }
+
+      if (hgFires.length > 0) {
+        playUISound('reminder');
+        // Android: AlarmManager already fires showTaskNotification (with Snooze) — don't duplicate.
+        if (!isNativeAndroid() && reminderSettings.browserNotifications && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          navigator.serviceWorker?.ready.then(reg => {
+            for (const { title, body, tag } of hgFires) {
+              try { reg.showNotification(title, { body, icon: '/icon-192.png', tag }); } catch {}
+            }
+          });
+        }
+      }
     }
 
     if (!reminderSettings.enabled) return;
@@ -179,7 +233,7 @@ export default function useReminderEngine({
         }
       }
     }
-  }, [currentTime, reminderSettings, tasks, expandedRecurringTasks]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTime, reminderSettings, tasks, expandedRecurringTasks, hgSessions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-dismiss reminders based on type
   useEffect(() => {
@@ -197,54 +251,93 @@ export default function useReminderEngine({
   }, [activeReminders.length]);
 
   // Native Android: pre-schedule background reminder alarms via AlarmManager so
-  // notifications fire even when the app is closed. Runs whenever tasks or settings
-  // change. On device reboot, ReminderReceiver.BOOT_COMPLETED re-registers from the
-  // persisted list stored by nativeSyncReminders.
+  // notifications fire even when the app is closed. Runs whenever tasks, settings,
+  // or HG sessions change. On device reboot, ReminderReceiver.BOOT_COMPLETED
+  // re-registers from the persisted list stored by nativeSyncReminders.
   useEffect(() => {
-    if (!isNativeAndroid() || !reminderSettings.enabled) return;
+    if (!isNativeAndroid()) return;
 
     const todayStr = dateToString(new Date());
     const todayMidnight = new Date();
     todayMidnight.setHours(0, 0, 0, 0);
     const now = Date.now();
 
-    const todayRegular = tasks.filter(t => t.date === todayStr && !t.completed);
-    const todayRecurring = expandedRecurringTasks.filter(t => t.date === todayStr);
-    const allTodayTasks = [...todayRegular, ...todayRecurring];
-
-    const messageMap = {
-      before15: 'Starts in 15 minutes',
-      before10: 'Starts in 10 minutes',
-      before5: 'Starts in 5 minutes',
-      start: 'Starting now',
-      end: 'Ending now',
-      morning: 'All-day task reminder',
-    };
-
     const futureReminders = [];
-    for (const task of allTodayTasks) {
-      if (task.completed) continue;
-      const category = getTaskCategory(task);
-      const catSettings = reminderSettings.categories?.[category];
-      if (!catSettings) continue;
-      const points = getReminderPoints(task, catSettings, reminderSettings.morningReminderTime);
-      for (const point of points) {
-        const triggerAtMillis = todayMidnight.getTime() + point.triggerMin * 60 * 1000;
-        if (triggerAtMillis <= now) continue; // already passed
-        futureReminders.push({
-          id: point.key,
-          taskId: String(task.id),
-          title: task.title,
-          body: messageMap[point.type] || 'Reminder',
-          type: point.type,
-          isCalendarEvent: !!(task.imported && !task.isTaskCalendar),
-          triggerAtMillis,
-        });
+
+    // ── Task reminders (only when globally enabled) ────────────────────────
+    if (reminderSettings.enabled) {
+      const todayRegular = tasks.filter(t => t.date === todayStr && !t.completed);
+      const todayRecurring = expandedRecurringTasks.filter(t => t.date === todayStr);
+      const allTodayTasks = [...todayRegular, ...todayRecurring];
+
+      const messageMap = {
+        before15: 'Starts in 15 minutes',
+        before10: 'Starts in 10 minutes',
+        before5: 'Starts in 5 minutes',
+        start: 'Starting now',
+        end: 'Ending now',
+        morning: 'All-day task reminder',
+      };
+
+      for (const task of allTodayTasks) {
+        if (task.completed) continue;
+        const category = getTaskCategory(task);
+        const catSettings = reminderSettings.categories?.[category];
+        if (!catSettings) continue;
+        const points = getReminderPoints(task, catSettings, reminderSettings.morningReminderTime);
+        for (const point of points) {
+          const triggerAtMillis = todayMidnight.getTime() + point.triggerMin * 60 * 1000;
+          if (triggerAtMillis <= now) continue;
+          futureReminders.push({
+            id: point.key,
+            taskId: String(task.id),
+            title: task.title,
+            body: messageMap[point.type] || 'Reminder',
+            type: point.type,
+            isCalendarEvent: !!(task.imported && !task.isTaskCalendar),
+            triggerAtMillis,
+          });
+        }
+      }
+    }
+
+    // ── HG session alarms (independent of global enabled toggle) ──────────
+    const hgNotifEnabled = reminderSettings.hyperGlance?.enabled !== false;
+    if (hgNotifEnabled) {
+      const upNextMinutes = reminderSettings.hyperGlance?.upNextMinutes ?? 10;
+      for (const session of hgSessions) {
+        if (session.date !== todayStr) continue;
+        if (upNextMinutes > 0) {
+          const triggerAtMillis = todayMidnight.getTime() + (session.startMinutes - upNextMinutes) * 60 * 1000;
+          if (triggerAtMillis > now) {
+            futureReminders.push({
+              id: `hg-upnext-${session.id}-${session.date}`,
+              taskId: `hg-${session.id}`,
+              title: 'hyperGLANCE',
+              body: `${session.title}${session.taskCount > 0 ? ` · ${session.taskCount} task${session.taskCount !== 1 ? 's' : ''}` : ''} · Starts in ${upNextMinutes}m`,
+              type: 'hg-upnext',
+              isCalendarEvent: false,
+              triggerAtMillis,
+            });
+          }
+        }
+        const startTrigger = todayMidnight.getTime() + session.startMinutes * 60 * 1000;
+        if (startTrigger > now) {
+          futureReminders.push({
+            id: `hg-start-${session.id}-${session.date}`,
+            taskId: `hg-${session.id}`,
+            title: 'hyperGLANCE',
+            body: `${session.title} · Starting now`,
+            type: 'hg-start',
+            isCalendarEvent: false,
+            triggerAtMillis: startTrigger,
+          });
+        }
       }
     }
 
     nativeSyncReminders(futureReminders);
-  }, [tasks, expandedRecurringTasks, reminderSettings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tasks, expandedRecurringTasks, reminderSettings, hgSessions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reminder snooze: push task start time forward 15 minutes
   const snoozeReminder = (reminder) => {

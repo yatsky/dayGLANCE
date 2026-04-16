@@ -55,18 +55,28 @@ class UpNextNotificationUpdater : BroadcastReceiver() {
                 ?.let { runCatching { JSONObject(it) }.getOrNull() }
                 ?: return
 
-            val nextTask = snapshot.optJSONObject("nextTask")
+            // Prefer nextUpNext (task or HG session, whichever is sooner) over legacy nextTask.
+            val nextUpNext = snapshot.optJSONObject("nextUpNext")
+                ?: snapshot.optJSONObject("nextTask")?.let { t ->
+                    JSONObject().apply {
+                        put("title", t.optString("title", ""))
+                        put("startTime", t.optString("startTime", ""))
+                        put("duration", t.optInt("duration", 0))
+                        put("bodyPrefix", "")
+                    }
+                }
             val bridge = NotificationBridge(context)
 
-            if (nextTask == null) {
+            if (nextUpNext == null) {
                 bridge.cancelUpNextNotification()
                 cancelAlarms(context)
                 return
             }
 
-            val title = nextTask.optString("title", "")
-            val startTime = nextTask.optString("startTime", "")
-            val duration = nextTask.optInt("duration", 0)
+            val title = nextUpNext.optString("title", "")
+            val startTime = nextUpNext.optString("startTime", "")
+            val duration = nextUpNext.optInt("duration", 0)
+            val bodyPrefix = nextUpNext.optString("bodyPrefix", "")
             val use24Hour = snapshot.optBoolean("use24Hour", false)
 
             if (startTime.isEmpty()) {
@@ -89,7 +99,7 @@ class UpNextNotificationUpdater : BroadcastReceiver() {
                 return
             }
 
-            val bodyText = buildBodyText(nowMin, startMin, duration, endMin, use24Hour)
+            val bodyText = buildBodyText(nowMin, startMin, duration, endMin, use24Hour, bodyPrefix)
             bridge.updateUpNextNotification(
                 JSONObject().apply {
                     put("title", title)
@@ -110,26 +120,29 @@ class UpNextNotificationUpdater : BroadcastReceiver() {
             duration: Int,
             endMin: Int,
             use24Hour: Boolean,
+            bodyPrefix: String = "",
         ): String = when {
             nowMin < startMin -> {
                 val diff = startMin - nowMin
-                if (diff >= 60) {
+                val countdown = if (diff >= 60) {
                     "Starts in ${diff / 60}h${if (diff % 60 > 0) " ${diff % 60}m" else ""}"
                 } else {
                     "Starts in ${diff}m"
                 }
+                "$bodyPrefix$countdown"
             }
-            duration == 0 -> "Starting now"
+            duration == 0 -> "${bodyPrefix}Starting now"
             else -> {
                 val endH = (endMin / 60) % 24
                 val endM = endMin % 60
-                if (use24Hour) {
-                    "In progress · ends at %d:%02d".format(endH, endM)
+                val endStr = if (use24Hour) {
+                    "%d:%02d".format(endH, endM)
                 } else {
                     val h = if (endH > 12) endH - 12 else if (endH == 0) 12 else endH
                     val amPm = if (endH >= 12) "PM" else "AM"
-                    "In progress · ends at %d:%02d %s".format(h, endM, amPm)
+                    "%d:%02d %s".format(h, endM, amPm)
                 }
+                "${bodyPrefix}In progress · ends at $endStr"
             }
         }
 

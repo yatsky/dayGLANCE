@@ -134,7 +134,8 @@ export function isHGSessionReachable(instance, hgConfig, currentTime) {
   today.setHours(0, 0, 0, 0);
   if (instance.date !== dateToString(today)) return false;
 
-  const [h, m] = (hgConfig.scheduledTime || '0:0').split(':').map(Number);
+  const effectiveTime = hgConfig.scheduledTimeOverrides?.[instance.date] || hgConfig.scheduledTime || '0:0';
+  const [h, m] = effectiveTime.split(':').map(Number);
   const startMinutes = h * 60 + m;
   const nowMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
   return nowMinutes >= startMinutes;

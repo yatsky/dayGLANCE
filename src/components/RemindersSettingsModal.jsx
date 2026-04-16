@@ -250,11 +250,11 @@ const RemindersSettingsModal = () => {
                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${reminderSettings.hyperGlance?.enabled !== false ? 'translate-x-5' : 'translate-x-1'}`} />
                   </div>
                 </div>
-                <span className={`text-sm ${textPrimary}`}>Notify me for sessions</span>
+                <span className={`text-sm ${textPrimary}`}>Notify me at session start</span>
               </label>
               {reminderSettings.hyperGlance?.enabled !== false && (
                 <div>
-                  <p className={`text-xs ${textSecondary} mb-1.5`}>Up next reminder</p>
+                  <p className={`text-xs ${textSecondary} mb-1.5`}>Session reminder</p>
                   <div className="flex gap-1.5 flex-wrap">
                     {[[0, 'Off'], [5, '5m before'], [10, '10m before'], [15, '15m before'], [30, '30m before']].map(([mins, label]) => (
                       <button

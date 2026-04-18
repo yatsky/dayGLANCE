@@ -12,9 +12,8 @@ import useDayViewHourHeight from '../hooks/useDayViewHourHeight.js';
 
 function hourLabel(hour, use24h) {
   if (use24h) return `${hour.toString().padStart(2, '0')}:00`;
-  if (hour === 0) return '12:00a';
-  if (hour === 12) return '12:00p';
-  return hour < 12 ? `${hour}:00a` : `${hour - 12}:00p`;
+  const n = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return <>{n}<span className="text-[10px] ml-0.5">{hour >= 12 ? 'PM' : 'AM'}</span></>;
 }
 
 function getTaskSlice(task, col, hourHeight, timeToMinutes) {
@@ -97,17 +96,15 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
     <div className={`flex-1 flex flex-col min-w-0 ${colIdx > 0 ? `border-l ${borderClass}` : ''}`}>
       {/* Gutter + grid */}
       <div className="flex flex-1 relative">
-        {/* Hour label gutter */}
-        <div className={`flex-shrink-0 border-r ${borderClass}`} style={{ width: '44px' }}>
+        {/* Hour label gutter — matches TimeGrid's w-16 px-3 py-1 text-sm styling */}
+        <div className={`w-16 flex-shrink-0 border-r ${borderClass}`}>
           {hours.map(hour => (
             <div
               key={hour}
-              className="px-1 flex items-start justify-end"
+              className={`px-3 py-1 text-sm ${textSecondary} flex items-start`}
               style={{ height: `${hourHeight}px` }}
             >
-              <span className={`text-[10px] ${textSecondary} mt-0.5 leading-none`}>
-                {hourLabel(hour, use24HourClock)}
-              </span>
+              {hourLabel(hour, use24HourClock)}
             </div>
           ))}
         </div>
@@ -129,7 +126,7 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
               className="absolute left-0 right-0 pointer-events-none"
               style={{ top: `${(hour - col.startHour) * hourHeight + hourHeight / 2}px` }}
             >
-              <div className={`border-b border-dashed ${borderClass} opacity-40`} />
+              <div className={`border-b border-dashed ${borderClass} opacity-50`} />
             </div>
           ))}
 

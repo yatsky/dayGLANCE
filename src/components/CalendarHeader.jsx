@@ -6,6 +6,7 @@ import {
   Target, Trash2,
 } from 'lucide-react';
 import ViewCycler from './ViewCycler.jsx';
+import DayViewAllDaySection from './DayViewAllDaySection.jsx';
 import { isNativeAndroid, nativeUpdateEvent } from '../native.js';
 import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, isObsidianNoteOnlyTask } from '../utils/textFormatting.jsx';
 import { dateToString, extractWikilinks, formatDeadlineDate, formatShortDate } from '../utils/taskUtils.js';
@@ -101,11 +102,13 @@ const CalendarHeader = () => {
     <>
 {/* Date headers row */}
 <div ref={(el) => { if (isTablet) mobileDateHeaderRef.current = el; }} className={`flex border-b ${borderClass} ${cardBg}`}>
-  {/* Top-left cell: matches GLANCE/Inbox tab row height; hosts ViewCycler on large screens */}
-  <div className={`w-16 flex-shrink-0 border-r ${borderClass} flex items-center justify-center min-h-[44px]`}>
-    {canShowViewCycler && <ViewCycler />}
-  </div>
-  {effectiveViewMode === 'multi' ? visibleDates.map((date, idx) => {
+  {effectiveViewMode === 'multi' ? (
+    <>
+    {/* Top-left cell: hosts ViewCycler on large screens */}
+    <div className={`w-16 flex-shrink-0 border-r ${borderClass} flex items-center justify-center min-h-[44px]`}>
+      {canShowViewCycler && <ViewCycler />}
+    </div>
+    {visibleDates.map((date, idx) => {
     const isDateToday = dateToString(date) === dateToString(new Date());
     const dateStr = dateToString(date);
     const isDragOverThis = dragOverAllDay === dateStr;
@@ -163,8 +166,11 @@ const CalendarHeader = () => {
         )}
       </div>
     );
-  }) : (() => {
-    // Day mode: build date groups from dayViewColumns
+  })}
+    </>
+  ) : (() => {
+    // Day mode: build date groups from dayViewColumns — start at x=0 so column
+    // boundaries align exactly with DayView's flex-1 columns below.
     const dateGroups = [];
     for (const col of dayViewColumns) {
       const last = dateGroups[dateGroups.length - 1];
@@ -182,15 +188,22 @@ const CalendarHeader = () => {
       return (
         <div
           key={group.dateStr}
-          className={`py-2 px-3 text-center min-h-[44px] flex flex-col items-center justify-center ${idx > 0 ? `border-l ${borderClass}` : ''} ${isDateToday ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : cardBg}`}
+          className={`relative min-h-[44px] flex items-center justify-center ${isDateToday ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : cardBg}`}
           style={{ flex: group.count }}
         >
-          <div className={`font-bold ${isDateToday ? 'text-blue-600' : textPrimary}`}>
-            {formatShortDate(group.date)}
-          </div>
-          {timeRange && (
-            <div className={`text-[11px] ${textSecondary} leading-tight`}>{timeRange}</div>
+          {/* ViewCycler floats in the absolute-left of the first date group so
+              column boundaries align: both header and DayView start at x=0. */}
+          {idx === 0 && canShowViewCycler && (
+            <div className={`absolute left-0 top-0 w-16 h-full border-r ${borderClass}`}>
+              <ViewCycler />
+            </div>
           )}
+          <div className={`text-center font-bold text-sm ${isDateToday ? 'text-blue-600' : textPrimary} ${idx === 0 && canShowViewCycler ? 'pl-16' : ''}`}>
+            {formatShortDate(group.date)}
+            {timeRange && (
+              <span className={`font-normal text-xs ${textSecondary} ml-1.5`}>\u00b7 {timeRange}</span>
+            )}
+          </div>
         </div>
       );
     });
@@ -216,8 +229,11 @@ const CalendarHeader = () => {
   );
 })()}
 
-{/* All-day tasks section - inside combined sticky header */}
-{(visibleDates.some(date => getTasksForDate(date).some(t => t.isAllDay) || getDeadlineTasksForDate(dateToString(date)).length > 0) || (routinesEnabled && todayRoutines.some(r => r.isAllDay))) && (
+{/* Day mode all-day chips strip */}
+{effectiveViewMode === 'day' && <DayViewAllDaySection />}
+
+{/* Multi-mode all-day tasks section */}
+{effectiveViewMode === 'multi' && (visibleDates.some(date => getTasksForDate(date).some(t => t.isAllDay) || getDeadlineTasksForDate(dateToString(date)).length > 0) || (routinesEnabled && todayRoutines.some(r => r.isAllDay))) && (
   <div ref={(el) => { if (isTablet) mobileAllDaySectionRef.current = el; }} className={`flex border-b ${borderClass} ${cardBg}`}>
     <div className={`w-16 flex-shrink-0 px-3 py-2 text-xs font-semibold ${textSecondary} border-r ${borderClass}`}>
       ALL DAY

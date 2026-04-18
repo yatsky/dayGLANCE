@@ -28,6 +28,9 @@ const SettingsModal = () => {
     dailyContentEnabled, setDailyContentEnabled,
     setTasks, setUnscheduledTasks,
     dailyNoteTemplate, setDailyNoteTemplate,
+    defaultView, setDefaultView,
+    dayViewMode, setDayViewMode,
+    canShowViewCycler,
   } = useDayPlannerCtx();
   const {
     handleFileUpload,
@@ -117,6 +120,61 @@ const SettingsModal = () => {
                 <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
                   {/* Left column */}
                   <div className="space-y-6">
+
+                    {/* View Defaults Section (only when the cycler is available) */}
+                    {canShowViewCycler && (
+                      <div className="space-y-3">
+                        <h4 className={`font-medium ${textPrimary} flex items-center gap-2`}>
+                          <LayoutGrid size={16} className={textSecondary} />
+                          View defaults
+                        </h4>
+                        <div>
+                          <label className={`block text-xs ${textSecondary} mb-1.5`}>Default view on load</label>
+                          <div className="flex gap-2">
+                            {['multi', 'day', 'week'].map(v => (
+                              <button
+                                key={v}
+                                onClick={() => setDefaultView(v)}
+                                className={`px-3 py-1.5 text-xs rounded-lg transition-colors capitalize ${
+                                  defaultView === v
+                                    ? 'bg-blue-600 text-white'
+                                    : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                                }`}
+                              >
+                                {v === 'multi' ? 'Multi-day' : v === 'day' ? 'Day' : 'Week'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${textSecondary} mb-1.5`}>Day view mode</label>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setDayViewMode('calendar-day')}
+                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                dayViewMode === 'calendar-day'
+                                  ? 'bg-blue-600 text-white'
+                                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                              }`}
+                            >
+                              Calendar day
+                            </button>
+                            <button
+                              onClick={() => setDayViewMode('rolling-24')}
+                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                dayViewMode === 'rolling-24'
+                                  ? 'bg-blue-600 text-white'
+                                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                              }`}
+                            >
+                              Rolling 24h
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {canShowViewCycler && <hr className={borderClass} />}
 
                     {/* Localization Section */}
                     <div className="space-y-3">

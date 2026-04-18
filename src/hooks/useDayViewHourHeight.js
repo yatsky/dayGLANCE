@@ -1,9 +1,5 @@
 import { useState, useEffect } from 'react';
 
-// Column header row is ~32px (py-1.5 + text-xs line-height).
-// Subtracted so 8 hour rows fill exactly the remaining vertical space.
-const COL_HEADER_HEIGHT = 32;
-
 export default function useDayViewHourHeight(calendarRef, stickyHeaderRef) {
   const [hourHeight, setHourHeight] = useState(80);
 
@@ -12,7 +8,7 @@ export default function useDayViewHourHeight(calendarRef, stickyHeaderRef) {
       if (!calendarRef?.current) return;
       const totalH = calendarRef.current.clientHeight;
       const stickyH = stickyHeaderRef?.current?.offsetHeight || 0;
-      const usable = Math.max(160, totalH - stickyH - COL_HEADER_HEIGHT);
+      const usable = Math.max(160, totalH - stickyH);
       setHourHeight(Math.max(20, Math.floor((usable - 8) / 8)));
     };
 

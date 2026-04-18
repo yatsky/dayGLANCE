@@ -224,14 +224,24 @@ const DayPlanner = () => {
   // Override visible days: tablet uses orientation (static panel always present), mobile always 1, desktop uses width-based hook
   const visibleDays = isTablet ? (isLandscape ? 2 : 1) : isMobile ? 1 : _visibleDays;
   const [viewMode, setViewMode] = useState(() => {
-    const saved = localStorage.getItem('day-planner-view-mode');
-    return saved ? JSON.parse(saved) : 'multi';
+    // Initialize from defaultView on every cold load; last-used viewMode is
+    // written to day-planner-view-mode during a session but not read back.
+    const def = localStorage.getItem('day-planner-default-view');
+    return def ? JSON.parse(def) : 'multi';
   });
   // Only expose the cycler (and honour viewMode) when the 3-day breakpoint is active
   const canShowViewCycler = !isTablet && !isMobile && _visibleDays === 3;
   // Below 1600px the cycler is hidden and the stored mode is ignored until the
   // viewport grows back; the app behaves as 'multi' in the meantime.
   const effectiveViewMode = canShowViewCycler ? viewMode : 'multi';
+  const [defaultView, setDefaultView] = useState(() => {
+    const saved = localStorage.getItem('day-planner-default-view');
+    return saved ? JSON.parse(saved) : 'multi';
+  });
+  const [dayViewMode, setDayViewMode] = useState(() => {
+    const saved = localStorage.getItem('day-planner-day-view-mode');
+    return saved ? JSON.parse(saved) : 'calendar-day';
+  });
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('day-planner-darkmode');
     return saved ? JSON.parse(saved) : false;
@@ -1011,6 +1021,14 @@ const DayPlanner = () => {
   useEffect(() => {
     localStorage.setItem('day-planner-view-mode', JSON.stringify(viewMode));
   }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('day-planner-default-view', JSON.stringify(defaultView));
+  }, [defaultView]);
+
+  useEffect(() => {
+    localStorage.setItem('day-planner-day-view-mode', JSON.stringify(dayViewMode));
+  }, [dayViewMode]);
 
   // Lock body/html scrolling to prevent scroll chaining (all devices incl. desktop PWA)
   useEffect(() => {
@@ -5223,6 +5241,38 @@ const DayPlanner = () => {
     });
   }, [selectedDate, visibleDays]);
 
+  // Columns for DayView — three 8-hour windows.
+  // 'calendar-day': fixed 00-08 / 08-16 / 16-24 for selectedDate.
+  // 'rolling-24': leftmost column is the current 8-hour block; columns that
+  // cross midnight carry the next calendar day's date.
+  const dayViewColumns = useMemo(() => {
+    const base = new Date(selectedDate);
+    base.setHours(0, 0, 0, 0);
+    const nextDay = new Date(base);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const baseStr = dateToString(base);
+    const nextStr = dateToString(nextDay);
+
+    if (dayViewMode === 'rolling-24') {
+      const blockStart = Math.floor(currentTime.getHours() / 8) * 8;
+      return [0, 1, 2].map(i => {
+        const absStart = blockStart + i * 8;
+        const crossesMidnight = absStart >= 24;
+        const startHour = absStart % 24;
+        const endHour = startHour + 8;
+        const date = crossesMidnight ? nextDay : base;
+        const dateStr = crossesMidnight ? nextStr : baseStr;
+        return { startHour, endHour, date, dateStr };
+      });
+    }
+    // calendar-day (default)
+    return [
+      { startHour: 0,  endHour: 8,  date: base, dateStr: baseStr },
+      { startHour: 8,  endHour: 16, date: base, dateStr: baseStr },
+      { startHour: 16, endHour: 24, date: base, dateStr: baseStr },
+    ];
+  }, [selectedDate, dayViewMode, currentTime]);
+
   // Auto-select new tags when they appear (only truly new tags, not previously deselected ones)
   const prevAllTagsRef = useRef(new Set(allTags));
   useEffect(() => {
@@ -6835,6 +6885,9 @@ const DayPlanner = () => {
     isPhone, isMobile, isTablet, isLandscape,
     visibleDays, visibleDates,
     viewMode, setViewMode, canShowViewCycler, effectiveViewMode,
+    defaultView, setDefaultView,
+    dayViewMode, setDayViewMode,
+    dayViewColumns,
 
     // ── DOM / timer / function refs ───────────────────────────────────────────
     tabBarRef, suppressTabBarRef,
@@ -8235,7 +8288,7 @@ const DayPlanner = () => {
       )}
 
       {/* Refocus timeline toast — all form factors */}
-      {timelineScrolledAway && (
+      {timelineScrolledAway && effectiveViewMode === 'multi' && (
         <div className="fixed left-1/2 -translate-x-1/2 z-50 pointer-events-auto" style={{ bottom: isMobile ? 'calc(5rem + env(safe-area-inset-bottom, 0px))' : '1.5rem' }}>
           <button
             onClick={() => { setTimelineScrolledAway(false); scrollToCurrentHour(true); }}

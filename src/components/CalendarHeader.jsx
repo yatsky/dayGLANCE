@@ -24,6 +24,7 @@ const CalendarHeader = () => {
     visibleDates,
     selectedDate,
     canShowViewCycler, effectiveViewMode,
+    use24HourClock, dayViewColumns,
     mobileDateHeaderRef, mobileAllDaySectionRef,
     autoScrollInterval,
     longPressTimerRef, longPressTriggeredRef,
@@ -87,26 +88,17 @@ const CalendarHeader = () => {
     openRoutinesDashboard,
   } = useFeaturesCtx();
 
+  // Helpers for day-mode date-group header labels
+  const formatBoundHour = (h, use24h) => {
+    const norm = h % 24;
+    if (use24h) return `${norm.toString().padStart(2, '0')}:00`;
+    if (norm === 0) return '12a';
+    if (norm === 12) return '12p';
+    return norm < 12 ? `${norm}a` : `${norm - 12}p`;
+  };
+
   return (
     <>
-{/* Current task banner */}
-{(() => {
-  const todayStr = dateToString(new Date());
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-  const runningTask = [...tasks, ...expandedRecurringTasks].find(t =>
-    t.date === todayStr && !t.isAllDay && !t.completed &&
-    !(t.imported && !t.isTaskCalendar) &&
-    nowMin >= timeToMinutes(t.startTime || '0:00') &&
-    nowMin < timeToMinutes(t.startTime || '0:00') + (t.duration || 0)
-  );
-  if (!runningTask) return null;
-  return (
-    <div className={`flex items-center gap-2 px-4 py-1.5 text-xs font-semibold ${darkMode ? 'bg-amber-900/40 text-amber-300 border-b border-amber-700/40' : 'bg-amber-50 text-amber-800 border-b border-amber-200'}`}>
-      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
-      <span className="truncate">Now: {renderTitle(runningTask.title)}</span>
-    </div>
-  );
-})()}
 {/* Date headers row */}
 <div ref={(el) => { if (isTablet) mobileDateHeaderRef.current = el; }} className={`flex border-b ${borderClass} ${cardBg}`}>
   {/* Top-left cell: matches GLANCE/Inbox tab row height; hosts ViewCycler on large screens */}
@@ -171,15 +163,58 @@ const CalendarHeader = () => {
         )}
       </div>
     );
-  }) : (
-    // Non-multi views: single full-width date header for the selected date
-    <div className={`flex-1 py-2 px-3 text-center ${cardBg}`}>
-      <div className={`font-bold flex items-center justify-center gap-1.5 ${dateToString(selectedDate) === dateToString(new Date()) ? 'text-blue-600' : textPrimary}`}>
-        {formatShortDate(selectedDate)}
-      </div>
-    </div>
-  )}
+  }) : (() => {
+    // Day mode: build date groups from dayViewColumns
+    const dateGroups = [];
+    for (const col of dayViewColumns) {
+      const last = dateGroups[dateGroups.length - 1];
+      if (last && last.dateStr === col.dateStr) {
+        last.count++;
+        last.endHour = col.endHour;
+      } else {
+        dateGroups.push({ dateStr: col.dateStr, date: col.date, startHour: col.startHour, endHour: col.endHour, count: 1 });
+      }
+    }
+    return dateGroups.map((group, idx) => {
+      const isDateToday = group.dateStr === dateToString(new Date());
+      const fullDay = group.startHour === 0 && group.endHour === 24;
+      const timeRange = fullDay ? null : `${formatBoundHour(group.startHour, use24HourClock)} \u2013 ${formatBoundHour(group.endHour, use24HourClock)}`;
+      return (
+        <div
+          key={group.dateStr}
+          className={`py-2 px-3 text-center min-h-[44px] flex flex-col items-center justify-center ${idx > 0 ? `border-l ${borderClass}` : ''} ${isDateToday ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : cardBg}`}
+          style={{ flex: group.count }}
+        >
+          <div className={`font-bold ${isDateToday ? 'text-blue-600' : textPrimary}`}>
+            {formatShortDate(group.date)}
+          </div>
+          {timeRange && (
+            <div className={`text-[11px] ${textSecondary} leading-tight`}>{timeRange}</div>
+          )}
+        </div>
+      );
+    });
+  })()}
 </div>
+
+{/* Now bar - current running task */}
+{(() => {
+  const todayStr = dateToString(new Date());
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const runningTask = [...tasks, ...expandedRecurringTasks].find(t =>
+    t.date === todayStr && !t.isAllDay && !t.completed &&
+    !(t.imported && !t.isTaskCalendar) &&
+    nowMin >= timeToMinutes(t.startTime || '0:00') &&
+    nowMin < timeToMinutes(t.startTime || '0:00') + (t.duration || 0)
+  );
+  if (!runningTask) return null;
+  return (
+    <div className={`flex items-center gap-2 px-4 py-1.5 text-xs font-semibold ${darkMode ? 'bg-amber-900/40 text-amber-300 border-b border-amber-700/40' : 'bg-amber-50 text-amber-800 border-b border-amber-200'}`}>
+      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+      <span className="truncate">Now: {renderTitle(runningTask.title)}</span>
+    </div>
+  );
+})()}
 
 {/* All-day tasks section - inside combined sticky header */}
 {(visibleDates.some(date => getTasksForDate(date).some(t => t.isAllDay) || getDeadlineTasksForDate(dateToString(date)).length > 0) || (routinesEnabled && todayRoutines.some(r => r.isAllDay))) && (

@@ -58,6 +58,8 @@ export default function useKeyboardShortcuts({
   setMobileActiveTab, setMobileSettingsView, setFramesModalTab, setEditingFrame, setShowFramesModal,
   // date navigation (arrows)
   changeDate, setSelectedDate,
+  // view cycler (1/2/3)
+  setViewMode, canShowViewCycler,
 }) {
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
@@ -251,6 +253,20 @@ export default function useKeyboardShortcuts({
         }
       }
 
+      // 1/2/3 to jump directly to multi/day/week view
+      if (e.key === '1' && noModifiers && canShowViewCycler) {
+        e.preventDefault();
+        setViewMode('multi');
+      }
+      if (e.key === '2' && noModifiers && canShowViewCycler) {
+        e.preventDefault();
+        setViewMode('day');
+      }
+      if (e.key === '3' && noModifiers && canShowViewCycler) {
+        e.preventDefault();
+        setViewMode('week');
+      }
+
       // Arrow left/right to navigate dates
       if (e.key === 'ArrowLeft' && noModifiers) {
         e.preventDefault();
@@ -277,5 +293,5 @@ export default function useKeyboardShortcuts({
 
     document.addEventListener('keydown', handleGlobalKeyDown);
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [selectedDate, showAddTask, showShortcutHelp, showFocusMode, showRoutinesDashboard, showHabitModal, showMonthView, showSpotlight, showSettings, showRemindersSettings, showWeeklyReview, showVoiceInput, showFramesModal, frameAdjustModal, showRescheduleModal, showGoalsDashboard, hoverPreviewTime, hoverPreviewDate, isMobile, routinesEnabled, habitsEnabled, goalsProjectsEnabled, aiConfig, gtdFrames]);
+  }, [selectedDate, showAddTask, showShortcutHelp, showFocusMode, showRoutinesDashboard, showHabitModal, showMonthView, showSpotlight, showSettings, showRemindersSettings, showWeeklyReview, showVoiceInput, showFramesModal, frameAdjustModal, showRescheduleModal, showGoalsDashboard, hoverPreviewTime, hoverPreviewDate, isMobile, routinesEnabled, habitsEnabled, goalsProjectsEnabled, aiConfig, gtdFrames, canShowViewCycler]);
 }

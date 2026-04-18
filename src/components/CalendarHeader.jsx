@@ -5,6 +5,7 @@ import {
   NotebookPen, Pencil, RefreshCw, Settings, SkipForward,
   Target, Trash2,
 } from 'lucide-react';
+import ViewCycler from './ViewCycler.jsx';
 import { isNativeAndroid, nativeUpdateEvent } from '../native.js';
 import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, isObsidianNoteOnlyTask } from '../utils/textFormatting.jsx';
 import { dateToString, extractWikilinks, formatDeadlineDate, formatShortDate } from '../utils/taskUtils.js';
@@ -21,6 +22,8 @@ const CalendarHeader = () => {
   const {
     isTablet,
     visibleDates,
+    selectedDate,
+    canShowViewCycler, effectiveViewMode,
     mobileDateHeaderRef, mobileAllDaySectionRef,
     autoScrollInterval,
     longPressTimerRef, longPressTriggeredRef,
@@ -106,8 +109,11 @@ const CalendarHeader = () => {
 })()}
 {/* Date headers row */}
 <div ref={(el) => { if (isTablet) mobileDateHeaderRef.current = el; }} className={`flex border-b ${borderClass} ${cardBg}`}>
-  <div className={`w-16 flex-shrink-0 border-r ${borderClass}`}></div>
-  {visibleDates.map((date, idx) => {
+  {/* Top-left cell: matches GLANCE/Inbox tab row height; hosts ViewCycler on large screens */}
+  <div className={`w-16 flex-shrink-0 border-r ${borderClass} flex items-center justify-center min-h-[44px]`}>
+    {canShowViewCycler && <ViewCycler />}
+  </div>
+  {effectiveViewMode === 'multi' ? visibleDates.map((date, idx) => {
     const isDateToday = dateToString(date) === dateToString(new Date());
     const dateStr = dateToString(date);
     const isDragOverThis = dragOverAllDay === dateStr;
@@ -165,7 +171,14 @@ const CalendarHeader = () => {
         )}
       </div>
     );
-  })}
+  }) : (
+    // Non-multi views: single full-width date header for the selected date
+    <div className={`flex-1 py-2 px-3 text-center ${cardBg}`}>
+      <div className={`font-bold flex items-center justify-center gap-1.5 ${dateToString(selectedDate) === dateToString(new Date()) ? 'text-blue-600' : textPrimary}`}>
+        {formatShortDate(selectedDate)}
+      </div>
+    </div>
+  )}
 </div>
 
 {/* All-day tasks section - inside combined sticky header */}

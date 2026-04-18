@@ -8,6 +8,8 @@ import { dateToString, formatDateRange } from '../utils/taskUtils.js';
 import DesktopHeader from './DesktopHeader.jsx';
 import CalendarHeader from './CalendarHeader.jsx';
 import TimeGrid from './TimeGrid.jsx';
+import DayView from './DayView.jsx';
+import WeekView from './WeekView.jsx';
 import InboxArchivedBar from './InboxArchivedBar.jsx';
 import GlanceSidebar from './GlanceSidebar.jsx';
 import InboxSidebar from './InboxSidebar.jsx';
@@ -19,6 +21,7 @@ const DesktopLayout = () => {
   const {
     isPhone, isMobile, isTablet, isLandscape,
     visibleDays, visibleDates,
+    effectiveViewMode,
     tabBarRef, suppressTabBarRef,
     reviewScrollRef, calendarRef, timeGridRef, currentTimeRef,
     tagFilterBtnRef, spotlightInputRef, newTaskInputRef,
@@ -769,7 +772,7 @@ const DesktopLayout = () => {
           <div className="flex-1 min-w-0 relative">
             <div
               ref={calendarRef}
-              className={`${cardBg} border ${borderClass} overflow-y-scroll overflow-x-hidden ${darkMode ? 'dark-scrollbar' : ''} relative`}
+              className={`${cardBg} border ${borderClass} ${effectiveViewMode === 'multi' ? `overflow-y-scroll overflow-x-hidden ${darkMode ? 'dark-scrollbar' : ''}` : 'overflow-hidden'} relative`}
               style={{ height: '100%' }}
             >
               {/* Combined sticky header — date headers + all-day section */}
@@ -777,8 +780,10 @@ const DesktopLayout = () => {
               <CalendarHeader />
               </div>
 
-              {/* Main calendar grid */}
-              <TimeGrid />
+              {/* Main calendar grid — switches between multi/day/week views */}
+              {effectiveViewMode === 'multi' && <TimeGrid />}
+              {effectiveViewMode === 'day' && <DayView />}
+              {effectiveViewMode === 'week' && <WeekView />}
             </div>
           </div>
         </div>

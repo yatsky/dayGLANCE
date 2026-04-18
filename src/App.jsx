@@ -223,6 +223,15 @@ const DayPlanner = () => {
   const [tabletActiveTab, setTabletActiveTab] = useState('glance'); // 'glance' | 'inbox' — for landscape tabbed panel
   // Override visible days: tablet uses orientation (static panel always present), mobile always 1, desktop uses width-based hook
   const visibleDays = isTablet ? (isLandscape ? 2 : 1) : isMobile ? 1 : _visibleDays;
+  const [viewMode, setViewMode] = useState(() => {
+    const saved = localStorage.getItem('day-planner-view-mode');
+    return saved ? JSON.parse(saved) : 'multi';
+  });
+  // Only expose the cycler (and honour viewMode) when the 3-day breakpoint is active
+  const canShowViewCycler = !isTablet && !isMobile && _visibleDays === 3;
+  // Below 1600px the cycler is hidden and the stored mode is ignored until the
+  // viewport grows back; the app behaves as 'multi' in the meantime.
+  const effectiveViewMode = canShowViewCycler ? viewMode : 'multi';
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('day-planner-darkmode');
     return saved ? JSON.parse(saved) : false;
@@ -914,6 +923,7 @@ const DayPlanner = () => {
     selectedDate,
     isMobile, isTablet,
     mobileActiveTab,
+    viewMode: effectiveViewMode,
   });
 
   // Close month view when clicking outside
@@ -997,6 +1007,10 @@ const DayPlanner = () => {
     // can't reliably read resources.configuration.uiMode — it has to be told.
     if (isNativeAndroid()) window.DayGlanceNative?.setStatusBarAppearance?.(darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('day-planner-view-mode', JSON.stringify(viewMode));
+  }, [viewMode]);
 
   // Lock body/html scrolling to prevent scroll chaining (all devices incl. desktop PWA)
   useEffect(() => {
@@ -2263,6 +2277,7 @@ const DayPlanner = () => {
     gtdFrames, setShowRescheduleModal, setRescheduleResults, setRescheduleError,
     setMobileActiveTab, setMobileSettingsView, setFramesModalTab, setEditingFrame, setShowFramesModal,
     changeDate, setSelectedDate,
+    setViewMode, canShowViewCycler,
   });
 
   const changeViewedMonth = (delta) => {
@@ -6819,6 +6834,7 @@ const DayPlanner = () => {
     // ── Device & layout ──────────────────────────────────────────────────────
     isPhone, isMobile, isTablet, isLandscape,
     visibleDays, visibleDates,
+    viewMode, setViewMode, canShowViewCycler, effectiveViewMode,
 
     // ── DOM / timer / function refs ───────────────────────────────────────────
     tabBarRef, suppressTabBarRef,

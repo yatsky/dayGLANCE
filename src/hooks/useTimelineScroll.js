@@ -6,12 +6,14 @@ export default function useTimelineScroll({
   selectedDate,
   isMobile, isTablet,
   mobileActiveTab,
+  viewMode = 'multi',
 }) {
   const [timelineScrolledAway, setTimelineScrolledAway] = useState(false);
   const suppressScrollAwayRef = useRef(false);
 
   // Scroll timeline to start of current hour on date change / tab switch
   const scrollToCurrentHour = useCallback((smooth = false) => {
+    if (viewMode !== 'multi') return;
     const currentHour = new Date().getHours();
     const hourHeight = timeGridRef.current?.children?.[1]?.offsetHeight || 161;
     const scrollPosition = Math.max(0, currentHour * hourHeight);
@@ -43,11 +45,12 @@ export default function useTimelineScroll({
   }, []);
 
   useEffect(() => {
+    if (viewMode !== 'multi') return;
     const isToday = dateToString(selectedDate) === dateToString(new Date());
     if (isToday && calendarRef.current && (!isMobile || mobileActiveTab === 'timeline')) {
       setTimeout(() => scrollToCurrentHour(false), 100);
     }
-  }, [selectedDate, isMobile, mobileActiveTab, scrollToCurrentHour]);
+  }, [selectedDate, isMobile, mobileActiveTab, scrollToCurrentHour, viewMode]);
 
   // Detect when user scrolls away from current time (all form factors)
   useEffect(() => {
@@ -81,7 +84,7 @@ export default function useTimelineScroll({
 
   // Auto-refocus timeline every 30 minutes on tablet and desktop
   useEffect(() => {
-    if (isMobile) return;
+    if (isMobile || viewMode !== 'multi') return;
     let intervalId = null;
     const now = new Date();
     // Calculate ms until next :00 or :30

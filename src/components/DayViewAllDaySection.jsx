@@ -33,30 +33,31 @@ const GroupChips = ({ tasks, darkMode, textSecondary, borderClass, cardBg, getTa
   const [limit, setLimit] = useState(null); // null = show all
   const [overflowOpen, setOverflowOpen] = useState(false);
 
-  // Measure which chips fit within MAX_ROWS using a ghost (invisible) render
+  // Measure which chips fit within MAX_ROWS. Re-runs on task count change AND
+  // on container width change (ResizeObserver) so wrapping recalculates on resize.
   useLayoutEffect(() => {
     const el = ghostRef.current;
-    if (!el || !tasks.length) { setLimit(null); return; }
-    const chips = Array.from(el.children);
-    if (!chips.length) { setLimit(null); return; }
+    if (!el) return;
 
-    const rowTop = chips[0].offsetTop;
-    const maxBottom = rowTop + MAX_H;
-
-    let lastFit = chips.length;
-    for (let i = 0; i < chips.length; i++) {
-      if (chips[i].offsetTop + chips[i].offsetHeight > maxBottom + 2) {
-        lastFit = i;
-        break;
+    const measure = () => {
+      const chips = Array.from(el.children);
+      if (!chips.length || !tasks.length) { setLimit(null); return; }
+      const rowTop = chips[0].offsetTop;
+      const maxBottom = rowTop + MAX_H;
+      let lastFit = chips.length;
+      for (let i = 0; i < chips.length; i++) {
+        if (chips[i].offsetTop + chips[i].offsetHeight > maxBottom + 2) {
+          lastFit = i;
+          break;
+        }
       }
-    }
+      setLimit(lastFit < chips.length ? Math.max(0, lastFit - 1) : null);
+    };
 
-    if (lastFit < chips.length) {
-      // Reserve one slot for the "+N more" chip
-      setLimit(Math.max(0, lastFit - 1));
-    } else {
-      setLimit(null);
-    }
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [tasks.length]);
 
   // Click-outside dismisses the overflow popover

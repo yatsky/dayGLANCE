@@ -198,7 +198,7 @@ const CalendarHeader = () => {
               <ViewCycler />
             </div>
           )}
-          <div className={`text-center font-bold text-sm ${isDateToday ? 'text-blue-600' : textPrimary}`}>
+          <div className={`text-center font-bold text-sm ${isDateToday ? 'text-blue-600' : textPrimary} ${idx === 0 && canShowViewCycler ? 'pl-16' : ''}`}>
             {formatShortDate(group.date)}
             {timeRange && (
               <span className={`font-normal text-xs ${textSecondary} ml-1.5`}>\u00b7 {timeRange}</span>

@@ -1,29 +1,20 @@
 import React from 'react';
 import {
-  Check, ChevronDown, ChevronUp, FileText, Inbox,
+  Check, ChevronDown, ChevronUp, Inbox,
   Pencil, RefreshCw, SkipForward, Trash2,
 } from 'lucide-react';
 import { renderTitleWithoutTags } from '../utils/textFormatting.jsx';
-import { dateToString } from '../utils/taskUtils.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import useDayViewHourHeight from '../hooks/useDayViewHourHeight.js';
 
-// ── Column definitions ────────────────────────────────────────────────────────
-
-const COLUMNS = [
-  { startHour: 0,  endHour: 8,  label12: '12a \u2013 8a',  label24: '00 \u2013 08' },
-  { startHour: 8,  endHour: 16, label12: '8a \u2013 4p',   label24: '08 \u2013 16' },
-  { startHour: 16, endHour: 24, label12: '4p \u2013 12a',  label24: '16 \u2013 00' },
-];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function hourLabel(hour, use24h) {
-  if (use24h) return hour.toString().padStart(2, '0');
-  if (hour === 0) return '12a';
-  if (hour === 12) return '12p';
-  return hour < 12 ? `${hour}a` : `${hour - 12}p`;
+  if (use24h) return `${hour.toString().padStart(2, '0')}:00`;
+  if (hour === 0) return '12:00a';
+  if (hour === 12) return '12:00p';
+  return hour < 12 ? `${hour}:00a` : `${hour - 12}:00p`;
 }
 
 function getTaskSlice(task, col, hourHeight, timeToMinutes) {
@@ -47,9 +38,6 @@ function getTaskSlice(task, col, hourHeight, timeToMinutes) {
   };
 }
 
-// Simple conflict layout — returns left/width percentages for a task among its
-// overlapping peers within one column. More sophisticated conflict detection
-// (matching TimeGrid's algorithm) is deferred to a follow-up PR.
 function columnConflictPos(task, colTasks, timeToMinutes) {
   const tStart = timeToMinutes(task.startTime || '0:00');
   const tEnd = tStart + (task.duration || 0);
@@ -76,13 +64,11 @@ function columnConflictPos(task, colTasks, timeToMinutes) {
 
 // ── DayViewColumn ─────────────────────────────────────────────────────────────
 
-const DayViewColumn = ({ col, colIdx, date, dateStr, hourHeight }) => {
+const DayViewColumn = ({ col, colIdx, hourHeight }) => {
   const {
     isTablet,
     darkMode, use24HourClock,
-    borderClass, textPrimary, textSecondary,
-    tasks,
-    expandedRecurringTasks,
+    borderClass, textSecondary,
     taskContextMenu, setTaskContextMenu,
     toggleComplete,
     moveToRecycleBin, moveToInbox, postponeTask,
@@ -95,7 +81,7 @@ const DayViewColumn = ({ col, colIdx, date, dateStr, hourHeight }) => {
 
   const { projectFilter } = useFeaturesCtx();
 
-  const allDayTasks = getTasksForDate(date);
+  const allDayTasks = getTasksForDate(col.date);
   const colTasks = allDayTasks.filter(t => {
     if (t.isAllDay || !t.startTime) return false;
     if (projectFilter && t.projectId !== projectFilter) return false;
@@ -104,31 +90,19 @@ const DayViewColumn = ({ col, colIdx, date, dateStr, hourHeight }) => {
     return end > col.startHour * 60 && start < col.endHour * 60;
   });
 
-  const colLabel = use24HourClock ? col.label24 : col.label12;
   const hours = Array.from({ length: 8 }, (_, i) => col.startHour + i);
-
   const altRow = darkMode ? 'bg-white/[0.04]' : 'bg-stone-100/50';
 
   return (
     <div className={`flex-1 flex flex-col min-w-0 ${colIdx > 0 ? `border-l ${borderClass}` : ''}`}>
-      {/* Column header */}
-      <div
-        className={`flex items-center justify-center border-b ${borderClass} flex-shrink-0`}
-        style={{ height: '32px' }}
-      >
-        <span className={`text-xs font-semibold tracking-wide ${textSecondary}`}>
-          {colLabel}
-        </span>
-      </div>
-
       {/* Gutter + grid */}
       <div className="flex flex-1 relative">
         {/* Hour label gutter */}
-        <div className={`flex-shrink-0 border-r ${borderClass}`} style={{ width: '40px' }}>
+        <div className={`flex-shrink-0 border-r ${borderClass}`} style={{ width: '44px' }}>
           {hours.map(hour => (
             <div
               key={hour}
-              className={`px-1 flex items-start justify-end`}
+              className="px-1 flex items-start justify-end"
               style={{ height: `${hourHeight}px` }}
             >
               <span className={`text-[10px] ${textSecondary} mt-0.5 leading-none`}>
@@ -206,7 +180,7 @@ const DayViewColumn = ({ col, colIdx, date, dateStr, hourHeight }) => {
                     isRecurring: !!isRecurring,
                     isImported: !!isImported,
                     isAllDay: false,
-                    dateStr,
+                    dateStr: col.dateStr,
                   });
                 }}
               >
@@ -238,7 +212,8 @@ const DayViewColumn = ({ col, colIdx, date, dateStr, hourHeight }) => {
                         </button>
                       )}
                       <div
-                        className={`text-xs font-semibold leading-tight truncate flex-1 min-w-0 ${task.completed ? 'line-through' : ''}`}
+                        className={`font-semibold leading-tight truncate flex-1 min-w-0 ${task.completed ? 'line-through' : ''}`}
+                        style={{ fontSize: '13px' }}
                         title={task.title}
                       >
                         {renderTitleWithoutTags(task.title)}
@@ -262,9 +237,9 @@ const DayViewColumn = ({ col, colIdx, date, dateStr, hourHeight }) => {
                   </div>
                 )}
 
-                {/* Action buttons (non-imported, non-tablet) */}
+                {/* Action buttons (non-imported, non-tablet) — top-right corner */}
                 {!isImported && !isTablet && height > 55 && showTitle && (
-                  <div className="absolute bottom-0.5 right-0.5 flex gap-0.5">
+                  <div className="absolute top-0.5 right-0.5 flex gap-0.5">
                     <button
                       onClick={(e) => { e.stopPropagation(); postponeTask(task.id); }}
                       className="hover:bg-white/20 rounded p-0.5 transition-colors text-white/80"
@@ -311,22 +286,19 @@ const DayViewColumn = ({ col, colIdx, date, dateStr, hourHeight }) => {
 
 const DayView = () => {
   const {
-    selectedDate,
     calendarRef, stickyHeaderRef,
+    dayViewColumns,
   } = useDayPlannerCtx();
 
   const hourHeight = useDayViewHourHeight(calendarRef, stickyHeaderRef);
-  const dateStr = dateToString(selectedDate);
 
   return (
     <div className="flex" style={{ height: '100%' }}>
-      {COLUMNS.map((col, colIdx) => (
+      {dayViewColumns.map((col, colIdx) => (
         <DayViewColumn
-          key={col.startHour}
+          key={`${col.dateStr}-${col.startHour}`}
           col={col}
           colIdx={colIdx}
-          date={selectedDate}
-          dateStr={dateStr}
           hourHeight={hourHeight}
         />
       ))}

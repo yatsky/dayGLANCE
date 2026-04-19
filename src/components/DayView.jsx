@@ -187,7 +187,12 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
                   </div>
                 )}
                 {showTitle && (
-                  <TimelineTaskCardContent task={task} height={height} isNarrowWidth={false} />
+                  <TimelineTaskCardContent
+                    task={task}
+                    height={height}
+                    isNarrowWidth={false}
+                    flipNotesPanel={(8 * hourHeight) - (top + height) < 200}
+                  />
                 )}
                 {clippedBottom && (
                   <div className="absolute bottom-0 left-0 right-0 flex justify-center pointer-events-none">

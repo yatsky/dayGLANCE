@@ -127,7 +127,7 @@ const GroupChips = ({ tasks, darkMode, borderClass, cardBg }) => {
               className={`notes-panel-container relative ${t.completed && (!t.imported || t.isTaskCalendar) ? 'opacity-50' : ''}`}
               onClick={() => setOverflowOpen(false)}
             >
-              <AllDayTaskCard task={t} fillWidth={true} />
+              <AllDayTaskCard task={t} fillWidth={false} />
             </div>
           ))}
         </div>

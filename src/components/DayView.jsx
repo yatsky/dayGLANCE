@@ -158,6 +158,7 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
             return (
               <div
                 key={`${task.id}-${col.startHour}`}
+                data-task-id={task.id}
                 data-ctx-menu
                 className={`absolute pointer-events-auto shadow-md notes-panel-container
                   ${task.isTaskCalendar ? '' : task.color}

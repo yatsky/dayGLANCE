@@ -64,7 +64,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
     moveToRecycleBin,
     setInboxProjectFilter, setInboxPriorityFilter, setHideCompletedInbox,
     setHideProjectTasksInbox, setHideStandaloneTasksInbox,
-    goToDate, scrollToHour,
+    goToDate, scrollToHour, effectiveViewMode,
   } = useDayPlannerCtx();
   const {
     habitLongPressTimer,
@@ -553,14 +553,15 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
                   className={`flex-1 min-w-0 ${task._overdueType === 'scheduled' ? 'cursor-pointer' : ''}`}
                   onClick={() => {
                     if (task._overdueType !== 'scheduled') return;
-                    if (task.date) setSelectedDate(new Date(task.date + 'T12:00:00'));
+                    if (task.date) goToDate(task.date);
                     setTimeout(() => {
                       const el = document.querySelector(`[data-task-id="${task.id}"]`);
-                      if (el && calendarRef.current) {
-                        const container = calendarRef.current;
-                        const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
-                        const scrollTarget = Math.max(0, elTop - container.clientHeight / 2 + el.offsetHeight / 2);
-                        container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+                      if (el) {
+                        if (effectiveViewMode === 'multi' && calendarRef.current) {
+                          const container = calendarRef.current;
+                          const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+                          container.scrollTo({ top: Math.max(0, elTop - container.clientHeight / 2 + el.offsetHeight / 2), behavior: 'smooth' });
+                        }
                         el.classList.add('ring-2', 'ring-blue-400');
                         setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2000);
                       }
@@ -835,11 +836,12 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
           className={`flex gap-2.5 py-2 ${task.completed ? 'opacity-50' : ''} cursor-pointer ${isDesktop ? 'hover:bg-white/5' : 'active:bg-white/5'} rounded-lg transition-colors`}
           onClick={() => {
             const el = document.querySelector(`[data-task-id="${task.id}"]`);
-            if (el && calendarRef.current) {
-              const container = calendarRef.current;
-              const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
-              const scrollTarget = Math.max(0, elTop - container.clientHeight / 2 + el.offsetHeight / 2);
-              container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+            if (el) {
+              if (effectiveViewMode === 'multi' && calendarRef.current) {
+                const container = calendarRef.current;
+                const elTop = el.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+                container.scrollTo({ top: Math.max(0, elTop - container.clientHeight / 2 + el.offsetHeight / 2), behavior: 'smooth' });
+              }
               el.classList.add('ring-2', 'ring-blue-400');
               setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 2000);
             }

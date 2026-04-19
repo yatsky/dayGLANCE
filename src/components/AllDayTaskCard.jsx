@@ -52,7 +52,9 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
   const taskCalendarStyle = getTaskCalendarStyle(task, darkMode);
   const isRecurringAllDay = typeof task.id === 'string' && task.id.startsWith('recurring-');
   const allDayTaskWidth = taskWidths[task.id];
-  const useFullLayout = allDayTaskWidth === undefined || allDayTaskWidth >= 200;
+  // Day-view chips (fillWidth=false) always use full layout — they have a min-width of 200px
+  // and must never read stale taskWidths measurements from multi view.
+  const useFullLayout = !fillWidth || allDayTaskWidth === undefined || allDayTaskWidth >= 200;
 
   const NotesButton = ({ inMenu = false }) => (
     <button
@@ -161,7 +163,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
   };
 
   return (
-    <div className={isTablet && !isImported ? 'relative flex-1 min-w-0 rounded-lg overflow-hidden' : `relative overflow-hidden${fillWidth ? '' : ' w-fit'}`}>
+    <div className={isTablet && !isImported ? 'relative flex-1 min-w-0 rounded-lg overflow-hidden' : `relative overflow-hidden${fillWidth ? '' : ' min-w-[200px] max-w-[300px]'}`}>
       <div
         {...(isTablet && !isImported ? {
           onTouchStart: (e) => handleMobileTaskTouchStart(e, task, 'allday'),

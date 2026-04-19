@@ -30,6 +30,7 @@ const SettingsModal = () => {
     dailyNoteTemplate, setDailyNoteTemplate,
     defaultView, setDefaultView,
     dayViewMode, setDayViewMode,
+    weekViewMode, setWeekViewMode,
     canShowViewCycler,
   } = useDayPlannerCtx();
   const {
@@ -168,6 +169,31 @@ const SettingsModal = () => {
                               }`}
                             >
                               Rolling 24h
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${textSecondary} mb-1.5`}>Week view mode</label>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setWeekViewMode('strict')}
+                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                weekViewMode === 'strict'
+                                  ? 'bg-blue-600 text-white'
+                                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                              }`}
+                            >
+                              Strict week
+                            </button>
+                            <button
+                              onClick={() => setWeekViewMode('rolling')}
+                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                weekViewMode === 'rolling'
+                                  ? 'bg-blue-600 text-white'
+                                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                              }`}
+                            >
+                              Rolling 7 days
                             </button>
                           </div>
                         </div>

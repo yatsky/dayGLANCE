@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle, BookOpen, Calendar, Check, CheckSquare,
   ExternalLink, FileText, GripVertical, Inbox, MoreHorizontal,
@@ -8,6 +8,7 @@ import {
 import ViewCycler from './ViewCycler.jsx';
 import DayViewAllDaySection from './DayViewAllDaySection.jsx';
 import AllDayTaskCard from './AllDayTaskCard.jsx';
+import { WEEK_GUTTER_W } from './WeekView.jsx';
 import { isNativeAndroid, nativeUpdateEvent } from '../native.js';
 import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, isObsidianNoteOnlyTask } from '../utils/textFormatting.jsx';
 import { dateToString, extractWikilinks, formatDeadlineDate, formatShortDate } from '../utils/taskUtils.js';
@@ -27,6 +28,7 @@ const CalendarHeader = () => {
     selectedDate,
     canShowViewCycler, effectiveViewMode,
     use24HourClock, dayViewColumns,
+    weekViewDates,
     mobileDateHeaderRef, mobileAllDaySectionRef,
     autoScrollInterval,
     longPressTimerRef, longPressTriggeredRef,
@@ -90,6 +92,28 @@ const CalendarHeader = () => {
     openRoutinesDashboard,
   } = useFeaturesCtx();
 
+  // Week view: all-day popover state
+  const weekAllDayBtnRefs = useRef({});
+  const [weekAllDayPopover, setWeekAllDayPopover] = useState(null); // { dateStr, tasks, anchor }
+  const weekAllDayPopoverRef = useRef(null);
+
+  useEffect(() => {
+    if (!weekAllDayPopover) return;
+    const onDown = (e) => {
+      const btnEl = weekAllDayBtnRefs.current[weekAllDayPopover.dateStr];
+      if (!weekAllDayPopoverRef.current?.contains(e.target) && !btnEl?.contains(e.target)) {
+        setWeekAllDayPopover(null);
+      }
+    };
+    const onKey = (e) => { if (e.key === 'Escape') setWeekAllDayPopover(null); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [weekAllDayPopover]);
+
   // Helpers for day-mode date-group header labels
   const formatBoundHour = (h, use24h) => {
     const norm = h % 24;
@@ -104,10 +128,53 @@ const CalendarHeader = () => {
 {/* Date headers row */}
 <div
   ref={(el) => { if (isTablet) mobileDateHeaderRef.current = el; }}
-  className={`border-b ${borderClass} ${cardBg}${effectiveViewMode === 'day' ? '' : ' flex'}`}
+  className={`border-b ${borderClass} ${cardBg} flex`}
   style={effectiveViewMode === 'day' ? { display: 'grid', gridTemplateColumns: `repeat(${dayViewColumns.length}, 1fr)` } : undefined}
 >
-  {effectiveViewMode === 'multi' ? (
+  {effectiveViewMode === 'week' ? (
+    /* Week view: gutter cell + 7 day-header cells */
+    <>
+      <div
+        className={`flex-shrink-0 border-r ${borderClass} flex items-center justify-center`}
+        style={{ width: WEEK_GUTTER_W, minHeight: 'var(--header-row-h)' }}
+      >
+        {canShowViewCycler && <ViewCycler />}
+      </div>
+      {weekViewDates.map((date, idx) => {
+        const dateStr = dateToString(date);
+        const isDateToday = dateStr === dateToString(new Date());
+        return (
+          <div
+            key={dateStr}
+            className={`flex-1 py-1.5 px-1 text-center transition-colors ${idx > 0 ? `border-l ${borderClass}` : ''}
+              ${isDateToday ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : ''}`}
+            style={{ minHeight: 'var(--header-row-h)' }}
+          >
+            <div className={`text-xs font-bold flex items-center justify-center gap-1 ${isDateToday ? 'text-blue-600' : textPrimary}`}>
+              <span>{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()]}</span>
+              <span className={`font-normal ${isDateToday ? 'text-blue-500' : textSecondary}`}>
+                {date.getMonth() + 1}/{date.getDate()}
+              </span>
+              <button
+                onClick={(e) => { e.stopPropagation(); setDailyNotesModalDate(dateStr); }}
+                className={`p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${dailyNotes[dateStr]?.text ? '' : 'opacity-40'}`}
+                title="Daily notes"
+              >
+                <NotebookPen size={12} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setFocusLogModalDate(dateStr); }}
+                className={`p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${focusLog[dateStr]?.totalMinutes > 0 ? '' : 'opacity-40'}`}
+                title="Focus sessions"
+              >
+                <Target size={12} />
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  ) : effectiveViewMode === 'multi' ? (
     <>
     {/* Top-left cell: hosts ViewCycler on large screens */}
     <div className={`w-16 flex-shrink-0 border-r ${borderClass} flex items-center justify-center`} style={{ minHeight: 'var(--header-row-h)' }}>
@@ -258,6 +325,67 @@ const CalendarHeader = () => {
 
 {/* Day mode all-day chips strip */}
 {effectiveViewMode === 'day' && <DayViewAllDaySection />}
+
+{/* Week view all-day count chips */}
+{effectiveViewMode === 'week' && weekViewDates.some(d => getTasksForDate(d).some(t => t.isAllDay)) && (
+  <div className={`flex border-b ${borderClass} ${cardBg}`}>
+    <div
+      className={`flex-shrink-0 border-r ${borderClass} flex items-center justify-center`}
+      style={{ width: WEEK_GUTTER_W, minHeight: '28px' }}
+    >
+      <span className={`text-[10px] font-semibold ${textSecondary} uppercase tracking-wide`}>All day</span>
+    </div>
+    {weekViewDates.map((date, idx) => {
+      const dateStr = dateToString(date);
+      const allDayTasks = getTasksForDate(date).filter(t => t.isAllDay && (!projectFilter || t.projectId === projectFilter));
+      const isDateToday = dateStr === dateToString(new Date());
+      return (
+        <div
+          key={dateStr}
+          className={`flex-1 flex items-center justify-center py-1 min-w-0 ${idx > 0 ? `border-l ${borderClass}` : ''}
+            ${isDateToday ? (darkMode ? 'bg-blue-900/10' : 'bg-blue-50/40') : ''}`}
+        >
+          {allDayTasks.length > 0 && (
+            <button
+              ref={el => { weekAllDayBtnRefs.current[dateStr] = el; }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (weekAllDayPopover?.dateStr === dateStr) {
+                  setWeekAllDayPopover(null);
+                } else {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setWeekAllDayPopover({ dateStr, tasks: allDayTasks, anchor: rect });
+                }
+              }}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors
+                ${darkMode ? 'bg-blue-700/60 text-blue-200 hover:bg-blue-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+            >
+              {allDayTasks.length} all day
+            </button>
+          )}
+        </div>
+      );
+    })}
+  </div>
+)}
+{/* Week all-day popover */}
+{weekAllDayPopover && (
+  <div
+    ref={weekAllDayPopoverRef}
+    className={`fixed z-50 shadow-xl rounded-xl border p-2 space-y-1 ${cardBg} ${borderClass}`}
+    style={{
+      left: Math.max(8, Math.min(weekAllDayPopover.anchor.left, window.innerWidth - 296)),
+      top: weekAllDayPopover.anchor.bottom + 4,
+      width: 280,
+    }}
+    onClick={(e) => e.stopPropagation()}
+    onMouseDown={(e) => e.stopPropagation()}
+  >
+    {weekAllDayPopover.tasks.map(task => (
+      <AllDayTaskCard key={task.id} task={task} fillWidth={true} />
+    ))}
+  </div>
+)}
 
 {/* Multi-mode all-day tasks section */}
 {effectiveViewMode === 'multi' && (visibleDates.some(date => getTasksForDate(date).some(t => t.isAllDay) || getDeadlineTasksForDate(dateToString(date)).length > 0) || (routinesEnabled && todayRoutines.some(r => r.isAllDay))) && (

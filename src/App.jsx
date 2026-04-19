@@ -243,6 +243,10 @@ const DayPlanner = () => {
     const saved = localStorage.getItem('day-planner-day-view-mode');
     return saved ? JSON.parse(saved) : 'calendar-day';
   });
+  const [weekViewMode, setWeekViewMode] = useState(() => {
+    const saved = localStorage.getItem('day-planner-week-view-mode');
+    return saved ? JSON.parse(saved) : 'strict';
+  });
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('day-planner-darkmode');
     return saved ? JSON.parse(saved) : false;
@@ -1042,6 +1046,9 @@ const DayPlanner = () => {
   useEffect(() => {
     localStorage.setItem('day-planner-day-view-mode', JSON.stringify(dayViewMode));
   }, [dayViewMode]);
+  useEffect(() => {
+    localStorage.setItem('day-planner-week-view-mode', JSON.stringify(weekViewMode));
+  }, [weekViewMode]);
 
   // Lock body/html scrolling to prevent scroll chaining (all devices incl. desktop PWA)
   useEffect(() => {
@@ -5288,6 +5295,35 @@ const DayPlanner = () => {
     ];
   }, [selectedDate, dayViewMode, currentTime]);
 
+  // Seven dates for week view — strict (calendar week) or rolling (today + 6 days).
+  // Empty array when not in week mode so it doesn't affect other views.
+  const weekViewDates = useMemo(() => {
+    if (effectiveViewMode !== 'week') return [];
+    const base = new Date(selectedDate);
+    base.setHours(0, 0, 0, 0);
+    const todayStr = dateToString(new Date());
+    const isViewingToday = dateToString(base) === todayStr;
+
+    if (weekViewMode === 'rolling' && isViewingToday) {
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(base);
+        d.setDate(d.getDate() + i);
+        return d;
+      });
+    }
+
+    // Strict: week containing selectedDate, starting on weekStartDay
+    const dayOfWeek = base.getDay();
+    const diff = (dayOfWeek - weekStartDay + 7) % 7;
+    const weekStart = new Date(base);
+    weekStart.setDate(weekStart.getDate() - diff);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, [effectiveViewMode, selectedDate, weekViewMode, weekStartDay]);
+
   // Auto-select new tags when they appear (only truly new tags, not previously deselected ones)
   const prevAllTagsRef = useRef(new Set(allTags));
   useEffect(() => {
@@ -5299,12 +5335,13 @@ const DayPlanner = () => {
     prevAllTagsRef.current = new Set(allTags);
   }, [allTags]);
 
-  // Expand recurring task templates into virtual task instances for visible dates
+  // Expand recurring task templates into virtual task instances for visible dates.
+  // In week view, expand over the full week range (which may extend beyond visibleDates).
   const expandedRecurringTasks = useMemo(() => {
     if (recurringTasks.length === 0) return [];
-    const dateStrs = visibleDates.map(d => dateToString(d));
-    const rangeStart = dateStrs[0];
-    const rangeEnd = dateStrs[dateStrs.length - 1];
+    const allDateStrs = [...visibleDates, ...weekViewDates].map(d => dateToString(d)).sort();
+    const rangeStart = allDateStrs[0];
+    const rangeEnd = allDateStrs[allDateStrs.length - 1];
     const today = getTodayStr();
     const instances = [];
     for (const template of recurringTasks) {
@@ -5333,7 +5370,7 @@ const DayPlanner = () => {
       }
     }
     return instances;
-  }, [recurringTasks, visibleDates]);
+  }, [recurringTasks, visibleDates, weekViewDates]);
   expandedRecurringTasksRef.current = expandedRecurringTasks;
 
   // Build today's non-overdue HG sessions for the reminder engine.
@@ -6903,6 +6940,8 @@ const DayPlanner = () => {
     defaultView, setDefaultView,
     dayViewMode, setDayViewMode,
     dayViewColumns,
+    weekViewMode, setWeekViewMode,
+    weekViewDates,
 
     // ── DOM / timer / function refs ───────────────────────────────────────────
     tabBarRef, suppressTabBarRef,

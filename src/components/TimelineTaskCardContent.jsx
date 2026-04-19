@@ -13,7 +13,7 @@ import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 
-const TimelineTaskCardContent = ({ task, height, isNarrowWidth }) => {
+const TimelineTaskCardContent = ({ task, height, isNarrowWidth, flipNotesPanel }) => {
   const {
     isTablet,
     darkMode,
@@ -397,7 +397,7 @@ const TimelineTaskCardContent = ({ task, height, isNarrowWidth }) => {
       {expandedNotesTaskId === task.id && !isImported && (() => {
         const startMin = timeToMinutes(task.startTime || '0:00');
         const endMin = startMin + (task.duration || 0);
-        const showAbove = endMin >= 22 * 60;
+        const showAbove = flipNotesPanel !== undefined ? flipNotesPanel : endMin >= 22 * 60;
         return (
           <div
             className="notes-panel-container absolute left-0 right-0 z-40"
@@ -430,7 +430,7 @@ const TimelineTaskCardContent = ({ task, height, isNarrowWidth }) => {
       {expandedNotesTaskId === task.id && isImported && (() => {
         const startMin = timeToMinutes(task.startTime || '0:00');
         const endMin = startMin + (task.duration || 0);
-        const showAbove = endMin >= 22 * 60;
+        const showAbove = flipNotesPanel !== undefined ? flipNotesPanel : endMin >= 22 * 60;
         return (
           <div
             className="notes-panel-container absolute left-0 right-0 z-40"

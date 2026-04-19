@@ -4,6 +4,7 @@ import { getNextOccurrence } from '../utils/recurrenceEngine.js';
 
 export default function useNavigation({
   visibleDays,
+  effectiveViewMode,
   setSelectedDate,
   setShowMonthView,
   setShowSpotlight,
@@ -15,13 +16,16 @@ export default function useNavigation({
   calendarRef,
 }) {
   const changeDate = useCallback((direction) => {
+    const stride = effectiveViewMode === 'day' ? 1
+      : effectiveViewMode === 'week' ? 7
+      : visibleDays;
     setSelectedDate(prev => {
       const newDate = new Date(prev);
-      newDate.setDate(newDate.getDate() + (direction * visibleDays));
+      newDate.setDate(newDate.getDate() + (direction * stride));
       newDate.setHours(12, 0, 0, 0);
       return newDate;
     });
-  }, [setSelectedDate, visibleDays]);
+  }, [setSelectedDate, visibleDays, effectiveViewMode]);
 
   const goToToday = useCallback(() => {
     const today = new Date();

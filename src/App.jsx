@@ -722,6 +722,7 @@ const DayPlanner = () => {
 
   const { changeDate, goToToday, goToDate, handleSpotlightSelect } = useNavigation({
     visibleDays,
+    effectiveViewMode,
     setSelectedDate,
     setShowMonthView,
     setShowSpotlight,
@@ -5253,7 +5254,9 @@ const DayPlanner = () => {
     const baseStr = dateToString(base);
     const nextStr = dateToString(nextDay);
 
-    if (dayViewMode === 'rolling-24') {
+    // rolling-24 only makes sense when viewing today; fall back to calendar-day for other dates
+    const isViewingToday = baseStr === dateToString(new Date());
+    if (dayViewMode === 'rolling-24' && isViewingToday) {
       const blockStart = Math.floor(currentTime.getHours() / 8) * 8;
       return [0, 1, 2].map(i => {
         const absStart = blockStart + i * 8;

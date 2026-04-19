@@ -82,7 +82,7 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
   const altRow = darkMode ? 'bg-white/[0.04]' : 'bg-stone-100/50';
 
   return (
-    <div className={`flex flex-col min-w-0 h-full ${colIdx > 0 ? `border-l ${borderClass}` : ''}`}>
+    <div className={`flex-1 flex flex-col min-w-0 ${colIdx > 0 ? `border-l ${borderClass}` : ''}`}>
       <div className="flex-1 relative">
         {/* Hour rows — each is a full-width flex row matching TimeGrid's structure */}
         {hours.map((hour, i) => (
@@ -193,7 +193,7 @@ const DayView = () => {
   const hourHeight = useDayViewHourHeight(calendarRef, stickyHeaderRef);
 
   return (
-    <div style={{ height: '100%', display: 'grid', gridTemplateColumns: `repeat(${dayViewColumns.length}, 1fr)` }}>
+    <div className="flex" style={{ height: '100%' }}>
       {dayViewColumns.map((col, colIdx) => (
         <DayViewColumn
           key={`${col.dateStr}-${col.startHour}`}

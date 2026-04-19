@@ -28,7 +28,7 @@ export default function useTimelineScroll({
         calendarRef.current.scrollTop = scrollPosition;
       }
     }
-  }, []);
+  }, [viewMode]);
 
   // Scroll timeline to a specific time string (e.g. "08:00")
   const scrollToHour = useCallback((timeStr, smooth = false) => {
@@ -108,7 +108,7 @@ export default function useTimelineScroll({
       clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isMobile, selectedDate, scrollToCurrentHour]);
+  }, [isMobile, selectedDate, scrollToCurrentHour, viewMode]);
 
   return { timelineScrolledAway, setTimelineScrolledAway, scrollToCurrentHour, scrollToHour };
 }

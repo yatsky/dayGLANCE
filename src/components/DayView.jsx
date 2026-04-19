@@ -143,6 +143,11 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
             const taskCalStyle = getTaskCalendarStyle(task, darkMode);
             const isCompleted = task.completed;
 
+            const _nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+            const _taskStart = timeToMinutes(task.startTime || '0:00');
+            const isCurrentTask = col.dateStr === dateToString(new Date()) && !isCompleted && !isCalendarEvent
+              && _nowMin >= _taskStart && _nowMin < _taskStart + (task.duration || 0);
+
             const radiusTop = clippedTop ? '' : 'rounded-t-lg';
             const radiusBot = clippedBottom ? '' : 'rounded-b-lg';
 
@@ -156,6 +161,7 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
                   ${isCompleted && !isCalendarEvent ? 'opacity-50' : ''}
                   ${isCalendarEvent ? 'cursor-default' : 'cursor-pointer'}
                   ${expandedNotesTaskId === task.id ? 'overflow-visible z-30' : 'overflow-hidden'}
+                  ${isCurrentTask ? 'current-task-pulse' : ''}
                 `}
                 style={{
                   top: `${top}px`,

@@ -67,7 +67,9 @@ const GroupChips = ({ tasks, darkMode, borderClass, cardBg }) => {
         aria-hidden="true"
       >
         {tasks.map(t => (
-          <AllDayTaskCard key={t.id} task={t} fillWidth={false} />
+          <div key={t.id} className="flex-1 min-w-[200px] max-w-[300px]">
+            <AllDayTaskCard task={t} fillWidth={false} />
+          </div>
         ))}
       </div>
 
@@ -76,7 +78,7 @@ const GroupChips = ({ tasks, darkMode, borderClass, cardBg }) => {
         {shown.map(t => (
           <div
             key={t.id}
-            className={`notes-panel-container relative flex-shrink-0 ${t.completed && (!t.imported || t.isTaskCalendar) ? 'opacity-50' : ''}`}
+            className={`notes-panel-container relative flex-1 min-w-[200px] max-w-[300px] ${t.completed && (!t.imported || t.isTaskCalendar) ? 'opacity-50' : ''}`}
           >
             <AllDayTaskCard task={t} fillWidth={false} />
           </div>

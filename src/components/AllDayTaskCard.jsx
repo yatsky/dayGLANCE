@@ -163,7 +163,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
   };
 
   return (
-    <div className={isTablet && !isImported ? 'relative flex-1 min-w-0 rounded-lg overflow-hidden' : `relative overflow-hidden${fillWidth ? '' : ' min-w-[200px] max-w-[300px]'}`}>
+    <div className={isTablet && !isImported ? 'relative flex-1 min-w-0 rounded-lg overflow-hidden' : `relative overflow-hidden${fillWidth ? '' : ' w-full'}`}>
       <div
         {...(isTablet && !isImported ? {
           onTouchStart: (e) => handleMobileTaskTouchStart(e, task, 'allday'),

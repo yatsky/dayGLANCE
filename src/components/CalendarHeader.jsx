@@ -194,7 +194,7 @@ const CalendarHeader = () => {
       return (
         <div
           key={group.dateStr}
-          className={`relative flex items-center justify-center ${isDateToday ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : cardBg} ${idx > 0 ? `border-l ${borderClass}` : ''}`}
+          className={`relative flex flex-col items-center justify-center py-2 ${isDateToday ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : cardBg} ${idx > 0 ? `border-l ${borderClass}` : ''}`}
           style={{ gridColumn: `span ${group.count}`, minHeight: 'var(--header-row-h)' }}
         >
           {/* ViewCycler floats in the absolute-left of the first date group so
@@ -204,12 +204,33 @@ const CalendarHeader = () => {
               <ViewCycler />
             </div>
           )}
-          <div className={`text-center font-bold text-sm ${isDateToday ? 'text-blue-600' : textPrimary} ${idx === 0 && canShowViewCycler ? 'pl-16' : ''}`}>
+          <div className={`font-bold text-sm flex items-center justify-center gap-1.5 ${isDateToday ? 'text-blue-600' : textPrimary} ${idx === 0 && canShowViewCycler ? 'pl-16' : ''}`}>
             {formatShortDate(group.date)}
             {timeRange && (
-              <span className={`font-normal text-xs ${textSecondary} ml-1.5`}>· {timeRange}</span>
+              <span className={`font-normal text-xs ${textSecondary}`}>· {timeRange}</span>
             )}
+            <button
+              onClick={(e) => { e.stopPropagation(); setDailyNotesModalDate(group.dateStr); }}
+              className={`p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${dailyNotes[group.dateStr]?.text ? '' : 'opacity-50'}`}
+              title="Daily notes"
+            >
+              <NotebookPen size={14} />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setFocusLogModalDate(group.dateStr); }}
+              className={`p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${focusLog[group.dateStr]?.totalMinutes > 0 ? '' : 'opacity-50'}`}
+              title="Focus sessions"
+            >
+              <Target size={14} />
+            </button>
           </div>
+          {habitsEnabled && !isDateToday && group.dateStr < dateToString(new Date()) && habitLogs[group.dateStr] && activeHabits.length > 0 && (
+            <div className="flex items-center justify-center gap-0.5 mt-0.5 cursor-pointer" onClick={(e) => { e.stopPropagation(); setHabitDayPopup(group.dateStr); }}>
+              {activeHabits.slice(0, 6).map(habit => (
+                <MiniHabitRing key={habit.id} habit={habit} count={habitLogs[group.dateStr]?.[habit.id] || 0} darkMode={darkMode} />
+              ))}
+            </div>
+          )}
         </div>
       );
     });

@@ -94,14 +94,31 @@ const WeekViewTaskPopover = ({ task, anchor, onClose }) => {
 
 const WEEK_GUTTER_W = 64; // px — matches the hour-label column width
 
+const fmtDur = (min) => {
+  const h = Math.floor(min / 60), m = min % 60;
+  return min < 60 ? `${min}m` : m ? `${h}h${m}m` : `${h}h`;
+};
+
 const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, activePopoverTaskId, isToday }) => {
   const {
-    darkMode, borderClass,
+    darkMode, borderClass, cardBg,
     getTasksForDate, getTaskCalendarStyle,
     timeToMinutes,
     setTaskContextMenu,
   } = useDayPlannerCtx();
   const { projectFilter, routinesEnabled, todayRoutines, routineCompletions } = useFeaturesCtx();
+
+  const [overflowPopover, setOverflowPopover] = useState(null); // { routines, rect }
+  const overflowPopoverRef = useRef(null);
+
+  useEffect(() => {
+    if (!overflowPopover) return;
+    const onDown = (e) => { if (!overflowPopoverRef.current?.contains(e.target)) setOverflowPopover(null); };
+    const onKey = (e) => { if (e.key === 'Escape') setOverflowPopover(null); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [overflowPopover]);
 
   const colTasks = getTasksForDate(date).filter(t => {
     if (t.isAllDay || !t.startTime) return false;
@@ -235,23 +252,23 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
 
           const overflowRoutines = assignments.filter(a => a.col === 2).map(a => a.r);
 
-          // Merge overlapping overflow routines into indicator spans
+          // Merge overlapping overflow routines into indicator spans (track actual routines)
           const overflowSpans = [];
           overflowRoutines.forEach(r => {
             const s = timeToMinutes(r.startTime), e = s + r.duration;
             const last = overflowSpans[overflowSpans.length - 1];
-            if (last && s < last.e) { last.e = Math.max(last.e, e); last.count++; }
-            else overflowSpans.push({ s, e, count: 1 });
+            if (last && s < last.e) { last.e = Math.max(last.e, e); last.routines.push(r); }
+            else overflowSpans.push({ s, e, routines: [r] });
           });
 
-          // Hide col-1 routines that overlap any overflow; fold them into the span count
+          // Hide col-1 routines that overlap any overflow; fold them into the span routines
           const hiddenCol1 = new Set();
           assignments.filter(a => a.col === 1).forEach(({ r }) => {
             if (overflowRoutines.some(o => rangesOverlap(r, o))) {
               hiddenCol1.add(r.id);
               overflowSpans.forEach(sp => {
                 const rS = timeToMinutes(r.startTime), rE = rS + r.duration;
-                if (sp.s < rE && sp.e > rS) sp.count++;
+                if (sp.s < rE && sp.e > rS) sp.routines.unshift(r); // col-1 first
               });
             }
           });
@@ -277,7 +294,7 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
                   right: hasOverlap && col === 0 ? 'calc(50% + 1px)' : '1px',
                 }}>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium truncate max-w-full ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[r.id] ? 'line-through opacity-75' : ''}`}>
-                  {r.name}
+                  {r.name} · {fmtDur(r.duration)}
                 </span>
               </div>
             );
@@ -286,10 +303,11 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
           overflowSpans.forEach((sp, i) => {
             items.push(
               <div key={`overflow-${i}`}
-                className="absolute pointer-events-none flex items-center justify-center"
-                style={{ top: `${sp.s * hourHeight / 60}px`, height: `${Math.max(22, (sp.e - sp.s) * hourHeight / 60)}px`, left: 'calc(50% + 1px)', right: '1px', zIndex: 6 }}>
+                className="absolute pointer-events-auto flex items-center justify-center cursor-pointer"
+                style={{ top: `${sp.s * hourHeight / 60}px`, height: `${Math.max(22, (sp.e - sp.s) * hourHeight / 60)}px`, left: 'calc(50% + 1px)', right: '1px', zIndex: 6 }}
+                onClick={(e) => { e.stopPropagation(); setOverflowPopover({ routines: sp.routines, rect: e.currentTarget.getBoundingClientRect() }); }}>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${darkMode ? 'bg-teal-700/60 text-teal-200' : 'bg-teal-500/60 text-white'}`}>
-                  +{sp.count}
+                  +{sp.routines.length}
                 </span>
               </div>
             );
@@ -298,6 +316,31 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
           return items;
         })()}
       </div>
+
+      {/* Overflow routine popover */}
+      {overflowPopover && (() => {
+        const { routines, rect } = overflowPopover;
+        let left = rect.right + 8;
+        if (left + 200 > window.innerWidth - 8) left = rect.left - 200 - 8;
+        let top = Math.max(8, Math.min(rect.top, window.innerHeight - routines.length * 36 - 24));
+        return (
+          <div
+            ref={overflowPopoverRef}
+            className={`fixed z-50 shadow-xl rounded-xl border p-2 space-y-1 ${cardBg} ${borderClass}`}
+            style={{ left, top, minWidth: 160 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {routines.map(routine => (
+              <div
+                key={routine.id}
+                className={`rounded-full px-3 py-1 text-xs font-medium ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
+              >
+                {routine.name} · {fmtDur(routine.duration)}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 };

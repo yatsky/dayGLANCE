@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
+import * as Icons from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { dateToString } from '../utils/taskUtils.js';
 import { splitChipTitleTag } from '../utils/textFormatting.jsx';
 import TimelineTaskCardContent from './TimelineTaskCardContent.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import useWeekViewHourHeight from '../hooks/useWeekViewHourHeight.js';
+import { getHGBarsForDate, isHGSessionReachable } from '../hooks/useHyperGlance.js';
+import { hexToRgba } from '../utils/colorUtils.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -106,7 +110,7 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
     timeToMinutes,
     setTaskContextMenu,
   } = useDayPlannerCtx();
-  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions } = useFeaturesCtx();
+  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, goalsProjectsEnabled, projects } = useFeaturesCtx();
 
   const [overflowPopover, setOverflowPopover] = useState(null); // { routines, rect }
   const overflowPopoverRef = useRef(null);
@@ -130,6 +134,10 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const nowY = isToday ? nowMinutes * hourHeight / 60 : 0;
   const altRow = darkMode ? 'bg-white/[0.04]' : 'bg-stone-100/50';
+
+  const hgBars = goalsProjectsEnabled
+    ? getHGBarsForDate(projects, dateStr, isToday ? nowMinutes : undefined)
+    : [];
 
   return (
     <div
@@ -163,6 +171,44 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
             <div className="w-2 h-2 bg-red-500 rounded-full -ml-1 flex-shrink-0" />
             <div className="flex-1 h-0.5 bg-red-500" />
           </div>
+        </div>
+      )}
+
+      {/* HyperGLANCE project strips — narrow left edge, display only */}
+      {hgBars.length > 0 && (
+        <div className="absolute top-0 bottom-0 left-0 pointer-events-none" style={{ width: 14 }}>
+          {hgBars.map(bar => {
+            const hg = bar.project.hyperglance;
+            const effectiveTime = hg.scheduledTimeOverrides?.[bar.date] || hg.scheduledTime || '0:0';
+            const [bh, bm] = effectiveTime.split(':').map(Number);
+            const startMin = bh * 60 + bm;
+            const dur = bar.isCompleted ? 15 : (hg.scheduledDurationOverrides?.[bar.date] || hg.scheduledDuration || 60);
+            const barTop = startMin * hourHeight / 60;
+            const barH = Math.max(dur * hourHeight / 60, 18);
+            const barColor = hg.color || '#4f46e5';
+            const IconComp = Icons[hg.icon] || Icons.Sparkles;
+            const canEnter = !bar.isCompleted && isHGSessionReachable({ date: bar.date, isOverdue: false }, hg, now);
+            return (
+              <div
+                key={bar.project.id}
+                className="absolute overflow-hidden flex flex-col items-center pt-0.5 gap-0.5"
+                style={{
+                  top: `${barTop}px`,
+                  height: `${barH}px`,
+                  left: 1,
+                  right: 1,
+                  backgroundColor: hexToRgba(barColor, 0.09),
+                  borderLeft: `3px solid ${barColor}`,
+                  borderRadius: 3,
+                }}
+              >
+                <IconComp size={9} style={{ color: barColor, flexShrink: 0 }} />
+                {canEnter && barH > 24 && (
+                  <Zap size={8} style={{ color: barColor }} className="animate-pulse flex-shrink-0" />
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

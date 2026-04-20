@@ -164,8 +164,8 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
       {Array.from({ length: 24 }, (_, hour) => (
         <div
           key={hour}
-          className={`relative${hour === 23 ? ' flex-1' : ''}`}
-          style={hour === 23 ? { minHeight: `${hourHeight}px` } : { height: `${hourHeight}px` }}
+          className="relative"
+          style={{ height: `${hourHeight}px` }}
         >
           <div className={`border-b h-full ${borderClass} ${hour % 2 === 1 ? altRow : ''}`} />
           <div
@@ -455,8 +455,8 @@ const WeekView = () => {
         {Array.from({ length: 24 }, (_, hour) => (
           <div
             key={hour}
-            className={`relative flex-shrink-0${hour === 23 ? ' flex-1' : ''}`}
-            style={hour === 23 ? { minHeight: `${hourHeight}px` } : { height: `${hourHeight}px` }}
+            className="relative flex-shrink-0"
+            style={{ height: `${hourHeight}px` }}
           >
             {hour % 3 === 0 && (
               <span

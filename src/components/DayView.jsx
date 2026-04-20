@@ -6,6 +6,8 @@ import TimelineTaskCardContent from './TimelineTaskCardContent.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import useDayViewHourHeight from '../hooks/useDayViewHourHeight.js';
+import { getHGBarsForDate } from '../hooks/useHyperGlance.js';
+import HyperGlanceBar from './HyperGlanceBar.jsx';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -70,7 +72,29 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
     handleRoutineResizeStart, handleTouchRoutineResizeStart,
   } = useDayPlannerCtx();
 
-  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion } = useFeaturesCtx();
+  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion, goalsProjectsEnabled, projects } = useFeaturesCtx();
+
+  const isDateToday = col.dateStr === dateToString(new Date());
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const hgBars = goalsProjectsEnabled
+    ? getHGBarsForDate(projects, col.dateStr, isDateToday ? nowMin : undefined)
+    : [];
+  const hasBars = hgBars.length > 0;
+
+  const taskOverlapsHG = (task) => {
+    if (!task.startTime || !hasBars) return false;
+    const [th, tm] = (task.startTime || '0:0').split(':').map(Number);
+    const tStart = th * 60 + tm;
+    const tEnd = tStart + (task.duration || 30);
+    return hgBars.some(bar => {
+      const hg = bar.project.hyperglance;
+      const effectiveTime = hg.scheduledTimeOverrides?.[bar.date] || hg.scheduledTime || '0:0';
+      const [bh, bm] = effectiveTime.split(':').map(Number);
+      const bStart = bh * 60 + bm;
+      const effectiveDur = bar.isCompleted ? 15 : (hg.scheduledDurationOverrides?.[bar.date] || hg.scheduledDuration || 60);
+      return tStart < bStart + effectiveDur && tEnd > bStart;
+    });
+  };
 
   const allDayTasks = getTasksForDate(col.date);
   const colTasks = allDayTasks.filter(t => {
@@ -137,6 +161,37 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
 
         {/* Task pill overlay — covers the event area only (right of gutter) */}
         <div className="absolute top-0 left-16 right-0 bottom-0 pointer-events-none">
+          {/* HyperGLANCE project bars — left 50% of event area */}
+          {hasBars && (
+            <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: 0, width: '50%' }}>
+              {hgBars.map(bar => {
+                const hg = bar.project.hyperglance;
+                const effectiveTime = hg.scheduledTimeOverrides?.[bar.date] || hg.scheduledTime || '0:0';
+                const [bh, bm] = effectiveTime.split(':').map(Number);
+                const bStartMin = bh * 60 + bm;
+                const effectiveDur = bar.isCompleted ? 15 : (hg.scheduledDurationOverrides?.[bar.date] || hg.scheduledDuration || 60);
+                const bEndMin = bStartMin + effectiveDur;
+                const colStartMin = col.startHour * 60;
+                const colEndMin = col.endHour * 60;
+                if (bEndMin <= colStartMin || bStartMin >= colEndMin) return null;
+                const visStart = Math.max(bStartMin, colStartMin);
+                const visEnd = Math.min(bEndMin, colEndMin);
+                const overrideTop = (visStart - colStartMin) * hourHeight / 60;
+                const overrideFullHeight = Math.max((visEnd - visStart) * hourHeight / 60 - 1, 24);
+                const overridePillHeight = Math.max(15 * hourHeight / 60 - 1, 18);
+                return (
+                  <HyperGlanceBar
+                    key={bar.project.id}
+                    {...bar}
+                    overrideTop={overrideTop}
+                    overrideFullHeight={overrideFullHeight}
+                    overridePillHeight={overridePillHeight}
+                  />
+                );
+              })}
+            </div>
+          )}
+
           {colTasks.map(task => {
             const slice = getTaskSlice(task, col, hourHeight, timeToMinutes);
             if (!slice) return null;
@@ -173,8 +228,9 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
                 style={{
                   top: `${top}px`,
                   height: `${height}px`,
-                  left,
-                  width,
+                  ...(hasBars && taskOverlapsHG(task)
+                    ? { left: '50%', right: 0, width: undefined }
+                    : { left, width }),
                   ...(isCalendarEvent || task.isTaskCalendar ? taskCalStyle : {}),
                 }}
                 onClick={() => {

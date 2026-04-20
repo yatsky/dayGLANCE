@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { dateToString } from '../utils/taskUtils.js';
+import { renderTitle } from '../utils/textFormatting.jsx';
 import TimelineTaskCardContent from './TimelineTaskCardContent.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
@@ -198,7 +199,7 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
               }}
             >
               <span className="block text-white text-[11px] font-medium leading-tight px-1 py-0.5 truncate">
-                {task.title}
+                {renderTitle(task.title)}
               </span>
             </div>
           );

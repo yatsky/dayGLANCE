@@ -9,7 +9,7 @@ export default function useWeekViewHourHeight(calendarRef, stickyHeaderRef) {
       const totalH = calendarRef.current.clientHeight;
       const stickyH = stickyHeaderRef?.current?.offsetHeight || 0;
       const usable = Math.max(240, totalH - stickyH);
-      setHourHeight(Math.max(10, Math.floor(usable / 24)));
+      setHourHeight(Math.max(10, usable / 24));
     };
 
     const rafId = requestAnimationFrame(() => {

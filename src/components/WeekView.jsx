@@ -3,6 +3,7 @@ import * as Icons from 'lucide-react';
 import { Zap } from 'lucide-react';
 import { dateToString } from '../utils/taskUtils.js';
 import { splitChipTitleTag } from '../utils/textFormatting.jsx';
+import { columnTimeFromEvent } from '../utils/dragUtils.js';
 import TimelineTaskCardContent from './TimelineTaskCardContent.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
@@ -109,11 +110,48 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
     getTasksForDate, getTaskCalendarStyle,
     timeToMinutes,
     setTaskContextMenu, setTimelineContextMenu,
+    isTablet,
+    draggedTask,
+    dragPreviewTime, dragPreviewDate,
+    setDragPreviewTime, setDragPreviewDate,
+    handleDragStart, handleDragEnd, handleDropOnCalendar,
+    formatTime,
   } = useDayPlannerCtx();
   const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, goalsProjectsEnabled, projects, getFrameInstancesForDate, setFrameContextMenu, setHgContextMenu } = useFeaturesCtx();
 
   const [overflowPopover, setOverflowPopover] = useState(null); // { routines, rect }
   const overflowPopoverRef = useRef(null);
+  const colRef = useRef(null);
+
+  // Compute the snapped drop time for the cursor Y relative to this
+  // week-view column. Week columns always span 00:00..24:00, so startMinute
+  // is 0 and the max is clamped to 23:45 (minus the dragged task's length).
+  const timeFromEvent = (e, { taskDuration = 0 } = {}) => columnTimeFromEvent(e, colRef.current, {
+    startMinute: 0,
+    hourHeight,
+    minMinute: 0,
+    maxMinute: 24 * 60,
+    taskDuration,
+  });
+
+  const onColDragOver = (e) => {
+    if (!draggedTask) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const t = timeFromEvent(e, { taskDuration: draggedTask.duration || 0 });
+    setDragPreviewTime(t);
+    setDragPreviewDate(date);
+  };
+
+  const onColDrop = (e) => {
+    if (!draggedTask) return;
+    const t = timeFromEvent(e, { taskDuration: draggedTask.duration || 0 });
+    handleDropOnCalendar(e, date, t);
+  };
+
+  const isDraggingOverThisCol = draggedTask && dragPreviewDate && dateToString(dragPreviewDate) === dateStr;
+
+  const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
 
   useEffect(() => {
     if (!overflowPopover) return;
@@ -157,7 +195,10 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
 
   return (
     <div
+      ref={colRef}
       data-week-col={dateStr}
+      onDragOver={onColDragOver}
+      onDrop={onColDrop}
       className={`flex-1 flex flex-col min-w-0 relative ${colIdx > 0 ? `border-l ${borderClass}` : ''} ${isToday ? (darkMode ? 'bg-blue-900/10' : 'bg-blue-50/40') : ''}`}
     >
       {/* Hour rows */}
@@ -275,12 +316,17 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
           const isActive = activePopoverTaskId === task.id;
           const isRecurring = typeof task.id === 'string' && task.id.startsWith('recurring-');
           const [chipText, chipTag] = splitChipTitleTag(task.title);
+          const chipDraggable = (!isImported || task.isTaskCalendar || !!task.nativeEventId) && !isTablet;
 
           return (
             <div
               key={task.id}
               data-task-id={task.id}
-              className={`absolute pointer-events-auto rounded-sm overflow-hidden cursor-pointer
+              draggable={chipDraggable}
+              onDragStart={chipDraggable ? (e) => handleDragStart(task, 'calendar', e) : undefined}
+              onDragEnd={chipDraggable ? handleDragEnd : undefined}
+              className={`absolute pointer-events-auto rounded-sm overflow-hidden
+                ${chipDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
                 ${task.isTaskCalendar ? '' : task.color}
                 ${task.completed ? 'opacity-50' : ''}
                 ${isActive ? 'ring-2 ring-white/70 z-20' : 'z-10'}
@@ -416,6 +462,25 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
           return items;
         })()}
       </div>
+
+      {/* Drag preview bar — shows target day + time during an active drag */}
+      {isDraggingOverThisCol && dragPreviewTime && (() => {
+        const dragMin = timeToMinutes(dragPreviewTime);
+        const topPx = dragMin * hourHeight / 60;
+        return (
+          <div
+            className="absolute left-0 right-0 pointer-events-none z-30"
+            style={{ top: `${topPx}px` }}
+          >
+            <div className="relative">
+              <div className={`absolute bottom-0.5 right-0 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${darkMode ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'}`}>
+                {dayName} {formatTime(dragPreviewTime)}
+              </div>
+              <div className="h-0.5 bg-blue-500" />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Overflow routine popover */}
       {overflowPopover && (() => {

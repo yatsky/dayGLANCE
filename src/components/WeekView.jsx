@@ -293,8 +293,9 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
                   left: hasOverlap && col === 1 ? 'calc(50% + 1px)' : '1px',
                   right: hasOverlap && col === 0 ? 'calc(50% + 1px)' : '1px',
                 }}>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium truncate max-w-full ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[r.id] ? 'line-through opacity-75' : ''}`}>
-                  {r.name} · {fmtDur(r.duration)}
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium inline-flex items-center min-w-0 max-w-full overflow-hidden ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[r.id] ? 'line-through opacity-75' : ''}`}>
+                  <span className="truncate min-w-0">{r.name}</span>
+                  <span className="shrink-0 ml-1 opacity-75">· {fmtDur(r.duration)}</span>
                 </span>
               </div>
             );
@@ -333,9 +334,10 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, active
             {routines.map(routine => (
               <div
                 key={routine.id}
-                className={`rounded-full px-3 py-1 text-xs font-medium ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
+                className={`rounded-full px-3 py-1 text-xs font-medium inline-flex items-center min-w-0 max-w-full overflow-hidden ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
               >
-                {routine.name} · {fmtDur(routine.duration)}
+                <span className="truncate min-w-0">{routine.name}</span>
+                <span className="shrink-0 ml-1 opacity-75">· {fmtDur(routine.duration)}</span>
               </div>
             ))}
           </div>

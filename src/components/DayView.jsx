@@ -416,7 +416,7 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
                   <TimelineTaskCardContent
                     task={task}
                     height={height}
-                    isNarrowWidth={false}
+                    isNarrowWidth={true}
                     flipNotesPanel={(8 * hourHeight) - (top + height) < 200}
                   />
                 )}

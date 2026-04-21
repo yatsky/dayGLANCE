@@ -81,20 +81,6 @@ const TimeGrid = () => {
 <div
   ref={timeGridRef}
   className="relative"
-  onMouseMove={(e) => {
-    // Belt-and-suspenders fallback: catch hover events that bubble up from
-    // calendar-slot cells (including border seams that individual onMouseMove
-    // handlers miss). Defer to element-specific handlers for interactive
-    // overlay elements (task cards, routine pills, frame zones).
-    if (e.target.closest('.pointer-events-auto')) return;
-    const slotEl = e.target.closest('.calendar-slot[data-date]');
-    if (!slotEl) return;
-    const dateStr = slotEl.getAttribute('data-date');
-    const targetDate = visibleDates.find(d => dateToString(d) === dateStr);
-    if (!targetDate) return;
-    handleCalendarMouseMove(e, targetDate, true);
-  }}
-  onMouseLeave={handleCalendarMouseLeave}
   onDragLeave={(e) => {
     // Clear preview when leaving the calendar grid entirely
     if (!e.currentTarget.contains(e.relatedTarget)) {

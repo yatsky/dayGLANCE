@@ -155,6 +155,7 @@ const DayViewAllDaySection = () => {
     getTasksForDate,
     isTablet,
     handleDragStart, handleDragEnd, handleDropOnDateHeader,
+    dragOverAllDay, setDragOverAllDay, setDragPreviewTime,
   } = useDayPlannerCtx();
   const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion } = useFeaturesCtx();
   const todayStr = dateToString(new Date());
@@ -192,8 +193,10 @@ const DayViewAllDaySection = () => {
             {idx === 0 ? 'ALL DAY' : ''}
           </div>
           <div
-            className="flex-1 min-w-0 py-1"
+            className={`flex-1 min-w-0 py-1 ${dragOverAllDay === group.dateStr ? (darkMode ? 'bg-green-700/50' : 'bg-green-100') : ''}`}
             onDragOver={(e) => e.preventDefault()}
+            onDragEnter={(e) => { e.preventDefault(); setDragOverAllDay(group.dateStr); setDragPreviewTime(null); }}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverAllDay(null); }}
             onDrop={(e) => handleDropOnDateHeader(e, group.date)}
           >
             <GroupChips

@@ -81,7 +81,7 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
     setDragPreviewTime, setDragPreviewDate,
     setHoverPreviewTime, setHoverPreviewDate,
     handleDragStart, handleDragEnd, handleDropOnCalendar,
-    handleResizeStart,
+    handleResizeStart, handleTouchResizeStart,
     isResizing,
     setNewTask, setShowAddTask,
   } = useDayPlannerCtx();
@@ -428,10 +428,11 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
                 {canResize && (
                   <div
                     onMouseDown={(e) => handleResizeStart(task, e)}
+                    onTouchStart={(e) => handleTouchResizeStart(task, e)}
                     onClick={(e) => e.stopPropagation()}
                     onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     className="absolute bottom-0 left-1/3 right-1/3 h-3 cursor-ns-resize hover:bg-white/20 flex items-center justify-center select-none"
-                    style={{ marginBottom: '-4px' }}
+                    style={{ marginBottom: '-4px', touchAction: 'none' }}
                   >
                     <div className="w-12 h-1 bg-white rounded-full" />
                   </div>

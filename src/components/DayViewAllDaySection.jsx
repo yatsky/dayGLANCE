@@ -193,7 +193,7 @@ const DayViewAllDaySection = () => {
             {idx === 0 ? 'ALL DAY' : ''}
           </div>
           <div
-            className={`flex-1 min-w-0 p-2 space-y-1 ${dragOverAllDay === group.dateStr ? (darkMode ? 'bg-green-700/50' : 'bg-green-100') : ''}`}
+            className={`flex-1 min-w-0 p-2 space-y-1 ${dragOverAllDay === group.dateStr ? (darkMode ? 'bg-green-700/50 ring-2 ring-inset ring-green-400' : 'bg-green-100 ring-2 ring-inset ring-green-500') : ''}`}
             onDragOver={(e) => e.preventDefault()}
             onDragEnter={(e) => { e.preventDefault(); setDragOverAllDay(group.dateStr); setDragPreviewTime(null); }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverAllDay(null); }}

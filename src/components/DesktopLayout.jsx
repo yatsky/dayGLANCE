@@ -8,6 +8,8 @@ import { dateToString, formatDateRange } from '../utils/taskUtils.js';
 import DesktopHeader from './DesktopHeader.jsx';
 import CalendarHeader from './CalendarHeader.jsx';
 import TimeGrid from './TimeGrid.jsx';
+import DayView from './DayView.jsx';
+import WeekView from './WeekView.jsx';
 import InboxArchivedBar from './InboxArchivedBar.jsx';
 import GlanceSidebar from './GlanceSidebar.jsx';
 import InboxSidebar from './InboxSidebar.jsx';
@@ -19,6 +21,7 @@ const DesktopLayout = () => {
   const {
     isPhone, isMobile, isTablet, isLandscape,
     visibleDays, visibleDates,
+    effectiveViewMode,
     tabBarRef, suppressTabBarRef,
     reviewScrollRef, calendarRef, timeGridRef, currentTimeRef,
     tagFilterBtnRef, spotlightInputRef, newTaskInputRef,
@@ -633,13 +636,15 @@ const DesktopLayout = () => {
               <div className={`flex border-b ${borderClass} flex-shrink-0`}>
                 <button
                   onClick={() => setTabletActiveTab('glance')}
-                  className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${tabletActiveTab === 'glance' ? 'text-blue-500 border-b-2 border-blue-500' : textSecondary}`}
+                  style={{ height: 'var(--header-row-h)' }}
+                  className={`flex-1 flex items-center justify-center text-sm font-semibold transition-colors border-b-2 ${tabletActiveTab === 'glance' ? 'text-blue-500 border-blue-500' : `${textSecondary} border-transparent`}`}
                 >
                   <span className="flex items-center justify-center gap-1.5"><Eye size={16} /> GLANCE</span>
                 </button>
                 <button
                   onClick={() => setTabletActiveTab('inbox')}
-                  className={`flex-1 py-3 text-sm font-semibold text-center transition-colors relative ${tabletActiveTab === 'inbox' ? 'text-blue-500 border-b-2 border-blue-500' : textSecondary}`}
+                  style={{ height: 'var(--header-row-h)' }}
+                  className={`flex-1 flex items-center justify-center text-sm font-semibold transition-colors relative border-b-2 ${tabletActiveTab === 'inbox' ? 'text-blue-500 border-blue-500' : `${textSecondary} border-transparent`}`}
                 >
                   <span className="flex items-center justify-center gap-1.5">
                     <Inbox size={16} /> Inbox
@@ -704,13 +709,15 @@ const DesktopLayout = () => {
             <div className={`flex border-b ${borderClass} flex-shrink-0`}>
               <button
                 onClick={() => setTabletActiveTab('glance')}
-                className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${tabletActiveTab === 'glance' ? 'text-blue-500 border-b-2 border-blue-500' : textSecondary}`}
+                style={{ height: 'var(--header-row-h)' }}
+                className={`flex-1 flex items-center justify-center text-sm font-semibold transition-colors border-b-2 ${tabletActiveTab === 'glance' ? 'text-blue-500 border-blue-500' : `${textSecondary} border-transparent`}`}
               >
                 <span className="flex items-center justify-center gap-1.5"><Eye size={16} /> GLANCE</span>
               </button>
               <button
                 onClick={() => setTabletActiveTab('inbox')}
-                className={`flex-1 py-3 text-sm font-semibold text-center transition-colors relative ${tabletActiveTab === 'inbox' ? 'text-blue-500 border-b-2 border-blue-500' : textSecondary}`}
+                style={{ height: 'var(--header-row-h)' }}
+                className={`flex-1 flex items-center justify-center text-sm font-semibold transition-colors relative border-b-2 ${tabletActiveTab === 'inbox' ? 'text-blue-500 border-blue-500' : `${textSecondary} border-transparent`}`}
               >
                 <span className="flex items-center justify-center gap-1.5">
                   <Inbox size={16} /> Inbox
@@ -769,7 +776,7 @@ const DesktopLayout = () => {
           <div className="flex-1 min-w-0 relative">
             <div
               ref={calendarRef}
-              className={`${cardBg} border ${borderClass} overflow-y-scroll overflow-x-hidden ${darkMode ? 'dark-scrollbar' : ''} relative`}
+              className={`${cardBg} border-x border-b ${borderClass} ${effectiveViewMode === 'multi' ? `overflow-y-scroll overflow-x-hidden ${darkMode ? 'dark-scrollbar' : ''}` : 'overflow-hidden'} relative`}
               style={{ height: '100%' }}
             >
               {/* Combined sticky header — date headers + all-day section */}
@@ -777,8 +784,10 @@ const DesktopLayout = () => {
               <CalendarHeader />
               </div>
 
-              {/* Main calendar grid */}
-              <TimeGrid />
+              {/* Main calendar grid — switches between multi/day/week views */}
+              {effectiveViewMode === 'multi' && <TimeGrid />}
+              {effectiveViewMode === 'day' && <DayView />}
+              {effectiveViewMode === 'week' && <WeekView />}
             </div>
           </div>
         </div>

@@ -28,6 +28,10 @@ const SettingsModal = () => {
     dailyContentEnabled, setDailyContentEnabled,
     setTasks, setUnscheduledTasks,
     dailyNoteTemplate, setDailyNoteTemplate,
+    defaultView, setDefaultView,
+    dayViewMode, setDayViewMode,
+    weekViewMode, setWeekViewMode,
+    canShowViewCycler,
   } = useDayPlannerCtx();
   const {
     handleFileUpload,
@@ -117,6 +121,86 @@ const SettingsModal = () => {
                 <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
                   {/* Left column */}
                   <div className="space-y-6">
+
+                    {/* View Defaults Section (only when the cycler is available) */}
+                    {canShowViewCycler && (
+                      <div className="space-y-3">
+                        <h4 className={`font-medium ${textPrimary} flex items-center gap-2`}>
+                          <LayoutGrid size={16} className={textSecondary} />
+                          View defaults
+                        </h4>
+                        <div>
+                          <label className={`block text-xs ${textSecondary} mb-1.5`}>Default view on load</label>
+                          <div className="flex gap-2">
+                            {['multi', 'day', 'week'].map(v => (
+                              <button
+                                key={v}
+                                onClick={() => setDefaultView(v)}
+                                className={`px-3 py-1.5 text-xs rounded-lg transition-colors capitalize ${
+                                  defaultView === v
+                                    ? 'bg-blue-600 text-white'
+                                    : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                                }`}
+                              >
+                                {v === 'multi' ? 'Multi-day' : v === 'day' ? 'Day' : 'Week'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${textSecondary} mb-1.5`}>Day view mode</label>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setDayViewMode('calendar-day')}
+                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                dayViewMode === 'calendar-day'
+                                  ? 'bg-blue-600 text-white'
+                                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                              }`}
+                            >
+                              Calendar day
+                            </button>
+                            <button
+                              onClick={() => setDayViewMode('rolling-24')}
+                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                dayViewMode === 'rolling-24'
+                                  ? 'bg-blue-600 text-white'
+                                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                              }`}
+                            >
+                              Rolling 24h
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className={`block text-xs ${textSecondary} mb-1.5`}>Week view mode</label>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setWeekViewMode('strict')}
+                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                weekViewMode === 'strict'
+                                  ? 'bg-blue-600 text-white'
+                                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                              }`}
+                            >
+                              Strict week
+                            </button>
+                            <button
+                              onClick={() => setWeekViewMode('rolling')}
+                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                                weekViewMode === 'rolling'
+                                  ? 'bg-blue-600 text-white'
+                                  : `${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-200 text-stone-700'} ${hoverBg}`
+                              }`}
+                            >
+                              Rolling 7 days
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {canShowViewCycler && <hr className={borderClass} />}
 
                     {/* Localization Section */}
                     <div className="space-y-3">
@@ -415,6 +499,7 @@ const SettingsModal = () => {
                           placeholder="https://nextcloud.example.com/remote.php/dav/calendars/user/calendar-name/?export"
                           value={syncUrl}
                           onChange={(e) => setSyncUrl(e.target.value.replace(/^webcal:\/\//i, 'https://'))}
+                          onPaste={(e) => { const text = e.clipboardData.getData('text'); if (/^webcal:\/\//i.test(text)) { e.preventDefault(); setSyncUrl(text.replace(/^webcal:\/\//i, 'https://')); } }}
                           className={`w-full px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm`}
                         />
                         <p className={`text-xs ${textSecondary} mt-1`}>
@@ -466,6 +551,7 @@ const SettingsModal = () => {
                           placeholder="https://nextcloud.example.com/remote.php/dav/calendars/user/tasks/?export"
                           value={taskCalendarUrl}
                           onChange={(e) => setTaskCalendarUrl(e.target.value.replace(/^webcal:\/\//i, 'https://'))}
+                          onPaste={(e) => { const text = e.clipboardData.getData('text'); if (/^webcal:\/\//i.test(text)) { e.preventDefault(); setTaskCalendarUrl(text.replace(/^webcal:\/\//i, 'https://')); } }}
                           className={`w-full px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm`}
                         />
                         <p className={`text-xs ${textSecondary} mt-1`}>

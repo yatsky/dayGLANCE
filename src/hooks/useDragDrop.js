@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { dateToString } from '../utils/taskUtils.js';
 import { TASK_COLORS } from '../utils/colorUtils.js';
 import { nativeUpdateEvent } from '../native.js';
@@ -253,6 +253,40 @@ export default function useDragDrop({
     }
   };
 
+  // Safeguard: clear drag state on any dragend event at the document level.
+  // The onDragEnd prop only fires on the source element — if it unmounts before
+  // dragend (e.g. a cross-column drop changes the element key), React never
+  // calls the handler and draggedTask stays stuck, blocking hover preview.
+  useEffect(() => {
+    const onDocDragEnd = () => {
+      setDraggedTask(null);
+      setDragSource(null);
+      setDragPreviewTime(null);
+      setDragPreviewDate(null);
+      setDragOverAllDay(null);
+      setDragOverInbox(false);
+      setDragOverRecycleBin(false);
+      if (autoScrollInterval.current) {
+        clearInterval(autoScrollInterval.current);
+        autoScrollInterval.current = null;
+      }
+    };
+    document.addEventListener('dragend', onDocDragEnd);
+    return () => document.removeEventListener('dragend', onDocDragEnd);
+  }, []);
+
+  // On window blur (alt-tab, focus loss), clear resize stuck states. The per-operation
+  // document mouseup listeners won't fire if the mouse button was released outside the
+  // browser window, leaving isResizing or frameResizingRef stuck and blocking hover.
+  useEffect(() => {
+    const onBlur = () => {
+      setIsResizing(false);
+      frameResizingRef.current = false;
+    };
+    window.addEventListener('blur', onBlur);
+    return () => window.removeEventListener('blur', onBlur);
+  }, []);
+
   const updateDragAutoScroll = (e) => {
     if (!calendarRef.current) return;
     const calendarRect = calendarRef.current.getBoundingClientRect();
@@ -345,7 +379,7 @@ export default function useDragDrop({
     }
   };
 
-  const handleDropOnCalendar = (e, targetDate = null) => {
+  const handleDropOnCalendar = (e, targetDate = null, overrideTime = null) => {
     e.preventDefault();
     if (!draggedTask) return;
 
@@ -358,13 +392,13 @@ export default function useDragDrop({
         setDraggedTask(null); setDragSource(null); setDragPreviewTime(null); setDragPreviewDate(null);
         return;
       }
-      const startTime = getTimeFromCursorPosition(e, { maxMinutes: 24 * 60, taskDuration: draggedTask.duration });
+      const startTime = overrideTime || getTimeFromCursorPosition(e, { maxMinutes: 24 * 60, taskDuration: draggedTask.duration });
       setTodayRoutines(prev => prev.map(r => r.id === draggedTask.id ? { ...r, startTime, isAllDay: false, lastModified: new Date().toISOString() } : r));
       setDraggedTask(null); setDragSource(null); setDragPreviewTime(null); setDragPreviewDate(null);
       return;
     }
 
-    const requestedStartTime = getTimeFromCursorPosition(e, {
+    const requestedStartTime = overrideTime || getTimeFromCursorPosition(e, {
       maxMinutes: 24 * 60,
       taskDuration: draggedTask.duration
     });
@@ -915,8 +949,7 @@ export default function useDragDrop({
     const handleMouseMove = (moveEvent) => {
       frameResizingRef.current = true;
       const deltaY = moveEvent.clientY - startY;
-      // Use approximate 80px per hour for desktop
-      const deltaMinutes = Math.round((deltaY / 80) * 60 / 15) * 15;
+      const deltaMinutes = Math.round((deltaY / getHourHeight()) * 60 / 15) * 15;
       let newStart = origStart;
       let newEnd = origEnd;
       if (edge === 'top') {

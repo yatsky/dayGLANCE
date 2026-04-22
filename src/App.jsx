@@ -223,11 +223,46 @@ const DayPlanner = () => {
   const [tabletActiveTab, setTabletActiveTab] = useState('glance'); // 'glance' | 'inbox' — for landscape tabbed panel
   // Override visible days: tablet uses orientation (static panel always present), mobile always 1, desktop uses width-based hook
   const visibleDays = isTablet ? (isLandscape ? 2 : 1) : isMobile ? 1 : _visibleDays;
+  const [viewMode, setViewMode] = useState(() => {
+    // URL ?view= param takes priority over defaultView on cold load.
+    const urlView = new URLSearchParams(window.location.search).get('view');
+    if (urlView && ['multi', 'day', 'week'].includes(urlView)) return urlView;
+    const def = localStorage.getItem('day-planner-default-view');
+    return def ? JSON.parse(def) : 'multi';
+  });
+  // Only expose the cycler (and honour viewMode) when the 3-day breakpoint is active
+  const canShowViewCycler = !isTablet && !isMobile && _visibleDays === 3;
+  // Below 1600px the cycler is hidden and the stored mode is ignored until the
+  // viewport grows back; the app behaves as 'multi' in the meantime.
+  const effectiveViewMode = canShowViewCycler ? viewMode : 'multi';
+  const [defaultView, setDefaultView] = useState(() => {
+    const saved = localStorage.getItem('day-planner-default-view');
+    return saved ? JSON.parse(saved) : 'multi';
+  });
+  const [dayViewMode, setDayViewMode] = useState(() => {
+    const saved = localStorage.getItem('day-planner-day-view-mode');
+    return saved ? JSON.parse(saved) : 'calendar-day';
+  });
+  const [weekViewMode, setWeekViewMode] = useState(() => {
+    const saved = localStorage.getItem('day-planner-week-view-mode');
+    return saved ? JSON.parse(saved) : 'strict';
+  });
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('day-planner-darkmode');
     return saved ? JSON.parse(saved) : false;
   });
   const [selectedDate, setSelectedDate] = useState(() => {
+    const urlDate = new URLSearchParams(window.location.search).get('date');
+    if (urlDate) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(urlDate);
+      if (m) {
+        const parsed = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0, 0);
+        const currentYear = new Date().getFullYear();
+        if (!isNaN(parsed.getTime()) && parsed.getFullYear() >= currentYear - 100 && parsed.getFullYear() <= currentYear + 100) {
+          return parsed;
+        }
+      }
+    }
     const today = new Date();
     today.setHours(12, 0, 0, 0);
     return today;
@@ -703,6 +738,7 @@ const DayPlanner = () => {
 
   const { changeDate, goToToday, goToDate, handleSpotlightSelect } = useNavigation({
     visibleDays,
+    effectiveViewMode,
     setSelectedDate,
     setShowMonthView,
     setShowSpotlight,
@@ -914,6 +950,7 @@ const DayPlanner = () => {
     selectedDate,
     isMobile, isTablet,
     mobileActiveTab,
+    viewMode: effectiveViewMode,
   });
 
   // Close month view when clicking outside
@@ -997,6 +1034,21 @@ const DayPlanner = () => {
     // can't reliably read resources.configuration.uiMode — it has to be told.
     if (isNativeAndroid()) window.DayGlanceNative?.setStatusBarAppearance?.(darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem('day-planner-view-mode', JSON.stringify(viewMode));
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem('day-planner-default-view', JSON.stringify(defaultView));
+  }, [defaultView]);
+
+  useEffect(() => {
+    localStorage.setItem('day-planner-day-view-mode', JSON.stringify(dayViewMode));
+  }, [dayViewMode]);
+  useEffect(() => {
+    localStorage.setItem('day-planner-week-view-mode', JSON.stringify(weekViewMode));
+  }, [weekViewMode]);
 
   // Lock body/html scrolling to prevent scroll chaining (all devices incl. desktop PWA)
   useEffect(() => {
@@ -2210,6 +2262,7 @@ const DayPlanner = () => {
   }, [aiConfig]);
 
   const enterFocusModeRef = useRef(null);
+  const openRoutinesDashboardRef = useRef(null);
 
   const { longPressTriggeredRef, longPressTimerRef } = useMobileInteractions({
     isMobile, performUndo, performRedo,
@@ -2249,7 +2302,7 @@ const DayPlanner = () => {
     showHabitModal, showFramesModal, frameAdjustModal, showRescheduleModal,
     selectedDate, hoverPreviewTime, hoverPreviewDate,
     setNewTask, setShowAddTask, setHoverPreviewTime, setHoverPreviewDate,
-    routinesEnabled, setRoutinesEnabled, setShowRoutinesDashboard,
+    routinesEnabled, setRoutinesEnabled, openRoutinesDashboardRef,
     focusModeAvailableRef, enterFocusModeRef,
     setDarkMode,
     showMonthView, goToToday, setViewedMonth,
@@ -2263,6 +2316,7 @@ const DayPlanner = () => {
     gtdFrames, setShowRescheduleModal, setRescheduleResults, setRescheduleError,
     setMobileActiveTab, setMobileSettingsView, setFramesModalTab, setEditingFrame, setShowFramesModal,
     changeDate, setSelectedDate,
+    setViewMode, canShowViewCycler,
   });
 
   const changeViewedMonth = (delta) => {
@@ -2844,6 +2898,7 @@ const DayPlanner = () => {
     nativeEnterFocusMode();
   };
   enterFocusModeRef.current = enterFocusMode;
+  openRoutinesDashboardRef.current = openRoutinesDashboard;
 
   const startFocusTimer = () => {
     setFocusShowSettings(false);
@@ -5208,6 +5263,69 @@ const DayPlanner = () => {
     });
   }, [selectedDate, visibleDays]);
 
+  // Columns for DayView — three 8-hour windows.
+  // 'calendar-day': fixed 00-08 / 08-16 / 16-24 for selectedDate.
+  // 'rolling-24': leftmost column is the current 8-hour block; columns that
+  // cross midnight carry the next calendar day's date.
+  const dayViewColumns = useMemo(() => {
+    const base = new Date(selectedDate);
+    base.setHours(0, 0, 0, 0);
+    const nextDay = new Date(base);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const baseStr = dateToString(base);
+    const nextStr = dateToString(nextDay);
+
+    // rolling-24 only makes sense when viewing today; fall back to calendar-day for other dates
+    const isViewingToday = baseStr === dateToString(new Date());
+    if (dayViewMode === 'rolling-24' && isViewingToday) {
+      const blockStart = Math.floor(currentTime.getHours() / 8) * 8;
+      return [0, 1, 2].map(i => {
+        const absStart = blockStart + i * 8;
+        const crossesMidnight = absStart >= 24;
+        const startHour = absStart % 24;
+        const endHour = startHour + 8;
+        const date = crossesMidnight ? nextDay : base;
+        const dateStr = crossesMidnight ? nextStr : baseStr;
+        return { startHour, endHour, date, dateStr };
+      });
+    }
+    // calendar-day (default)
+    return [
+      { startHour: 0,  endHour: 8,  date: base, dateStr: baseStr },
+      { startHour: 8,  endHour: 16, date: base, dateStr: baseStr },
+      { startHour: 16, endHour: 24, date: base, dateStr: baseStr },
+    ];
+  }, [selectedDate, dayViewMode, currentTime]);
+
+  // Seven dates for week view — strict (calendar week) or rolling (today + 6 days).
+  // Empty array when not in week mode so it doesn't affect other views.
+  const weekViewDates = useMemo(() => {
+    if (effectiveViewMode !== 'week') return [];
+    const base = new Date(selectedDate);
+    base.setHours(0, 0, 0, 0);
+    const todayStr = dateToString(new Date());
+    const isViewingToday = dateToString(base) === todayStr;
+
+    if (weekViewMode === 'rolling' && isViewingToday) {
+      return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(base);
+        d.setDate(d.getDate() + i);
+        return d;
+      });
+    }
+
+    // Strict: week containing selectedDate, starting on weekStartDay
+    const dayOfWeek = base.getDay();
+    const diff = (dayOfWeek - weekStartDay + 7) % 7;
+    const weekStart = new Date(base);
+    weekStart.setDate(weekStart.getDate() - diff);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, [effectiveViewMode, selectedDate, weekViewMode, weekStartDay]);
+
   // Auto-select new tags when they appear (only truly new tags, not previously deselected ones)
   const prevAllTagsRef = useRef(new Set(allTags));
   useEffect(() => {
@@ -5219,12 +5337,13 @@ const DayPlanner = () => {
     prevAllTagsRef.current = new Set(allTags);
   }, [allTags]);
 
-  // Expand recurring task templates into virtual task instances for visible dates
+  // Expand recurring task templates into virtual task instances for visible dates.
+  // In week view, expand over the full week range (which may extend beyond visibleDates).
   const expandedRecurringTasks = useMemo(() => {
     if (recurringTasks.length === 0) return [];
-    const dateStrs = visibleDates.map(d => dateToString(d));
-    const rangeStart = dateStrs[0];
-    const rangeEnd = dateStrs[dateStrs.length - 1];
+    const allDateStrs = [...visibleDates, ...weekViewDates].map(d => dateToString(d)).sort();
+    const rangeStart = allDateStrs[0];
+    const rangeEnd = allDateStrs[allDateStrs.length - 1];
     const today = getTodayStr();
     const instances = [];
     for (const template of recurringTasks) {
@@ -5253,7 +5372,7 @@ const DayPlanner = () => {
       }
     }
     return instances;
-  }, [recurringTasks, visibleDates]);
+  }, [recurringTasks, visibleDates, weekViewDates]);
   expandedRecurringTasksRef.current = expandedRecurringTasks;
 
   // Build today's non-overdue HG sessions for the reminder engine.
@@ -6819,6 +6938,12 @@ const DayPlanner = () => {
     // ── Device & layout ──────────────────────────────────────────────────────
     isPhone, isMobile, isTablet, isLandscape,
     visibleDays, visibleDates,
+    viewMode, setViewMode, canShowViewCycler, effectiveViewMode,
+    defaultView, setDefaultView,
+    dayViewMode, setDayViewMode,
+    dayViewColumns,
+    weekViewMode, setWeekViewMode,
+    weekViewDates,
 
     // ── DOM / timer / function refs ───────────────────────────────────────────
     tabBarRef, suppressTabBarRef,
@@ -8219,7 +8344,7 @@ const DayPlanner = () => {
       )}
 
       {/* Refocus timeline toast — all form factors */}
-      {timelineScrolledAway && (
+      {timelineScrolledAway && effectiveViewMode === 'multi' && (
         <div className="fixed left-1/2 -translate-x-1/2 z-50 pointer-events-auto" style={{ bottom: isMobile ? 'calc(5rem + env(safe-area-inset-bottom, 0px))' : '1.5rem' }}>
           <button
             onClick={() => { setTimelineScrolledAway(false); scrollToCurrentHour(true); }}
@@ -8298,7 +8423,7 @@ const DayPlanner = () => {
               <button onClick={() => setHabitDayPopup(null)} className={`${textSecondary} hover:${textPrimary} transition-colors`}><X size={18} /></button>
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
-              {activeHabits.map(habit => (
+              {activeHabits.filter(h => (h.scheduledDays ?? [0,1,2,3,4,5,6]).includes(new Date(habitDayPopup + 'T12:00:00').getDay())).map(habit => (
                 <div key={habit.id} className="flex flex-col items-center gap-1">
                   <div className="pointer-events-none">
                     <HabitRing
@@ -8474,7 +8599,6 @@ const DayPlanner = () => {
           <div
             className={`absolute ${cardBg} rounded-lg shadow-xl border ${borderClass} py-1 min-w-[160px]`}
             style={{ left: `${fmX}px`, top: `${fmY}px` }}
-            onClick={(e) => e.stopPropagation()}
           >
             <button
               className={`w-full text-left px-3 py-2 text-sm ${textPrimary} ${hoverBg} transition-colors flex items-center gap-2`}
@@ -8504,7 +8628,7 @@ const DayPlanner = () => {
 
       {/* Task Context Menu */}
       {taskContextMenu && (() => {
-        const { x, y, taskId, isRecurring, isImported, isAllDay, dateStr: ctxDateStr } = taskContextMenu;
+        const { x, y, taskId, isRecurring, isImported, isAllDay, dateStr: ctxDateStr, supportsInlineNotes } = taskContextMenu;
         const ctxDate = new Date(ctxDateStr + 'T12:00:00');
         const scheduledMatch = getTasksForDate(ctxDate).find(t => t.id === taskId);
         const inboxMatch = !scheduledMatch && unscheduledTasks.find(t => t.id === taskId);
@@ -8535,7 +8659,6 @@ const DayPlanner = () => {
             <div
               className={`absolute ${cardBg} rounded-lg shadow-xl border ${borderClass} py-1 min-w-[180px]`}
               style={{ left: `${clampedX}px`, top: `${clampedY}px` }}
-              onClick={(e) => e.stopPropagation()}
             >
               {!isImported && (
                 <button
@@ -8657,7 +8780,6 @@ const DayPlanner = () => {
             <div
               className={`absolute ${cardBg} rounded-lg shadow-xl border ${borderClass} py-1 min-w-[200px]`}
               style={{ left: `${tlX}px`, top: `${tlY}px` }}
-              onClick={(e) => e.stopPropagation()}
             >
               <button
                 className={`w-full text-left px-3 py-2 text-sm ${textPrimary} ${hoverBg} transition-colors flex items-center gap-2`}
@@ -8735,7 +8857,6 @@ const DayPlanner = () => {
             <div
               className={`absolute ${cardBg} rounded-lg shadow-xl border ${borderClass} py-1 min-w-[168px]`}
               style={{ left: `${cmX}px`, top: `${cmY}px` }}
-              onClick={(e) => e.stopPropagation()}
             >
               {!isCompleted && (
                 <button

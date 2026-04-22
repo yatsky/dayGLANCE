@@ -11,7 +11,7 @@ import { hexToRgba } from '../utils/colorUtils.js';
  * Renders a single hyperGLANCE project bar inside the left half of a
  * timeline day column. When the session is completed it shrinks to a small pill.
  */
-const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
+const HyperGlanceBar = ({ project, date, isCompleted, isOverdue, overrideTop, overrideFullHeight, overridePillHeight }) => {
   const { minutesToPosition, currentTime, use24HourClock, tasks, unscheduledTasks, getHourHeight, playUISound, frameResizingRef, setHoverPreviewTime, setHoverPreviewDate } = useDayPlannerCtx();
   const { enterHyperGlanceMode, setHgContextMenu, setPendingEditProjectId, updateProject } = useFeaturesCtx();
 
@@ -25,12 +25,13 @@ const HyperGlanceBar = ({ project, date, isCompleted, isOverdue }) => {
   const durationMin = hg.scheduledDurationOverrides?.[date] || hg.scheduledDuration || 60;
   const endMinutes = startMinutes + durationMin;
 
-  const top = Math.round(minutesToPosition(startMinutes));
-  const bottom = Math.round(minutesToPosition(endMinutes));
-  const fullHeight = Math.max(bottom - top - 1, 24);
+  const computedTop = Math.round(minutesToPosition(startMinutes));
+  const computedBottom = Math.round(minutesToPosition(endMinutes));
+  const top = overrideTop ?? computedTop;
+  const fullHeight = overrideFullHeight ?? Math.max(computedBottom - computedTop - 1, 24);
 
   // Completed pill: ~15 min tall at the start position
-  const pillHeight = Math.max(Math.round(minutesToPosition(startMinutes + 15) - minutesToPosition(startMinutes)) - 1, 18);
+  const pillHeight = overridePillHeight ?? Math.max(Math.round(minutesToPosition(startMinutes + 15) - minutesToPosition(startMinutes)) - 1, 18);
 
   const barColor = hg.color || '#4f46e5';
   const IconComp = Icons[hg.icon] || Icons.Sparkles;

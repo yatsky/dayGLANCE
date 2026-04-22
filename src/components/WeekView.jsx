@@ -1,0 +1,621 @@
+import React, { useEffect, useRef, useState } from 'react';
+import * as Icons from 'lucide-react';
+import { Zap } from 'lucide-react';
+import { dateToString } from '../utils/taskUtils.js';
+import { splitChipTitleTag } from '../utils/textFormatting.jsx';
+import { columnTimeFromEvent } from '../utils/dragUtils.js';
+import TimelineTaskCardContent from './TimelineTaskCardContent.jsx';
+import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
+import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import useWeekViewHourHeight from '../hooks/useWeekViewHourHeight.js';
+import { getHGBarsForDate, isHGSessionReachable } from '../hooks/useHyperGlance.js';
+import { hexToRgba, frameColorBg, frameColorBorder } from '../utils/colorUtils.js';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function weekColConflictPos(task, colTasks, timeToMinutes) {
+  const tStart = timeToMinutes(task.startTime || '0:00');
+  const tEnd = tStart + (task.duration || 0);
+
+  const peers = colTasks.filter(other => {
+    if (other.id === task.id) return false;
+    const oStart = timeToMinutes(other.startTime || '0:00');
+    const oEnd = oStart + (other.duration || 0);
+    return tStart < oEnd && tEnd > oStart;
+  });
+
+  if (peers.length === 0) return { left: '1px', right: '1px', width: undefined };
+
+  const group = [task, ...peers].sort((a, b) => {
+    const diff = timeToMinutes(a.startTime || '0:00') - timeToMinutes(b.startTime || '0:00');
+    return diff !== 0 ? diff : String(a.id).localeCompare(String(b.id));
+  });
+  const idx = group.findIndex(t => t.id === task.id);
+  const total = group.length;
+  const pct = 100 / total;
+  return { left: `calc(${idx * pct}% + 1px)`, width: `calc(${pct}% - 2px)`, right: undefined };
+}
+
+// ── Task popover ──────────────────────────────────────────────────────────────
+
+const WeekViewTaskPopover = ({ task, anchor, onClose }) => {
+  const { cardBg, borderClass, darkMode, getTaskCalendarStyle, expandedNotesTaskId } = useDayPlannerCtx();
+  const popoverRef = useRef(null);
+  const POPOVER_W = 300;
+  const POPOVER_H = 220;
+
+  const isImported = task.imported;
+  const isCalendarEvent = isImported && !task.isTaskCalendar;
+  const taskCalStyle = getTaskCalendarStyle(task, darkMode);
+
+  let left = anchor.right + 8;
+  if (left + POPOVER_W > window.innerWidth - 8) left = anchor.left - POPOVER_W - 8;
+  let top = anchor.top;
+  if (top + POPOVER_H > window.innerHeight - 8) top = window.innerHeight - POPOVER_H - 8;
+  top = Math.max(8, top);
+  left = Math.max(8, left);
+
+  useEffect(() => {
+    const onDown = (e) => {
+      if (!popoverRef.current?.contains(e.target)) onClose();
+    };
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      ref={popoverRef}
+      className={`fixed z-50 shadow-2xl rounded-xl border notes-panel-container text-white
+        ${expandedNotesTaskId === task.id ? 'overflow-visible' : 'overflow-hidden'}
+        ${task.isTaskCalendar ? '' : task.color}
+        ${isCalendarEvent ? '' : ''}
+      `}
+      style={{
+        left,
+        top,
+        width: POPOVER_W,
+        minHeight: POPOVER_H,
+        ...(isCalendarEvent || task.isTaskCalendar ? taskCalStyle : {}),
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <TimelineTaskCardContent
+        task={task}
+        height={POPOVER_H}
+        isNarrowWidth={false}
+        flipNotesPanel={top + POPOVER_H > window.innerHeight / 2}
+      />
+    </div>
+  );
+};
+
+// ── WeekViewColumn ────────────────────────────────────────────────────────────
+
+const WEEK_GUTTER_W = 64; // px — matches the hour-label column width
+
+const fmtDur = (min) => {
+  const h = Math.floor(min / 60), m = min % 60;
+  return min < 60 ? `${min}m` : m ? `${h}h${m}m` : `${h}h`;
+};
+
+const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, onTaskClick, activePopoverTaskId, isToday }) => {
+  const {
+    darkMode, borderClass, cardBg,
+    getTasksForDate, getTaskCalendarStyle,
+    timeToMinutes,
+    setTaskContextMenu, setTimelineContextMenu,
+    isTablet,
+    draggedTask,
+    dragPreviewTime, dragPreviewDate,
+    setDragPreviewTime, setDragPreviewDate,
+    handleDragStart, handleDragEnd, handleDropOnCalendar,
+    formatTime,
+  } = useDayPlannerCtx();
+  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, goalsProjectsEnabled, projects, getFrameInstancesForDate, setFrameContextMenu, setHgContextMenu } = useFeaturesCtx();
+
+  const [overflowPopover, setOverflowPopover] = useState(null); // { routines, rect }
+  const overflowPopoverRef = useRef(null);
+  const colRef = useRef(null);
+
+  // Compute the snapped drop time for the cursor Y relative to this
+  // week-view column. Week columns always span 00:00..24:00, so startMinute
+  // is 0 and the max is clamped to 23:45 (minus the dragged task's length).
+  const timeFromEvent = (e, { taskDuration = 0 } = {}) => columnTimeFromEvent(e, colRef.current, {
+    startMinute: 0,
+    hourHeight,
+    minMinute: 0,
+    maxMinute: 24 * 60,
+    taskDuration,
+  });
+
+  const onColDragOver = (e) => {
+    if (!draggedTask) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const t = timeFromEvent(e, { taskDuration: draggedTask.duration || 0 });
+    setDragPreviewTime(t);
+    setDragPreviewDate(date);
+  };
+
+  const onColDrop = (e) => {
+    if (!draggedTask) return;
+    const t = timeFromEvent(e, { taskDuration: draggedTask.duration || 0 });
+    handleDropOnCalendar(e, date, t);
+  };
+
+  const isDraggingOverThisCol = draggedTask && dragPreviewDate && dateToString(dragPreviewDate) === dateStr;
+
+  const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+
+  useEffect(() => {
+    if (!overflowPopover) return;
+    const onDown = (e) => { if (!overflowPopoverRef.current?.contains(e.target)) setOverflowPopover(null); };
+    const onKey = (e) => { if (e.key === 'Escape') setOverflowPopover(null); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [overflowPopover]);
+
+  const colTasks = getTasksForDate(date).filter(t => {
+    if (t.isAllDay || !t.startTime) return false;
+    if (projectFilter && t.projectId !== projectFilter) return false;
+    return true;
+  });
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowY = isToday ? nowMinutes * hourHeight / 60 : 0;
+  const altRow = darkMode ? 'bg-white/[0.04]' : 'bg-stone-100/50';
+
+  const hgBars = goalsProjectsEnabled
+    ? getHGBarsForDate(projects, dateStr, isToday ? nowMinutes : undefined)
+    : [];
+  const hasBars = hgBars.length > 0;
+
+  const taskOverlapsHG = (task) => {
+    if (!task.startTime || !hasBars) return false;
+    const [th, tm] = (task.startTime || '0:0').split(':').map(Number);
+    const tStart = th * 60 + tm;
+    const tEnd = tStart + (task.duration || 30);
+    return hgBars.some(bar => {
+      const hg = bar.project.hyperglance;
+      const effectiveTime = hg.scheduledTimeOverrides?.[bar.date] || hg.scheduledTime || '0:0';
+      const [bh, bm] = effectiveTime.split(':').map(Number);
+      const bStart = bh * 60 + bm;
+      const effectiveDur = bar.isCompleted ? 15 : (hg.scheduledDurationOverrides?.[bar.date] || hg.scheduledDuration || 60);
+      return tStart < bStart + effectiveDur && tEnd > bStart;
+    });
+  };
+
+  return (
+    <div
+      ref={colRef}
+      data-week-col={dateStr}
+      onDragOver={onColDragOver}
+      onDrop={onColDrop}
+      className={`flex-1 flex flex-col min-w-0 relative ${colIdx > 0 ? `border-l ${borderClass}` : ''} ${isToday ? (darkMode ? 'bg-blue-900/10' : 'bg-blue-50/40') : ''}`}
+    >
+      {/* Hour rows */}
+      {Array.from({ length: 24 }, (_, hour) => (
+        <div
+          key={hour}
+          className="relative"
+          style={{ height: `${hourHeight}px` }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            const rect = e.currentTarget.getBoundingClientRect();
+            const fraction = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+            const minutes = hour * 60 + Math.round(fraction * 60 / 15) * 15;
+            setTimelineContextMenu({ x: e.clientX, y: e.clientY, dateStr, timeMinutes: minutes });
+          }}
+        >
+          <div className={`border-b h-full ${borderClass} ${hour % 2 === 1 ? altRow : ''}`} />
+          <div
+            className="absolute left-0 right-0 pointer-events-none"
+            style={{ top: `${hourHeight / 2}px` }}
+          >
+            <div className={`border-b border-dashed ${borderClass} opacity-30`} />
+          </div>
+        </div>
+      ))}
+
+      {/* Now line — today's column only */}
+      {isToday && (
+        <div
+          className="absolute left-0 right-0 pointer-events-none z-10"
+          style={{ top: `${nowY}px` }}
+        >
+          <div className="flex items-center">
+            <div className="w-2 h-2 bg-red-500 rounded-full -ml-1 flex-shrink-0" />
+            <div className="flex-1 h-0.5 bg-red-500" />
+          </div>
+        </div>
+      )}
+
+      {/* GTD Frame background zones — behind everything */}
+      {getFrameInstancesForDate(date).map(frame => {
+        const fStartMin = timeToMinutes(frame.start);
+        const fEndMin = timeToMinutes(frame.end);
+        const top = fStartMin * hourHeight / 60;
+        const height = Math.max((fEndMin - fStartMin) * hourHeight / 60, 4);
+        const bg = frameColorBg(frame.color, darkMode);
+        const border = frameColorBorder(frame.color, darkMode);
+        return (
+          <div
+            key={frame.frameId}
+            data-ctx-menu
+            className="absolute left-0 right-0 pointer-events-auto select-none"
+            style={{ top: `${top}px`, height: `${height}px`, background: bg, borderLeft: `3px solid ${border}` }}
+            onContextMenu={(e) => { e.preventDefault(); setFrameContextMenu({ x: e.clientX, y: e.clientY, frameId: frame.frameId, dateStr }); }}
+          />
+        );
+      })}
+
+      {/* HyperGLANCE project strips — narrow left edge, display only */}
+      {hgBars.length > 0 && (
+        <div className="absolute top-0 bottom-0 left-0 pointer-events-none" style={{ width: '25%' }}>
+          {hgBars.map(bar => {
+            const hg = bar.project.hyperglance;
+            const effectiveTime = hg.scheduledTimeOverrides?.[bar.date] || hg.scheduledTime || '0:0';
+            const [bh, bm] = effectiveTime.split(':').map(Number);
+            const startMin = bh * 60 + bm;
+            const dur = bar.isCompleted ? 15 : (hg.scheduledDurationOverrides?.[bar.date] || hg.scheduledDuration || 60);
+            const barTop = startMin * hourHeight / 60;
+            const barH = Math.max(dur * hourHeight / 60, 18);
+            const barColor = hg.color || '#4f46e5';
+            const IconComp = Icons[hg.icon] || Icons.Sparkles;
+            const canEnter = !bar.isCompleted && isHGSessionReachable({ date: bar.date, isOverdue: false }, hg, now);
+            return (
+              <div
+                key={bar.project.id}
+                className="absolute overflow-hidden flex flex-col items-center pt-0.5 gap-0.5 pointer-events-auto"
+                style={{
+                  top: `${barTop}px`,
+                  height: `${barH}px`,
+                  left: 1,
+                  right: 1,
+                  backgroundColor: hexToRgba(barColor, 0.09),
+                  borderLeft: `3px solid ${barColor}`,
+                  borderRadius: 3,
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setHgContextMenu({ x: e.clientX, y: e.clientY, projectId: bar.project.id, date: bar.date, isCompleted: bar.isCompleted });
+                }}
+              >
+                <IconComp size={12} style={{ color: barColor, flexShrink: 0 }} />
+                {canEnter && (
+                  <Zap size={10} style={{ color: barColor }} className="animate-pulse flex-shrink-0" />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Task chips */}
+      <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none">
+        {colTasks.map(task => {
+          const taskStart = timeToMinutes(task.startTime || '0:00');
+          const duration = task.duration || 0;
+          const rawH = duration * hourHeight / 60;
+          const chipH = Math.max(22, rawH);
+          const chipTop = taskStart * hourHeight / 60;
+          const { left, right, width } = weekColConflictPos(task, colTasks, timeToMinutes);
+
+          const isImported = task.imported;
+          const isCalendarEvent = isImported && !task.isTaskCalendar;
+          const taskCalStyle = getTaskCalendarStyle(task, darkMode);
+          const isActive = activePopoverTaskId === task.id;
+          const isRecurring = typeof task.id === 'string' && task.id.startsWith('recurring-');
+          const [chipText, chipTag] = splitChipTitleTag(task.title);
+          const chipDraggable = (!isImported || task.isTaskCalendar || !!task.nativeEventId) && !isTablet;
+
+          return (
+            <div
+              key={task.id}
+              data-task-id={task.id}
+              draggable={chipDraggable}
+              onDragStart={chipDraggable ? (e) => handleDragStart(task, 'calendar', e) : undefined}
+              onDragEnd={chipDraggable ? handleDragEnd : undefined}
+              className={`absolute pointer-events-auto rounded-sm overflow-hidden
+                ${chipDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}
+                ${task.isTaskCalendar ? '' : task.color}
+                ${task.completed ? 'opacity-50' : ''}
+                ${isActive ? 'ring-2 ring-white/70 z-20' : 'z-10'}
+                hover:brightness-90
+              `}
+              style={{
+                top: `${chipTop}px`,
+                height: `${chipH}px`,
+                ...(hasBars && taskOverlapsHG(task)
+                  ? { left: '25%', right: '1px', width: undefined }
+                  : { left, right: width ? undefined : right, width }),
+                ...(isCalendarEvent || task.isTaskCalendar ? taskCalStyle : {}),
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTaskClick(task, e.currentTarget.getBoundingClientRect());
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setTaskContextMenu({
+                  x: e.clientX, y: e.clientY,
+                  taskId: task.id,
+                  isRecurring: typeof task.id === 'string' && task.id.startsWith('recurring-'),
+                  isImported: !!isImported,
+                  isAllDay: false,
+                  dateStr,
+                  supportsInlineNotes: false,
+                });
+              }}
+            >
+              <div className="flex items-center gap-0.5 text-white text-[11px] font-medium leading-tight px-1 py-0.5 min-w-0 overflow-hidden">
+                {isRecurring && <Icons.RefreshCw size={8} className="shrink-0 opacity-70" />}
+                <span className="truncate min-w-0">{chipText}</span>
+                {chipTag && <span className="shrink-0 italic opacity-75">{chipTag}</span>}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Routine pills — today's column only, display only, max 2 wide + overflow indicator */}
+        {routinesEnabled && isToday && (() => {
+          const timedRoutines = todayRoutines
+            .filter(r => !r.isAllDay && r.startTime)
+            .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
+          if (timedRoutines.length === 0) return null;
+
+          // Greedy 2-col assignment
+          const colTail = [null, null];
+          const assignments = timedRoutines.map(r => {
+            const rStart = timeToMinutes(r.startTime);
+            for (let c = 0; c < 2; c++) {
+              if (!colTail[c] || timeToMinutes(colTail[c].startTime) + colTail[c].duration <= rStart) {
+                colTail[c] = r;
+                return { r, col: c };
+              }
+            }
+            return { r, col: 2 };
+          });
+
+          const rangesOverlap = (a, b) => {
+            const aS = timeToMinutes(a.startTime), aE = aS + a.duration;
+            const bS = timeToMinutes(b.startTime), bE = bS + b.duration;
+            return aS < bE && bS < aE;
+          };
+
+          const overflowRoutines = assignments.filter(a => a.col === 2).map(a => a.r);
+
+          // Merge overlapping overflow routines into indicator spans (track actual routines)
+          const overflowSpans = [];
+          overflowRoutines.forEach(r => {
+            const s = timeToMinutes(r.startTime), e = s + r.duration;
+            const last = overflowSpans[overflowSpans.length - 1];
+            if (last && s < last.e) { last.e = Math.max(last.e, e); last.routines.push(r); }
+            else overflowSpans.push({ s, e, routines: [r] });
+          });
+
+          // Hide col-1 routines that overlap any overflow; fold them into the span routines
+          const hiddenCol1 = new Set();
+          assignments.filter(a => a.col === 1).forEach(({ r }) => {
+            if (overflowRoutines.some(o => rangesOverlap(r, o))) {
+              hiddenCol1.add(r.id);
+              overflowSpans.forEach(sp => {
+                const rS = timeToMinutes(r.startTime), rE = rS + r.duration;
+                if (sp.s < rE && sp.e > rS) sp.routines.unshift(r); // col-1 first
+              });
+            }
+          });
+
+          const items = [];
+
+          assignments.filter(({ r, col }) => col < 2 && !hiddenCol1.has(r.id)).forEach(({ r, col }) => {
+            const rawTop = timeToMinutes(r.startTime) * hourHeight / 60;
+            const h = Math.max(22, r.duration * hourHeight / 60);
+            // Clamp top so the chip never straddles the next hour line
+            const nextHourPx = (Math.floor(timeToMinutes(r.startTime) / 60) + 1) * hourHeight;
+            const top = Math.min(rawTop, nextHourPx - h);
+            const hasVisiblePartner = assignments.some(({ r: pr, col: pc }) =>
+              pc === (1 - col) && !hiddenCol1.has(pr.id) && rangesOverlap(r, pr)
+            );
+            const hasOverlap = hasVisiblePartner || overflowSpans.some(sp => {
+              const rS = timeToMinutes(r.startTime), rE = rS + r.duration;
+              return sp.s < rE && sp.e > rS;
+            });
+            items.push(
+              <div key={`routine-${r.id}`}
+                draggable={!isTablet}
+                onDragStart={!isTablet ? (e) => handleDragStart({ ...r }, 'routine', e) : undefined}
+                onDragEnd={!isTablet ? handleDragEnd : undefined}
+                className={`absolute pointer-events-auto flex items-start pt-0.5 ${!isTablet ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                style={{
+                  top: `${top}px`, height: `${h}px`, zIndex: 5,
+                  left: hasOverlap && col === 1 ? 'calc(50% + 1px)' : '1px',
+                  right: hasOverlap && col === 0 ? 'calc(50% + 1px)' : '1px',
+                }}>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium inline-flex items-center min-w-0 max-w-full overflow-hidden ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[r.id] ? 'line-through opacity-75' : ''}`}>
+                  <span className="truncate min-w-0">{r.name}</span>
+                  <span className="shrink-0 ml-1 opacity-75">· {fmtDur(r.duration)}</span>
+                </span>
+              </div>
+            );
+          });
+
+          overflowSpans.forEach((sp, i) => {
+            items.push(
+              <div key={`overflow-${i}`}
+                className="absolute pointer-events-auto flex items-center justify-center cursor-pointer"
+                style={{ top: `${Math.min(sp.s * hourHeight / 60, (Math.floor(sp.s / 60) + 1) * hourHeight - Math.max(22, (sp.e - sp.s) * hourHeight / 60))}px`, height: `${Math.max(22, (sp.e - sp.s) * hourHeight / 60)}px`, left: 'calc(50% + 1px)', right: '1px', zIndex: 6 }}
+                onClick={(e) => { e.stopPropagation(); setOverflowPopover({ routines: sp.routines, rect: e.currentTarget.getBoundingClientRect() }); }}>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${darkMode ? 'bg-teal-700/60 text-teal-200' : 'bg-teal-500/60 text-white'}`}>
+                  +{sp.routines.length}
+                </span>
+              </div>
+            );
+          });
+
+          return items;
+        })()}
+      </div>
+
+      {/* Drag preview bar — shows target day + time during an active drag */}
+      {isDraggingOverThisCol && dragPreviewTime && (() => {
+        const dragMin = timeToMinutes(dragPreviewTime);
+        const topPx = dragMin * hourHeight / 60;
+        return (
+          <div
+            className="absolute left-0 right-0 pointer-events-none z-30"
+            style={{ top: `${topPx}px` }}
+          >
+            <div className="relative">
+              <div className={`absolute bottom-0.5 right-0 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${darkMode ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white'}`}>
+                {dayName} {formatTime(dragPreviewTime)}
+              </div>
+              <div className="h-0.5 bg-blue-500" />
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Overflow routine popover */}
+      {overflowPopover && (() => {
+        const { routines, rect } = overflowPopover;
+        let left = rect.right + 8;
+        if (left + 200 > window.innerWidth - 8) left = rect.left - 200 - 8;
+        let top = Math.max(8, Math.min(rect.top, window.innerHeight - routines.length * 36 - 24));
+        return (
+          <div
+            ref={overflowPopoverRef}
+            className={`fixed z-50 shadow-xl rounded-xl border p-2 space-y-1 ${cardBg} ${borderClass}`}
+            style={{ left, top, minWidth: 160 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {routines.map(routine => (
+              <div
+                key={routine.id}
+                className={`rounded-full px-3 py-1 text-xs font-medium inline-flex items-center min-w-0 max-w-full overflow-hidden ${darkMode ? 'bg-teal-700 text-teal-100' : 'bg-teal-600 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
+              >
+                <span className="truncate min-w-0">{routine.name}</span>
+                <span className="shrink-0 ml-1 opacity-75">· {fmtDur(routine.duration)}</span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+    </div>
+  );
+};
+
+// ── WeekView ──────────────────────────────────────────────────────────────────
+
+const WeekView = () => {
+  const {
+    calendarRef, stickyHeaderRef,
+    weekViewDates,
+    darkMode, borderClass, textSecondary,
+    use24HourClock,
+    cardBg,
+    expandedNotesTaskId, setExpandedNotesTaskId,
+    getTasksForDate,
+  } = useDayPlannerCtx();
+
+  const hourHeight = useWeekViewHourHeight(calendarRef, stickyHeaderRef);
+  const [popoverTask, setPopoverTask] = useState(null);
+  const [popoverAnchor, setPopoverAnchor] = useState(null);
+
+  const todayStr = dateToString(new Date());
+
+  useEffect(() => {
+    if (!expandedNotesTaskId) return;
+    const chipEl = document.querySelector(`[data-task-id="${expandedNotesTaskId}"]`);
+    if (!chipEl) return;
+    const task = weekViewDates.flatMap(d => getTasksForDate(d))
+      .find(t => String(t.id) === String(expandedNotesTaskId));
+    if (!task) return;
+    setPopoverTask(task);
+    setPopoverAnchor(chipEl.getBoundingClientRect());
+  }, [expandedNotesTaskId]);
+
+  const handleTaskClick = (task, anchor) => {
+    if (popoverTask?.id === task.id) {
+      setPopoverTask(null);
+      setPopoverAnchor(null);
+      setExpandedNotesTaskId(null);
+    } else {
+      setPopoverTask(task);
+      setPopoverAnchor(anchor);
+    }
+  };
+
+  const handleClosePopover = () => {
+    setPopoverTask(null);
+    setPopoverAnchor(null);
+    setExpandedNotesTaskId(null);
+  };
+
+  return (
+    <div className="flex" style={{ height: '100%' }}>
+      {/* Hour-label gutter */}
+      <div
+        className={`flex-shrink-0 border-r ${borderClass} flex flex-col`}
+        style={{ width: WEEK_GUTTER_W }}
+      >
+        {Array.from({ length: 24 }, (_, hour) => (
+          <div
+            key={hour}
+            className="relative flex-shrink-0"
+            style={{ height: `${hourHeight}px` }}
+          >
+            {hour % 3 === 0 && (
+              <span
+                className={`absolute top-0.5 right-2 text-[10px] leading-none ${textSecondary} select-none`}
+              >
+                {use24HourClock
+                  ? `${String(hour).padStart(2, '0')}:00`
+                  : hour === 0 ? '12 AM' : hour === 12 ? '12 PM' : hour < 12 ? `${hour} AM` : `${hour - 12} PM`
+                }
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Day columns */}
+      {weekViewDates.map((date, colIdx) => {
+        const dateStr = dateToString(date);
+        return (
+          <WeekViewColumn
+            key={dateStr}
+            date={date}
+            dateStr={dateStr}
+            colIdx={colIdx}
+            hourHeight={hourHeight}
+            onTaskClick={handleTaskClick}
+            activePopoverTaskId={popoverTask?.id}
+            isToday={dateStr === todayStr}
+          />
+        );
+      })}
+
+      {/* Task detail popover */}
+      {popoverTask && popoverAnchor && (
+        <WeekViewTaskPopover
+          task={popoverTask}
+          anchor={popoverAnchor}
+          onClose={handleClosePopover}
+        />
+      )}
+    </div>
+  );
+};
+
+export { WEEK_GUTTER_W };
+export default WeekView;

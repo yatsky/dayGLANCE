@@ -11,6 +11,8 @@ import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 const DesktopHeader = () => {
   const {
     visibleDays, visibleDates,
+    effectiveViewMode, dayViewColumns,
+    weekViewDates,
     selectedDate,
     darkMode, setDarkMode,
     showMonthView, setShowMonthView,
@@ -109,7 +111,11 @@ const DesktopHeader = () => {
               }}
               className={`month-view-toggle ${textPrimary} font-semibold text-base px-2 py-1 rounded-lg ${hoverBg} transition-colors cursor-pointer text-center min-w-[13rem]`}
             >
-              {formatDateRange(visibleDates)}
+              {effectiveViewMode === 'day'
+                ? formatDateRange([...new Map(dayViewColumns.map(c => [c.dateStr, c.date])).values()])
+                : effectiveViewMode === 'week' && weekViewDates.length > 0
+                ? formatDateRange(weekViewDates)
+                : formatDateRange(visibleDates)}
             </button>
             <button onClick={() => changeDate(1)} className={`p-1.5 rounded-lg ${hoverBg} transition-colors`} aria-label="Next day">
               <ChevronRight size={20} className={textSecondary} />

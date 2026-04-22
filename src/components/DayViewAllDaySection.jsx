@@ -156,6 +156,9 @@ const DayViewAllDaySection = () => {
     isTablet,
     handleDragStart, handleDragEnd, handleDropOnDateHeader,
     dragOverAllDay, setDragOverAllDay, setDragPreviewTime,
+    mobileDragPreviewTime,
+    autoScrollInterval,
+    handleMobileTaskTouchStart, handleMobileTaskTouchMove, handleMobileTaskTouchEnd,
   } = useDayPlannerCtx();
   const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion } = useFeaturesCtx();
   const todayStr = dateToString(new Date());
@@ -193,29 +196,39 @@ const DayViewAllDaySection = () => {
             {idx === 0 ? 'ALL DAY' : ''}
           </div>
           <div
-            className={`flex-1 min-w-0 p-2 ${dragOverAllDay === group.dateStr ? (darkMode ? 'bg-green-700/50 ring-2 ring-inset ring-green-400' : 'bg-green-100 ring-2 ring-inset ring-green-500') : ''}`}
-            onDragOver={(e) => e.preventDefault()}
+            className={`flex-1 min-w-0 p-2 ${dragOverAllDay === group.dateStr || (isTablet && mobileDragPreviewTime === 'all-day') ? (darkMode ? 'bg-green-700/50' : 'bg-green-100') : ''}`}
+            onDragOver={(e) => { e.preventDefault(); if (autoScrollInterval.current) { clearInterval(autoScrollInterval.current); autoScrollInterval.current = null; } }}
             onDragEnter={(e) => { e.preventDefault(); setDragOverAllDay(group.dateStr); setDragPreviewTime(null); }}
             onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverAllDay(null); }}
             onDrop={(e) => handleDropOnDateHeader(e, group.date)}
           >
-            {group.tasks.length > 0 && <GroupChips
-              tasks={group.tasks}
-              darkMode={darkMode}
-              borderClass={borderClass}
-              cardBg={cardBg}
-            />}
+            {group.tasks.length > 0 && (
+              <div className="mb-1">
+                <GroupChips
+                  tasks={group.tasks}
+                  darkMode={darkMode}
+                  borderClass={borderClass}
+                  cardBg={cardBg}
+                />
+              </div>
+            )}
             {routinesEnabled && group.dateStr === todayStr && todayRoutines.filter(r => r.isAllDay).map(routine => (
-              <span
+              <div
                 key={`routine-${routine.id}`}
                 draggable={!isTablet}
                 onDragStart={!isTablet ? (e) => handleDragStart({ ...routine, duration: routine.duration || 15 }, 'routine', e) : undefined}
                 onDragEnd={!isTablet ? handleDragEnd : undefined}
-                className={`rounded-full px-3 py-1 text-xs font-medium inline-block mr-1 mb-1 ${!isTablet ? 'cursor-move' : 'cursor-pointer'} ${darkMode ? 'bg-teal-700/80 text-teal-100' : 'bg-teal-600/80 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
+                {...(isTablet ? {
+                  onTouchStart: (e) => handleMobileTaskTouchStart(e, { ...routine, isRoutineDrag: true, duration: routine.duration || 15 }, 'allday'),
+                  onTouchMove: (e) => handleMobileTaskTouchMove(e),
+                  onTouchEnd: (e) => handleMobileTaskTouchEnd(e, routine.id, 'allday'),
+                } : {})}
+                className={`rounded-full px-3 py-1 text-xs font-medium ${isTablet ? 'cursor-default select-none' : 'cursor-move'} inline-block mr-1 mb-1 ${darkMode ? 'bg-teal-700/80 text-teal-100' : 'bg-teal-600/80 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
+                style={isTablet ? { touchAction: 'none', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' } : {}}
                 onClick={() => toggleRoutineCompletion(routine.id)}
               >
                 {routine.name}
-              </span>
+              </div>
             ))}
           </div>
         </div>

@@ -8423,7 +8423,7 @@ const DayPlanner = () => {
               <button onClick={() => setHabitDayPopup(null)} className={`${textSecondary} hover:${textPrimary} transition-colors`}><X size={18} /></button>
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
-              {activeHabits.map(habit => (
+              {activeHabits.filter(h => (h.scheduledDays ?? [0,1,2,3,4,5,6]).includes(new Date(habitDayPopup + 'T12:00:00').getDay())).map(habit => (
                 <div key={habit.id} className="flex flex-col items-center gap-1">
                   <div className="pointer-events-none">
                     <HabitRing

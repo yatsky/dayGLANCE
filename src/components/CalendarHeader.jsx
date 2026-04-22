@@ -366,7 +366,10 @@ const CalendarHeader = () => {
           {routinesEnabled && isDateToday && todayRoutines.filter(r => r.isAllDay).map(routine => (
             <div
               key={`routine-${routine.id}`}
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${darkMode ? 'bg-teal-700/80 text-teal-100' : 'bg-teal-600/80 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
+              draggable={!isTablet}
+              onDragStart={!isTablet ? (e) => handleDragStart({ ...routine, duration: routine.duration || 15 }, 'routine', e) : undefined}
+              onDragEnd={!isTablet ? handleDragEnd : undefined}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${!isTablet ? 'cursor-grab active:cursor-grabbing' : ''} ${darkMode ? 'bg-teal-700/80 text-teal-100' : 'bg-teal-600/80 text-white'} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}
             >
               {routine.name}
             </div>

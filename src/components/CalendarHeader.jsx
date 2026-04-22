@@ -262,7 +262,7 @@ const CalendarHeader = () => {
       return (
         <div
           key={group.dateStr}
-          className={`relative flex flex-col items-center justify-center py-2 cursor-pointer transition-colors ${isDateToday ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : cardBg} ${idx > 0 ? `border-l ${borderClass}` : ''} ${isDragOverThis ? (darkMode ? 'bg-green-700 ring-2 ring-inset ring-green-400' : 'bg-green-200 ring-2 ring-inset ring-green-500') : ''}`}
+          className={`relative flex flex-col items-center justify-center py-2 cursor-pointer transition-colors ${isDateToday ? (darkMode ? 'bg-blue-900/30' : 'bg-blue-50') : cardBg} ${idx > 0 ? `border-l ${borderClass}` : ''} ${isDragOverThis ? (darkMode ? 'bg-green-700' : 'bg-green-200') : ''}`}
           style={{ gridColumn: `span ${group.count}`, minHeight: 'var(--header-row-h)' }}
           onDragOver={(e) => { e.preventDefault(); if (autoScrollInterval.current) { clearInterval(autoScrollInterval.current); autoScrollInterval.current = null; } }}
           onDragEnter={(e) => { e.preventDefault(); setDragOverAllDay(group.dateStr); setDragPreviewTime(null); }}
@@ -276,6 +276,11 @@ const CalendarHeader = () => {
             <div className={`absolute left-0 top-0 w-16 h-full border-r ${borderClass} ${cardBg}`}>
               <ViewCycler />
             </div>
+          )}
+          {/* Ring overlay rendered after ViewCycler so it paints on top of it —
+              box-shadow (ring) on the parent is covered by absolutely-positioned children */}
+          {isDragOverThis && (
+            <div className={`absolute inset-0 pointer-events-none ring-2 ring-inset ${darkMode ? 'ring-green-400' : 'ring-green-500'}`} />
           )}
           <div className={`font-bold flex items-center justify-center gap-1.5 ${isDateToday ? 'text-blue-600' : textPrimary} ${idx === 0 && canShowViewCycler ? 'pl-16' : ''}`}>
             {formatShortDate(group.date)}

@@ -20,7 +20,14 @@ const MAX_H = CHIP_ROW_H * MAX_ROWS + ROW_GAP * (MAX_ROWS - 1);
 
 // ── GroupChips — horizontal flex-wrap with 2-row cap + "+N more" popover ─────
 
-const GroupChips = ({ tasks, darkMode, borderClass, cardBg }) => {
+const GroupChips = ({ tasks, date, dateStr, darkMode, borderClass, cardBg }) => {
+  const {
+    isTablet,
+    handleDragStart, handleDragEnd,
+    updateDragAutoScroll,
+    setDragOverAllDay, setDragPreviewTime,
+    handleDropOnDateHeader,
+  } = useDayPlannerCtx();
   const ghostRef = useRef(null);
   const buttonRef = useRef(null);
   const popoverRef = useRef(null);
@@ -104,6 +111,12 @@ const GroupChips = ({ tasks, darkMode, borderClass, cardBg }) => {
         {shown.map(t => (
           <div
             key={t.id}
+            draggable={(!t.imported || !!t.nativeEventId) && !isTablet}
+            onDragStart={(e) => (!t.imported || !!t.nativeEventId) && handleDragStart(t, 'calendar', e)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => { e.preventDefault(); updateDragAutoScroll(e); }}
+            onDragEnter={(e) => { e.preventDefault(); setDragOverAllDay(dateStr); setDragPreviewTime(null); }}
+            onDrop={(e) => handleDropOnDateHeader(e, date)}
             className={`notes-panel-container relative grow shrink-0 basis-[200px] max-w-[400px] ${t.completed && (!t.imported || t.isTaskCalendar) ? 'opacity-50' : ''}`}
           >
             <AllDayTaskCard task={t} fillWidth={false} />
@@ -227,6 +240,8 @@ const DayViewAllDaySection = () => {
               <div className="mb-1">
                 <GroupChips
                   tasks={group.tasks}
+                  date={group.date}
+                  dateStr={group.dateStr}
                   darkMode={darkMode}
                   borderClass={borderClass}
                   cardBg={cardBg}

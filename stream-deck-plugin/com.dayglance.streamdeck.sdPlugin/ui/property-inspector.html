@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root {
+      --brand: #fe8b00;
+      --bg: #1e1e1e;
+      --surface: #2a2a2a;
+      --border: #3a3a3a;
+      --text: #d4d4d4;
+      --text-dim: #888;
+      --radius: 4px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      padding: 12px;
+    }
+
+    .field { margin-bottom: 12px; }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+    }
+
+    input {
+      width: 100%;
+      padding: 7px 9px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus { border-color: var(--brand); }
+    input::placeholder { color: var(--text-dim); }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    button {
+      flex: 1;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    button:hover { border-color: var(--brand); color: var(--brand); }
+    button:active { opacity: 0.8; }
+
+    #status {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: right;
+      min-height: 16px;
+      margin-top: 8px;
+    }
+
+    #status.ok  { color: #4caf50; }
+    #status.err { color: #f44336; }
+  </style>
+</head>
+<body>
+  <div class="field">
+    <label>Instance URL</label>
+    <input id="instanceUrl" type="url" placeholder="https://dayglance.app" spellcheck="false" />
+    <p class="hint">Your dayGLANCE instance (no trailing slash)</p>
+  </div>
+
+  <div class="field">
+    <label>API Token</label>
+    <input id="apiToken" type="password" placeholder="••••••••••••••••" spellcheck="false" />
+    <p class="hint">Found in dayGLANCE → Settings → API</p>
+  </div>
+
+  <div class="row">
+    <button id="testBtn">Test connection</button>
+  </div>
+
+  <p id="status"></p>
+
+  <script>
+    let websocket = null;
+    let uuid = null;
+
+    // Called by Stream Deck software
+    function connectElgatoStreamDeckSocket(port, pluginUUID, registerEvent, info) {
+      uuid = pluginUUID;
+      websocket = new WebSocket(`ws://127.0.0.1:${port}`);
+
+      websocket.onopen = () => {
+        send({ event: registerEvent, uuid });
+        send({ event: "getSettings", context: uuid });
+      };
+
+      websocket.onmessage = ({ data }) => {
+        const msg = JSON.parse(data);
+        if (msg.event === "didReceiveSettings") {
+          const s = msg.payload?.settings ?? {};
+          document.getElementById("instanceUrl").value = s.instanceUrl ?? "";
+          document.getElementById("apiToken").value   = s.apiToken   ?? "";
+        }
+      };
+    }
+
+    function send(obj) {
+      if (websocket?.readyState === WebSocket.OPEN) {
+        websocket.send(JSON.stringify(obj));
+      }
+    }
+
+    function saveSettings() {
+      send({
+        event: "setSettings",
+        context: uuid,
+        payload: {
+          instanceUrl: document.getElementById("instanceUrl").value.trim().replace(/\/$/, ""),
+          apiToken:    document.getElementById("apiToken").value.trim(),
+        },
+      });
+    }
+
+    function setStatus(text, cls = "") {
+      const el = document.getElementById("status");
+      el.textContent = text;
+      el.className = cls;
+    }
+
+    document.getElementById("instanceUrl").addEventListener("input", saveSettings);
+    document.getElementById("apiToken").addEventListener("input", saveSettings);
+
+    document.getElementById("testBtn").addEventListener("click", async () => {
+      const url   = document.getElementById("instanceUrl").value.trim().replace(/\/$/, "");
+      const token = document.getElementById("apiToken").value.trim();
+
+      if (!url || !token) {
+        setStatus("Enter instance URL and token first.", "err");
+        return;
+      }
+
+      setStatus("Testing…");
+
+      try {
+        const res = await fetch(`${url}/api/health`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          setStatus("Connected.", "ok");
+        } else {
+          setStatus(`Error ${res.status}`, "err");
+        }
+      } catch (e) {
+        setStatus("Could not reach instance.", "err");
+      }
+    });
+  </script>
+</body>
+</html>

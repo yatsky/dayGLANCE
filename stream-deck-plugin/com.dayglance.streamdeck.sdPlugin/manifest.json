@@ -25,6 +25,7 @@
       "UUID": "app.dayglance.streamdeck.agenda",
       "Icon": "imgs/actions/agenda/icon",
       "Tooltip": "Scrollable agenda strip — shows current and next events.",
+      "PropertyInspectorPath": "ui/property-inspector.html",
       "Controllers": ["Encoder", "Keypad"],
       "Encoder": {
         "layout": "$B1",
@@ -42,6 +43,7 @@
       "UUID": "app.dayglance.streamdeck.focus",
       "Icon": "imgs/actions/focus/icon",
       "Tooltip": "Start, stop, or adjust the Pomodoro timer. Stays in sync with dayGLANCE focus mode.",
+      "PropertyInspectorPath": "ui/property-inspector.html",
       "Controllers": ["Encoder", "Keypad"],
       "Encoder": {
         "layout": "layouts/focus.json",
@@ -61,6 +63,7 @@
       "UUID": "app.dayglance.streamdeck.next-task",
       "Icon": "imgs/actions/next-task/icon",
       "Tooltip": "Shows your next due task. Press to complete, long-press to snooze.",
+      "PropertyInspectorPath": "ui/property-inspector.html",
       "Controllers": ["Encoder", "Keypad"],
       "Encoder": {
         "layout": "$B1",
@@ -78,6 +81,7 @@
       "UUID": "app.dayglance.streamdeck.goal-progress",
       "Icon": "imgs/actions/goal-progress/icon",
       "Tooltip": "Cycles through active goals with arc progress indicator.",
+      "PropertyInspectorPath": "ui/property-inspector.html",
       "Controllers": ["Encoder", "Keypad"],
       "Encoder": {
         "layout": "layouts/goal-progress.json",
@@ -95,6 +99,7 @@
       "UUID": "app.dayglance.streamdeck.quick-glance",
       "Icon": "imgs/actions/quick-glance/icon",
       "Tooltip": "Rotates between date, weather, and next event.",
+      "PropertyInspectorPath": "ui/property-inspector.html",
       "Controllers": ["Encoder", "Keypad"],
       "Encoder": {
         "layout": "$B1",

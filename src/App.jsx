@@ -79,6 +79,7 @@ import useConflictDetection from './hooks/useConflictDetection.js';
 import useNewTaskInput from './hooks/useNewTaskInput.js';
 import useTaskFormHelpers from './hooks/useTaskFormHelpers.js';
 import useTaskActions from './hooks/useTaskActions.js';
+import useElectronBridge from './hooks/useElectronBridge.js';
 import useRecycleBin from './hooks/useRecycleBin.js';
 import useReminderEngine from './hooks/useReminderEngine.js';
 import useReminders from './hooks/useReminders.js';
@@ -6063,6 +6064,25 @@ const DayPlanner = () => {
   const restoreArchivedInboxTask = (id) => {
     setUnscheduledTasks(prev => prev.map(t => t.id === id ? { ...t, archived: false } : t));
   };
+
+  // ── Electron desktop bridge ──────────────────────────────────────────────
+  // Pushes lightweight state snapshots to the Electron WebSocket server and
+  // routes commands from connected clients (Stream Deck, etc.) back into the app.
+  useElectronBridge({
+    todayAgenda,
+    currentTime,
+    tasks,
+    showFocusMode,
+    focusPhase,
+    focusTimerSeconds,
+    focusTimerRunning,
+    focusWorkMinutes,
+    focusBreakMinutes,
+    enterFocusModeRef,
+    exitFocusModeRef,
+    skipFocusPhase,
+    toggleComplete,
+  });
 
   // ── Native Android widget snapshot sync ──────────────────────────────────
   // Pushes a rich snapshot of today's agenda to the native widget via NativeBridge.

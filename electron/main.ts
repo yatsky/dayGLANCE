@@ -1,7 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createWsServer } from './ws-server';
+import { createWsServer } from './ws-server.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

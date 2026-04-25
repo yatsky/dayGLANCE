@@ -26,6 +26,7 @@ export type Task = {
   tags: string[];
   completed: boolean;
   isAllDay?: boolean;
+  isHGSession?: boolean;
 };
 
 export type FocusState = {
@@ -65,6 +66,7 @@ export type DayGlanceState = {
   focus: FocusState;
   habits: Habit[];
   nextRoutine: Routine | null;
+  use24Hour: boolean;
 };
 
 // ── Outbound message (server → clients) ──────────────────────────────────

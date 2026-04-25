@@ -64,6 +64,8 @@ export default function useElectronBridge({
   todayRoutines,
   routineCompletions,
   toggleRoutineCompletion,
+  // Settings
+  use24HourClock,
 }) {
   const skipFocusPhaseRef = useRef(skipFocusPhase);
   const toggleCompleteRef = useRef(toggleComplete);
@@ -132,6 +134,7 @@ export default function useElectronBridge({
       tags: t.tags || [],
       completed: !!t.completed,
       isAllDay: !!t.isAllDay,
+      isHGSession: !!t.isHGSession,
     } : null;
 
     const todayStr = dateToString(currentTime);
@@ -202,12 +205,13 @@ export default function useElectronBridge({
         startTime: nextRoutineRaw.startTime,
         completed: false,
       } : null,
+      use24Hour: !!use24HourClock,
     });
   }, [
     todayAgenda, currentTime, tasks, expandedRecurringTasks, todayHGSessions, focusModeAvailable,
     showFocusMode, focusPhase, focusTimerSeconds, focusTimerRunning,
     focusWorkMinutes, focusBreakMinutes,
     activeHabits, getTodayHabitCount, habitsEnabled,
-    todayRoutines, routineCompletions,
+    todayRoutines, routineCompletions, use24HourClock,
   ]);
 }

@@ -67,7 +67,7 @@ export class UpNextAction extends SingletonAction {
 
   private async completeIfInProgress(): Promise<void> {
     const task = this.lastState?.currentTask;
-    if (task) send({ type: MSG_DAY_TASK_COMPLETE, id: task.id });
+    if (task && !task.isHGSession) send({ type: MSG_DAY_TASK_COMPLETE, id: task.id });
   }
 
   private async renderAll(state: DayGlanceState): Promise<void> {

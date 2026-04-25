@@ -134,6 +134,7 @@ export default function useElectronBridge({
       tags: t.tags || [],
       completed: !!t.completed,
       isAllDay: !!t.isAllDay,
+      isHGSession: !!t.isHGSession,
     } : null;
 
     const todayStr = dateToString(currentTime);

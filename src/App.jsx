@@ -6116,7 +6116,7 @@ const DayPlanner = () => {
         const hg = project.hyperglance;
         const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
         const duration = hg.scheduledDurationOverrides?.[instance.date] || hg.scheduledDuration || 60;
-        return { id: project.id, title: project.title, colorHex: hg.color || '#4f46e5', startTime: effectiveTime, duration, isOverdue: instance.isOverdue, date: instance.date };
+        return { id: project.id, title: project.title, colorHex: hg.color || '#4f46e5', startTime: effectiveTime, duration, isOverdue: instance.isOverdue, date: instance.date, isHGSession: true };
       })
       .filter(s => !s.isOverdue && s.date === todayStr && s.startTime);
   }, [goalsProjectsEnabled, projects, currentTime]);

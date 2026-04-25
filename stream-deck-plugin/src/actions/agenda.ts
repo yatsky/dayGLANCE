@@ -82,7 +82,7 @@ export class AgendaAction extends SingletonAction {
   private async completeCurrentTask(): Promise<void> {
     if (!this.lastState || this.viewIndex === 0) return;
     const task = this.lastState.scheduledTasks?.[this.viewIndex - 1];
-    if (task) send({ type: MSG_DAY_TASK_COMPLETE, id: task.id });
+    if (task && !task.isHGSession) send({ type: MSG_DAY_TASK_COMPLETE, id: task.id });
   }
 
   private async renderAll(state: DayGlanceState): Promise<void> {

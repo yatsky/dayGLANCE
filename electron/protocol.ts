@@ -26,6 +26,7 @@ export type Task = {
   tags: string[];
   completed: boolean;
   isAllDay?: boolean;
+  isHGSession?: boolean;
 };
 
 export type FocusState = {

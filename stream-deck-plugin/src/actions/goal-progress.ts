@@ -13,11 +13,13 @@ export class GoalProgressAction extends SingletonAction {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private actionRef: any = null;
   private unsubscribe: (() => void) | null = null;
+  private lastState: DayGlanceState | null = null;
 
   override async onWillAppear(ev: WillAppearEvent): Promise<void> {
     this.actionRef = ev.action;
     this.unsubscribe?.();
-    this.unsubscribe = onState((s) => void this.render(s));
+    this.unsubscribe = onState((s) => { this.lastState = s; void this.render(s); });
+    if (this.lastState) await this.render(this.lastState);
   }
 
   override async onDialRotate(_ev: DialRotateEvent): Promise<void> {

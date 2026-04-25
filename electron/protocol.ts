@@ -12,6 +12,7 @@ export const MSG_DAY_STATE = 'day:state' as const;
 export const MSG_DAY_FOCUS_START      = 'day:focus:start'      as const;
 export const MSG_DAY_FOCUS_STOP       = 'day:focus:stop'       as const;
 export const MSG_DAY_FOCUS_SKIP       = 'day:focus:skip'       as const;
+export const MSG_DAY_FOCUS_SET_DURATION = 'day:focus:set-duration' as const;
 export const MSG_DAY_TASK_COMPLETE    = 'day:task:complete'    as const;
 export const MSG_DAY_HABIT_INCREMENT  = 'day:habit:increment'  as const;
 export const MSG_DAY_ROUTINE_COMPLETE = 'day:routine:complete' as const;
@@ -37,6 +38,7 @@ export type FocusState = {
   running: boolean;
   workMinutes: number;
   breakMinutes: number;
+  cycleCount: number;  // total completed work cycles since session start
 };
 
 export type Habit = {
@@ -98,6 +100,7 @@ export type InboundCommand =
   | { v: typeof PROTOCOL_VERSION; type: typeof MSG_DAY_FOCUS_START }
   | { v: typeof PROTOCOL_VERSION; type: typeof MSG_DAY_FOCUS_STOP }
   | { v: typeof PROTOCOL_VERSION; type: typeof MSG_DAY_FOCUS_SKIP }
+  | { v: typeof PROTOCOL_VERSION; type: typeof MSG_DAY_FOCUS_SET_DURATION; workMinutes?: number; breakMinutes?: number }
   | { v: typeof PROTOCOL_VERSION; type: typeof MSG_DAY_TASK_COMPLETE; id: string }
   | { v: typeof PROTOCOL_VERSION; type: typeof MSG_DAY_HABIT_INCREMENT; id: string }
   | { v: typeof PROTOCOL_VERSION; type: typeof MSG_DAY_ROUTINE_COMPLETE; id: string };

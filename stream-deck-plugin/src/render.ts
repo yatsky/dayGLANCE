@@ -74,6 +74,74 @@ function fontSize(text: string): number {
   return 18;
 }
 
+// ── Pomodoro 4-section strip ──────────────────────────────────────────────
+
+/**
+ * Renders the 200×100 touch strip as 4 equal sections (50px each), one per
+ * Pomodoro work cycle. Completed cycles show a tomato; the current phase
+ * (work or break) shows a live countdown; pending cycles show a dim number.
+ */
+export function renderFocusStrip(
+  phase: string,
+  secondsRemaining: number,
+  cycleCount: number,
+): string {
+  // How many work cycles are done within the current set of 4
+  const completedInSet = cycleCount % 4;
+  // All 4 done = long-break after completing cycle 4 (or 8, 12…)
+  const allDone = cycleCount > 0 && completedInSet === 0 && phase === "longBreak";
+
+  const m = Math.floor(secondsRemaining / 60);
+  const s = secondsRemaining % 60;
+  const timeStr = `${m}:${s.toString().padStart(2, "0")}`;
+
+  let cells = "";
+  for (let i = 0; i < 4; i++) {
+    const cx = i * 50 + 25;
+    const lx = i * 50;
+
+    if (allDone || i < completedInSet) {
+      // ── Completed — tomato ──
+      cells += `
+  <rect x="${lx}" y="0" width="50" height="100" fill="#180a0a"/>
+  <circle cx="${cx}" cy="56" r="20" fill="#dc2626"/>
+  <rect x="${cx - 2}" y="31" width="4" height="10" fill="#16a34a" rx="2"/>
+  <path d="M${cx - 2} 37 Q${cx - 9} 29 ${cx - 5} 25 Q${cx - 1} 33 ${cx - 2} 37Z" fill="#16a34a"/>`;
+    } else if (i === completedInSet && phase === "work") {
+      // ── Active work cycle ──
+      cells += `
+  <rect x="${lx}" y="0" width="50" height="100" fill="#1c0e00"/>
+  <rect x="${lx}" y="0" width="50" height="4" fill="#f97316"/>
+  <text x="${cx}" y="53" font-family="${FONT}" font-size="15" fill="white" fill-opacity="0.95" text-anchor="middle" font-weight="700">${timeStr}</text>
+  <text x="${cx}" y="70" font-family="${FONT}" font-size="10" fill="white" fill-opacity="0.4" text-anchor="middle">work</text>`;
+    } else if (i === completedInSet && (phase === "shortBreak" || phase === "longBreak")) {
+      // ── Active break (shown in the upcoming slot) ──
+      cells += `
+  <rect x="${lx}" y="0" width="50" height="100" fill="#0a180c"/>
+  <rect x="${lx}" y="0" width="50" height="4" fill="#22c55e"/>
+  <text x="${cx}" y="53" font-family="${FONT}" font-size="15" fill="white" fill-opacity="0.95" text-anchor="middle" font-weight="700">${timeStr}</text>
+  <text x="${cx}" y="70" font-family="${FONT}" font-size="10" fill="white" fill-opacity="0.4" text-anchor="middle">break</text>`;
+    } else {
+      // ── Pending ──
+      cells += `
+  <rect x="${lx}" y="0" width="50" height="100" fill="#111"/>
+  <circle cx="${cx}" cy="52" r="18" fill="none" stroke="#252525" stroke-width="2"/>
+  <text x="${cx}" y="58" font-family="${FONT}" font-size="16" fill="#2a2a2a" text-anchor="middle" font-weight="700">${i + 1}</text>`;
+    }
+  }
+
+  // Thin dividers between sections
+  const dividers = [50, 100, 150].map(dx =>
+    `<line x1="${dx}" y1="0" x2="${dx}" y2="100" stroke="#222" stroke-width="1"/>`
+  ).join("\n  ");
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SW}" height="${SH}">
+  ${cells}
+  ${dividers}
+</svg>`;
+  return "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64");
+}
+
 // ── Goal arc rendering ────────────────────────────────────────────────────
 
 interface GoalOpts {

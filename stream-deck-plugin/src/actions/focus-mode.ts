@@ -23,7 +23,7 @@ export class FocusAction extends SingletonAction<Settings> {
     this.unsubscribe?.();
     this.unsubscribe = onState((s) => {
       this.lastState = s;
-      void this.render(s);
+      this.render(s).catch(e => console.error("[dayGLANCE] focus-mode render:", e));
     });
     if (this.lastState) await this.render(this.lastState);
   }

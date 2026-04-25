@@ -4,6 +4,7 @@ import {
   DialUpEvent,
   KeyDownEvent,
   SingletonAction,
+  TouchTapEvent,
   WillAppearEvent,
   WillDisappearEvent,
 } from "@elgato/streamdeck";
@@ -62,6 +63,20 @@ export class AgendaAction extends SingletonAction {
 
   override async onKeyDown(_ev: KeyDownEvent): Promise<void> {
     await this.completeCurrentTask();
+  }
+
+  override async onTouchTap(ev: TouchTapEvent): Promise<void> {
+    if (!this.lastState) return;
+    if (ev.payload.hold) {
+      await this.completeCurrentTask();
+      return;
+    }
+    const count = this.lastState.scheduledTasks?.length ?? 0;
+    if (count === 0) return;
+    const total = count + 1;
+    const delta = ev.payload.tapPos[0] < 100 ? -1 : 1;
+    this.viewIndex = ((this.viewIndex + delta) % total + total) % total;
+    await this.renderAll(this.lastState);
   }
 
   private async completeCurrentTask(): Promise<void> {

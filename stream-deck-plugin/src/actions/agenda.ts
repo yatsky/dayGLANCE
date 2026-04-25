@@ -75,12 +75,8 @@ export class AgendaAction extends SingletonAction {
       const time = task.startTime ? formatTime(task.startTime) : "";
       image = renderKey({ value: title, sub: time, barColor: task.colorHex, strikethrough: task.completed });
     }
-    if (act.controller === "Encoder") {
-      await act.setFeedback({ icon: image });
-    } else {
-      await act.setImage(image);
-      await act.setTitle("");
-    }
+    await act.setImage(image);
+    await act.setTitle("");
   }
 }
 

@@ -105,7 +105,9 @@ export class AgendaAction extends SingletonAction {
     } else {
       const task = tasks[this.viewIndex - 1];
       const title = truncate(stripTags(task.title), 12);
-      const sub = task.completed ? "Completed" : (task.startTime ? formatTime(task.startTime) : "");
+      const sub = task.completed ? "Completed"
+        : task.startTime ? (isOverdue(task.startTime) ? "Overdue" : formatTime(task.startTime))
+        : "";
       renderOpts = { value: title, sub, barColor: task.colorHex, strikethrough: task.completed };
     }
 
@@ -121,4 +123,10 @@ export class AgendaAction extends SingletonAction {
 function formatTime(t: string): string {
   const [h, m] = t.split(":");
   return `${parseInt(h, 10)}:${m}`;
+}
+
+function isOverdue(startTime: string): boolean {
+  const [h, m] = startTime.split(":").map(Number);
+  const now = new Date();
+  return h * 60 + m < now.getHours() * 60 + now.getMinutes();
 }

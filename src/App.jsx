@@ -6107,11 +6107,26 @@ const DayPlanner = () => {
   // ── Electron desktop bridge ──────────────────────────────────────────────
   // Pushes lightweight state snapshots to the Electron WebSocket server and
   // routes commands from connected clients (Stream Deck, etc.) back into the app.
+  const todayHGSessions = useMemo(() => {
+    if (!goalsProjectsEnabled) return [];
+    const todayStr = getTodayStr();
+    const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
+    return getGlanceHGInstances(projects, nowMin)
+      .map(({ project, instance }) => {
+        const hg = project.hyperglance;
+        const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
+        const duration = hg.scheduledDurationOverrides?.[instance.date] || hg.scheduledDuration || 60;
+        return { id: project.id, title: project.title, colorHex: hg.color || '#4f46e5', startTime: effectiveTime, duration, isOverdue: instance.isOverdue, date: instance.date };
+      })
+      .filter(s => !s.isOverdue && s.date === todayStr && s.startTime);
+  }, [goalsProjectsEnabled, projects, currentTime]);
+
   useElectronBridge({
     todayAgenda,
     currentTime,
     tasks,
     expandedRecurringTasks,
+    todayHGSessions,
     focusModeAvailable,
     showFocusMode,
     focusPhase,

@@ -43,6 +43,7 @@ export default function useElectronBridge({
   currentTime,
   tasks,
   expandedRecurringTasks,
+  todayHGSessions,
   focusModeAvailable,
   showFocusMode,
   focusPhase,
@@ -107,7 +108,11 @@ export default function useElectronBridge({
     if (!window.electronAPI) return;
 
     const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
-    const scheduled = todayAgenda.filter(t => t._agendaType === 'scheduled' && !t.completed && t.startTime);
+    const hgSessions = (todayHGSessions || []);
+    const scheduled = [
+      ...todayAgenda.filter(t => t._agendaType === 'scheduled' && !t.completed && t.startTime),
+      ...hgSessions,
+    ].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 
     const inProgress = scheduled.find(t => {
       const start = timeToMinutes(t.startTime);
@@ -123,7 +128,7 @@ export default function useElectronBridge({
       title: t.title,
       startTime: t.startTime ?? null,
       duration: t.duration || 0,
-      colorHex: taskColorToHex(t.color, t.nativeCalendarColor),
+      colorHex: t.colorHex || taskColorToHex(t.color, t.nativeCalendarColor),
       tags: t.tags || [],
       completed: !!t.completed,
       isAllDay: !!t.isAllDay,
@@ -135,6 +140,7 @@ export default function useElectronBridge({
     const todayTasks = [
       ...tasks.filter(t => t.date === todayStr && t.startTime && !t.isAllDay),
       ...todayRecurring.filter(t => t.startTime && !t.isAllDay),
+      ...hgSessions,
     ];
     const allDayTasks = [
       ...tasks.filter(t => t.date === todayStr && t.isAllDay),
@@ -198,7 +204,7 @@ export default function useElectronBridge({
       } : null,
     });
   }, [
-    todayAgenda, currentTime, tasks, expandedRecurringTasks, focusModeAvailable,
+    todayAgenda, currentTime, tasks, expandedRecurringTasks, todayHGSessions, focusModeAvailable,
     showFocusMode, focusPhase, focusTimerSeconds, focusTimerRunning,
     focusWorkMinutes, focusBreakMinutes,
     activeHabits, getTodayHabitCount, habitsEnabled,

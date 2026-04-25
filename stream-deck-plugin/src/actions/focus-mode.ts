@@ -14,7 +14,7 @@ import {
   MSG_DAY_FOCUS_START, MSG_DAY_FOCUS_TIMER_START, MSG_DAY_FOCUS_STOP, MSG_DAY_FOCUS_SKIP,
   MSG_DAY_FOCUS_SET_DURATION,
 } from "../client";
-import { renderKey, renderFocusSlot, renderFocusSlotKey, renderFocusSetupSlot } from "../render";
+import { renderKey, renderStrip, renderFocusSlot, renderFocusSlotKey, renderFocusSetupSlot } from "../render";
 
 // Three operating modes for the Focus encoder:
 //   idle   — panel closed (active=false)
@@ -155,7 +155,11 @@ export class FocusAction extends SingletonAction {
           ? { value: "Focus", sub: available ? "press to start" : "unavailable", dim: !available, barColor: "#f97316" }
           : { value: `${slotIndex + 1}`, sub: `cycle ${slotIndex + 1}`, dim: true, barColor: "#f97316" };
         await act.setImage(renderKey(idleKeyOpts));
-        await act.setFeedback({ canvas: renderFocusSetupSlot(slotIndex, workMinutes, breakMinutes, this.adjusting) });
+        // Strip mirrors the key: slot 0 = Focus label, slots 1-3 = pending rings
+        const idleStrip = slotIndex === 0
+          ? renderStrip(idleKeyOpts)
+          : renderFocusSlot(slotIndex, "work", 0, 0);
+        await act.setFeedback({ canvas: idleStrip });
       } else if (setup) {
         // Setup screen open: slots 0+1 show work/break; slots 2-3 show pending
         const barColor = this.adjusting === "work" ? "#f97316" : "#22c55e";

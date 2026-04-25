@@ -9,6 +9,7 @@ import {
   MSG_DAY_FOCUS_START,
   MSG_DAY_FOCUS_STOP,
   MSG_DAY_FOCUS_SKIP,
+  MSG_DAY_FOCUS_SET_DURATION,
   MSG_DAY_TASK_COMPLETE,
   MSG_DAY_HABIT_INCREMENT,
   MSG_DAY_ROUTINE_COMPLETE,
@@ -56,6 +57,8 @@ export default function useElectronBridge({
   enterFocusModeRef,
   exitFocusModeRef,
   skipFocusPhase,
+  setFocusWorkMinutes,
+  setFocusBreakMinutes,
   toggleComplete,
   // Habits
   activeHabits,
@@ -78,10 +81,14 @@ export default function useElectronBridge({
   const toggleCompleteRef = useRef(toggleComplete);
   const incrementHabitRef = useRef(incrementHabit);
   const toggleRoutineCompletionRef = useRef(toggleRoutineCompletion);
+  const setFocusWorkMinutesRef = useRef(setFocusWorkMinutes);
+  const setFocusBreakMinutesRef = useRef(setFocusBreakMinutes);
   skipFocusPhaseRef.current = skipFocusPhase;
   toggleCompleteRef.current = toggleComplete;
   incrementHabitRef.current = incrementHabit;
   toggleRoutineCompletionRef.current = toggleRoutineCompletion;
+  setFocusWorkMinutesRef.current = setFocusWorkMinutes;
+  setFocusBreakMinutesRef.current = setFocusBreakMinutes;
 
   // Subscribe to commands from WebSocket clients once on mount.
   useEffect(() => {
@@ -97,6 +104,10 @@ export default function useElectronBridge({
           break;
         case MSG_DAY_FOCUS_SKIP:
           skipFocusPhaseRef.current?.();
+          break;
+        case MSG_DAY_FOCUS_SET_DURATION:
+          if (cmd.workMinutes !== undefined) setFocusWorkMinutesRef.current?.(Math.max(1, Math.min(120, cmd.workMinutes)));
+          if (cmd.breakMinutes !== undefined) setFocusBreakMinutesRef.current?.(Math.max(1, Math.min(60, cmd.breakMinutes)));
           break;
         case MSG_DAY_TASK_COMPLETE:
           if (cmd.id) toggleCompleteRef.current?.(cmd.id);

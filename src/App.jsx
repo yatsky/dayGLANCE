@@ -6137,6 +6137,8 @@ const DayPlanner = () => {
     enterFocusModeRef,
     exitFocusModeRef,
     skipFocusPhase,
+    setFocusWorkMinutes,
+    setFocusBreakMinutes,
     toggleComplete,
     activeHabits,
     getTodayHabitCount,

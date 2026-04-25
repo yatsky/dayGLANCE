@@ -6145,6 +6145,7 @@ const DayPlanner = () => {
     todayRoutines,
     routineCompletions,
     toggleRoutineCompletion,
+    use24HourClock,
   });
 
   // ── Native Android widget snapshot sync ──────────────────────────────────

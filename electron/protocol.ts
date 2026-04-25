@@ -65,6 +65,7 @@ export type DayGlanceState = {
   focus: FocusState;
   habits: Habit[];
   nextRoutine: Routine | null;
+  use24Hour: boolean;
 };
 
 // ── Outbound message (server → clients) ──────────────────────────────────

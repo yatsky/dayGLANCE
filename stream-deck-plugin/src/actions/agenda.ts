@@ -105,9 +105,10 @@ export class AgendaAction extends SingletonAction {
     } else {
       const task = tasks[this.viewIndex - 1];
       const title = truncate(stripTags(task.title), 12);
+      const use24Hour = state.use24Hour ?? false;
       const sub = task.completed ? "Completed"
         : task.isAllDay ? "All Day"
-        : task.startTime ? statusLabel(task.startTime, task.duration)
+        : task.startTime ? statusLabel(task.startTime, task.duration, use24Hour)
         : "";
       renderOpts = { value: title, sub, barColor: task.colorHex, strikethrough: task.completed };
     }
@@ -121,9 +122,14 @@ export class AgendaAction extends SingletonAction {
   }
 }
 
-function formatTime(t: string): string {
-  const [h, m] = t.split(":");
-  return `${parseInt(h, 10)}:${m}`;
+function formatTime(t: string, use24Hour: boolean): string {
+  const [hStr, mStr] = t.split(":");
+  const h = parseInt(hStr, 10);
+  const m = mStr.padStart(2, "0");
+  if (use24Hour) return `${h.toString().padStart(2, "0")}:${m}`;
+  const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${displayHour}:${m} ${ampm}`;
 }
 
 function nowMin(): number {
@@ -136,10 +142,10 @@ function toMin(t: string): number {
   return h * 60 + m;
 }
 
-function statusLabel(startTime: string, duration: number): string {
+function statusLabel(startTime: string, duration: number, use24Hour: boolean): string {
   const start = toMin(startTime);
   const now = nowMin();
-  if (start > now) return formatTime(startTime);
+  if (start > now) return formatTime(startTime, use24Hour);
   if (duration > 0 && start + duration > now) return "In Progress";
   return "Overdue";
 }

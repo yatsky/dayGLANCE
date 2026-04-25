@@ -7,6 +7,7 @@ import {
   PROTOCOL_VERSION,
   MSG_DAY_STATE,
   MSG_DAY_FOCUS_START,
+  MSG_DAY_FOCUS_TIMER_START,
   MSG_DAY_FOCUS_STOP,
   MSG_DAY_FOCUS_SKIP,
   MSG_DAY_FOCUS_SET_DURATION,
@@ -55,8 +56,10 @@ export default function useElectronBridge({
   focusCycleCount,
   focusWorkMinutes,
   focusBreakMinutes,
+  focusShowSettings,
   enterFocusModeRef,
   exitFocusModeRef,
+  startFocusTimerRef,
   skipFocusPhase,
   setFocusWorkMinutes,
   setFocusBreakMinutes,
@@ -99,6 +102,9 @@ export default function useElectronBridge({
       switch (cmd.type) {
         case MSG_DAY_FOCUS_START:
           enterFocusModeRef.current?.();
+          break;
+        case MSG_DAY_FOCUS_TIMER_START:
+          startFocusTimerRef.current?.();
           break;
         case MSG_DAY_FOCUS_STOP:
           exitFocusModeRef.current?.();
@@ -239,6 +245,7 @@ export default function useElectronBridge({
       focus: {
         available: focusModeAvailable,
         active: showFocusMode,
+        setup: !!focusShowSettings,
         phase: focusPhase,
         secondsRemaining: focusTimerSeconds,
         running: focusTimerRunning,
@@ -259,7 +266,7 @@ export default function useElectronBridge({
     });
   }, [
     todayAgenda, currentTime, tasks, expandedRecurringTasks, todayHGSessions, focusModeAvailable,
-    showFocusMode, focusPhase, focusTimerSeconds, focusTimerRunning,
+    showFocusMode, focusShowSettings, focusPhase, focusTimerSeconds, focusTimerRunning,
     focusCycleCount, focusWorkMinutes, focusBreakMinutes,
     activeHabits, getTodayHabitCount, habitsEnabled,
     todayRoutines, routineCompletions, use24HourClock,

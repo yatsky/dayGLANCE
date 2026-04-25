@@ -2263,6 +2263,7 @@ const DayPlanner = () => {
   }, [aiConfig]);
 
   const enterFocusModeRef = useRef(null);
+  const startFocusTimerRef = useRef(null);
   const openRoutinesDashboardRef = useRef(null);
 
   const { longPressTriggeredRef, longPressTimerRef } = useMobileInteractions({
@@ -2899,6 +2900,7 @@ const DayPlanner = () => {
     nativeEnterFocusMode();
   };
   enterFocusModeRef.current = enterFocusMode;
+  startFocusTimerRef.current = startFocusTimer;
   openRoutinesDashboardRef.current = openRoutinesDashboard;
 
   const startFocusTimer = () => {
@@ -6135,8 +6137,10 @@ const DayPlanner = () => {
     focusCycleCount,
     focusWorkMinutes,
     focusBreakMinutes,
+    focusShowSettings,
     enterFocusModeRef,
     exitFocusModeRef,
+    startFocusTimerRef,
     skipFocusPhase,
     setFocusWorkMinutes,
     setFocusBreakMinutes,

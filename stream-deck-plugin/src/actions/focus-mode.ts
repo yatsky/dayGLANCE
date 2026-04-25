@@ -9,8 +9,17 @@ import {
   WillAppearEvent,
   WillDisappearEvent,
 } from "@elgato/streamdeck";
-import { DayGlanceState, onState, send, MSG_DAY_FOCUS_START, MSG_DAY_FOCUS_STOP, MSG_DAY_FOCUS_SKIP, MSG_DAY_FOCUS_SET_DURATION } from "../client";
+import {
+  DayGlanceState, onState, send,
+  MSG_DAY_FOCUS_START, MSG_DAY_FOCUS_TIMER_START, MSG_DAY_FOCUS_STOP, MSG_DAY_FOCUS_SKIP,
+  MSG_DAY_FOCUS_SET_DURATION,
+} from "../client";
 import { renderKey, renderFocusSlot, renderFocusSlotKey, renderFocusSetupSlot } from "../render";
+
+// Three operating modes for the Focus encoder:
+//   idle   — panel closed (active=false)
+//   setup  — panel open, settings screen showing (active=true, setup=true)
+//   session — timer running or paused (active=true, setup=false)
 
 @action({ UUID: "app.dayglance.streamdeck.focus" })
 export class FocusAction extends SingletonAction {
@@ -61,24 +70,32 @@ export class FocusAction extends SingletonAction {
     const held = this.dialPressedAt !== null && (Date.now() - this.dialPressedAt) >= this.LONG_PRESS_MS;
     this.dialPressedAt = null;
 
-    const { active, available } = this.lastState?.focus ?? { active: false, available: false };
-    if (active) {
-      // Any knob press during a session: advance to next phase
-      send({ type: MSG_DAY_FOCUS_SKIP });
-    } else if (held) {
-      // Long press when idle: toggle which duration the dial adjusts
-      this.adjusting = this.adjusting === "work" ? "break" : "work";
-      if (this.lastState) await this.renderAll(this.lastState);
-    } else if (available) {
-      // Short press when idle: start session
+    const focus = this.lastState?.focus;
+    if (!focus) return;
+
+    if (!focus.active) {
+      // Idle: open the session start screen in the app
       send({ type: MSG_DAY_FOCUS_START });
+    } else if (focus.setup) {
+      if (held) {
+        // Long press on setup screen: toggle work/break dial selection
+        this.adjusting = this.adjusting === "work" ? "break" : "work";
+        if (this.lastState) await this.renderAll(this.lastState);
+      } else {
+        // Short press on setup screen: start the timer
+        send({ type: MSG_DAY_FOCUS_TIMER_START });
+      }
+    } else {
+      // Session in progress: advance to next phase
+      send({ type: MSG_DAY_FOCUS_SKIP });
     }
   }
 
   override async onDialRotate(ev: DialRotateEvent): Promise<void> {
     if (!this.lastState) return;
-    const { active, workMinutes, breakMinutes } = this.lastState.focus;
-    if (active) return; // dial does nothing during a session
+    const { active, setup, workMinutes, breakMinutes } = this.lastState.focus;
+    // Dial only adjusts durations while the setup screen is showing
+    if (!active || !setup) return;
 
     if (this.adjusting === "work") {
       const newWork = Math.max(1, Math.min(120, workMinutes + ev.payload.ticks));
@@ -87,15 +104,17 @@ export class FocusAction extends SingletonAction {
       const newBreak = Math.max(1, Math.min(60, breakMinutes + ev.payload.ticks));
       send({ type: MSG_DAY_FOCUS_SET_DURATION, breakMinutes: newBreak });
     }
-    // State subscription will re-render once the app echoes the update back
   }
 
   override async onKeyDown(_ev: KeyDownEvent): Promise<void> {
-    const { active, available } = this.lastState?.focus ?? { active: false, available: false };
-    if (active) {
-      send({ type: MSG_DAY_FOCUS_SKIP });
-    } else if (available) {
+    const focus = this.lastState?.focus;
+    if (!focus) return;
+    if (!focus.active) {
       send({ type: MSG_DAY_FOCUS_START });
+    } else if (focus.setup) {
+      send({ type: MSG_DAY_FOCUS_TIMER_START });
+    } else {
+      send({ type: MSG_DAY_FOCUS_SKIP });
     }
   }
 
@@ -104,11 +123,14 @@ export class FocusAction extends SingletonAction {
       if (this.lastState?.focus.active) send({ type: MSG_DAY_FOCUS_STOP });
       return;
     }
-    const { active, available } = this.lastState?.focus ?? { active: false, available: false };
-    if (active) {
-      send({ type: MSG_DAY_FOCUS_SKIP });
-    } else if (available) {
+    const focus = this.lastState?.focus;
+    if (!focus) return;
+    if (!focus.active) {
       send({ type: MSG_DAY_FOCUS_START });
+    } else if (focus.setup) {
+      send({ type: MSG_DAY_FOCUS_TIMER_START });
+    } else {
+      send({ type: MSG_DAY_FOCUS_SKIP });
     }
   }
 
@@ -121,30 +143,41 @@ export class FocusAction extends SingletonAction {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async renderOne(act: any, state: DayGlanceState): Promise<void> {
     const isEncoder = this.encoderRefs.has(act);
-    const { available, active, phase, secondsRemaining, running, workMinutes, breakMinutes, cycleCount } = state.focus;
+    const { available, active, setup, phase, secondsRemaining, running, workMinutes, breakMinutes, cycleCount } = state.focus;
     const cycles = cycleCount ?? 0;
 
     if (isEncoder) {
       const slotIndex = this.slotIndexMap.get(act) ?? 0;
-      if (active) {
-        await act.setImage(renderFocusSlotKey(slotIndex, phase, secondsRemaining, cycles));
-        await act.setFeedback({ canvas: renderFocusSlot(slotIndex, phase, secondsRemaining, cycles) });
-      } else {
-        // Setup screen: slots 0+1 show work/break durations; slots 2-3 show pending rings
+
+      if (!active) {
+        // Idle: slot 0 = standard Focus display; slots 1-3 = pending rings
+        const idleKeyOpts = slotIndex === 0
+          ? { value: "Focus", sub: available ? "press to start" : "unavailable", dim: !available, barColor: "#f97316" }
+          : { value: `${slotIndex + 1}`, sub: `cycle ${slotIndex + 1}`, dim: true, barColor: "#f97316" };
+        await act.setImage(renderKey(idleKeyOpts));
+        await act.setFeedback({ canvas: renderFocusSetupSlot(slotIndex, workMinutes, breakMinutes, this.adjusting) });
+      } else if (setup) {
+        // Setup screen open: slots 0+1 show work/break; slots 2-3 show pending
         const barColor = this.adjusting === "work" ? "#f97316" : "#22c55e";
         const value = this.adjusting === "work" ? `${workMinutes}m` : `${breakMinutes}m`;
         const sub = this.adjusting === "work" ? "work" : "break";
-        await act.setImage(renderKey({ value, sub, dim: !available, barColor }));
+        await act.setImage(renderKey({ value, sub, barColor }));
         await act.setFeedback({ canvas: renderFocusSetupSlot(slotIndex, workMinutes, breakMinutes, this.adjusting) });
+      } else {
+        // Session active: per-slot Pomodoro view
+        await act.setImage(renderFocusSlotKey(slotIndex, phase, secondsRemaining, cycles));
+        await act.setFeedback({ canvas: renderFocusSlot(slotIndex, phase, secondsRemaining, cycles) });
       }
       return;
     }
 
     // Non-encoder key button
     if (!active) {
+      await act.setImage(renderKey({ value: "Focus", sub: available ? "press to start" : "unavailable", dim: !available, barColor: "#f97316" }));
+    } else if (setup) {
       const barColor = this.adjusting === "work" ? "#f97316" : "#22c55e";
       const value = this.adjusting === "work" ? `${workMinutes}m` : `${breakMinutes}m`;
-      await act.setImage(renderKey({ value, sub: available ? "press to start" : "unavailable", dim: !available, barColor }));
+      await act.setImage(renderKey({ value, sub: "press to start", barColor }));
     } else {
       const m = Math.floor(secondsRemaining / 60);
       const s = secondsRemaining % 60;

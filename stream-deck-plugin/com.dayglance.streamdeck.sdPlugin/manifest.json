@@ -31,7 +31,9 @@
         "layout": "layouts/agenda.json",
         "TriggerDescription": {
           "Rotate": "Cycle through tasks / overview",
-          "Push": "Complete current task"
+          "Push": "Complete current task",
+          "TouchTap": "Tap left/right to cycle views",
+          "LongTouch": "Complete current task"
         }
       },
       "States": [

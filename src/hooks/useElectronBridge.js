@@ -140,9 +140,6 @@ export default function useElectronBridge({
       ...tasks.filter(t => t.date === todayStr && t.isAllDay),
       ...todayRecurring.filter(t => t.isAllDay),
     ];
-    // todayAgenda is pre-built with recurring tasks merged and sorted — use it for display
-    const agendaAllDay = todayAgenda.filter(t => t._agendaType === 'allday');
-    const agendaScheduled = todayAgenda.filter(t => t._agendaType === 'scheduled');
 
     // ── Habits ────────────────────────────────────────────────────────────
     const habits = habitsEnabled ? (activeHabits ?? []).map(h => {
@@ -173,8 +170,10 @@ export default function useElectronBridge({
       currentTask: mapTask(inProgress),
       nextTask: mapTask(nextUpcoming),
       scheduledTasks: [
-        ...agendaAllDay.map(mapTask),
-        ...agendaScheduled.map(mapTask),
+        ...allDayTasks.map(mapTask),
+        ...[...todayTasks]
+          .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+          .map(mapTask),
       ],
       today: {
         total: todayTasks.length + allDayTasks.length,

@@ -18,7 +18,7 @@ export class GoalProgressAction extends SingletonAction {
   override async onWillAppear(ev: WillAppearEvent): Promise<void> {
     this.actionRef = ev.action;
     this.unsubscribe?.();
-    this.unsubscribe = onState((s) => { this.lastState = s; void this.render(s); });
+    this.unsubscribe = onState((s) => { this.lastState = s; this.render(s).catch(e => console.error("[dayGLANCE] goal-progress render:", e)); });
     if (this.lastState) await this.render(this.lastState);
   }
 

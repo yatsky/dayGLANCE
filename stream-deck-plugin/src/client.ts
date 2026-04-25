@@ -33,14 +33,26 @@ const listeners = new Set<StateListener>();
 
 function connect(): void {
   clearTimeout(retryTimer);
+  console.log("[dayGLANCE] connecting to", WS_URL);
   ws = new WebSocket(WS_URL);
+
+  ws.on("open", () => {
+    console.log("[dayGLANCE] WS connected");
+  });
 
   ws.on("message", (data) => {
     try {
       const msg = JSON.parse(data.toString());
       if (msg.type === MSG_DAY_STATE) {
         lastState = msg as DayGlanceState;
-        for (const listener of listeners) listener(lastState);
+        console.log("[dayGLANCE] state received, listeners:", listeners.size, "currentTask:", lastState.currentTask?.title ?? "none");
+        for (const listener of listeners) {
+          try {
+            listener(lastState);
+          } catch (e) {
+            console.error("[dayGLANCE] listener error:", e);
+          }
+        }
       }
     } catch {
       // drop malformed frames
@@ -48,6 +60,7 @@ function connect(): void {
   });
 
   ws.on("close", () => {
+    console.log("[dayGLANCE] WS closed, retrying in", RETRY_MS, "ms");
     retryTimer = setTimeout(connect, RETRY_MS);
   });
 

@@ -21,14 +21,14 @@ export class NextTaskAction extends SingletonAction {
     this.unsubscribe?.();
     this.unsubscribe = onState((s) => {
       this.lastState = s;
-      void this.render(s);
+      this.render(s).catch(e => console.error("[dayGLANCE] next-task render:", e));
     });
     if (this.lastState) await this.render(this.lastState);
   }
 
   override async onDialRotate(ev: DialRotateEvent): Promise<void> {
     this.showNext = ev.payload.ticks > 0;
-    if (this.lastState) void this.render(this.lastState);
+    if (this.lastState) this.render(this.lastState).catch(e => console.error("[dayGLANCE] next-task render:", e));
   }
 
   override async onKeyDown(_ev: KeyDownEvent): Promise<void> {

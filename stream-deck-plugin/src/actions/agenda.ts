@@ -17,7 +17,7 @@ export class AgendaAction extends SingletonAction {
   override async onWillAppear(ev: WillAppearEvent): Promise<void> {
     this.actionRef = ev.action;
     this.unsubscribe?.();
-    this.unsubscribe = onState((s) => { this.lastState = s; void this.render(s); });
+    this.unsubscribe = onState((s) => { this.lastState = s; this.render(s).catch(e => console.error("[dayGLANCE] agenda render:", e)); });
     if (this.lastState) await this.render(this.lastState);
   }
 

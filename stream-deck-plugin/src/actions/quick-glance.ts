@@ -25,7 +25,7 @@ export class QuickGlanceAction extends SingletonAction {
     this.unsubscribe?.();
     this.unsubscribe = onState((s) => {
       this.lastState = s;
-      void this.render(s);
+      this.render(s).catch(e => console.error("[dayGLANCE] quick-glance render:", e));
     });
     if (this.lastState) await this.render(this.lastState);
   }
@@ -33,7 +33,7 @@ export class QuickGlanceAction extends SingletonAction {
   override async onDialRotate(ev: DialRotateEvent): Promise<void> {
     if (this.pinned) return;
     this.modeIndex = (this.modeIndex + ev.payload.ticks + MODES.length) % MODES.length;
-    if (this.lastState) void this.render(this.lastState);
+    if (this.lastState) this.render(this.lastState).catch(e => console.error("[dayGLANCE] quick-glance render:", e));
   }
 
   override async onKeyDown(_ev: KeyDownEvent): Promise<void> {

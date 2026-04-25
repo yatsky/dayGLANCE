@@ -9,7 +9,7 @@ import {
   WillDisappearEvent,
 } from "@elgato/streamdeck";
 import { DayGlanceState, onState, send, MSG_DAY_FOCUS_START, MSG_DAY_FOCUS_STOP, MSG_DAY_FOCUS_SKIP, MSG_DAY_FOCUS_SET_DURATION } from "../client";
-import { renderKey, renderStrip } from "../render";
+import { renderKey, renderStrip, renderFocusStrip } from "../render";
 
 @action({ UUID: "app.dayglance.streamdeck.focus" })
 export class FocusAction extends SingletonAction {
@@ -117,7 +117,7 @@ export class FocusAction extends SingletonAction {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async renderOne(act: any, state: DayGlanceState): Promise<void> {
     const isEncoder = this.encoderRefs.has(act);
-    const { available, active, phase, secondsRemaining, running, workMinutes } = state.focus;
+    const { available, active, phase, secondsRemaining, running, workMinutes, cycleCount } = state.focus;
     let renderOpts: Parameters<typeof renderKey>[0];
 
     if (!active) {
@@ -138,7 +138,11 @@ export class FocusAction extends SingletonAction {
 
     await act.setImage(renderKey(renderOpts));
     if (isEncoder) {
-      await act.setFeedback({ canvas: renderStrip(renderOpts) });
+      if (active) {
+        await act.setFeedback({ canvas: renderFocusStrip(phase, secondsRemaining, cycleCount ?? 0) });
+      } else {
+        await act.setFeedback({ canvas: renderStrip(renderOpts) });
+      }
     } else {
       await act.setTitle("");
     }

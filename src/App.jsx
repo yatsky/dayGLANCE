@@ -6132,6 +6132,7 @@ const DayPlanner = () => {
     focusPhase,
     focusTimerSeconds,
     focusTimerRunning,
+    focusCycleCount,
     focusWorkMinutes,
     focusBreakMinutes,
     enterFocusModeRef,

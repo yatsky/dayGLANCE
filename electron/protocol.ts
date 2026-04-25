@@ -38,6 +38,7 @@ export type FocusState = {
   running: boolean;
   workMinutes: number;
   breakMinutes: number;
+  cycleCount: number;  // total completed work cycles since session start
 };
 
 export type Habit = {

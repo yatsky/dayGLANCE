@@ -52,6 +52,7 @@ export default function useElectronBridge({
   focusPhase,
   focusTimerSeconds,
   focusTimerRunning,
+  focusCycleCount,
   focusWorkMinutes,
   focusBreakMinutes,
   enterFocusModeRef,
@@ -243,6 +244,7 @@ export default function useElectronBridge({
         running: focusTimerRunning,
         workMinutes: focusWorkMinutes,
         breakMinutes: focusBreakMinutes,
+        cycleCount: focusCycleCount || 0,
       },
       habits,
       nextRoutine: nextRoutineRaw ? {
@@ -258,7 +260,7 @@ export default function useElectronBridge({
   }, [
     todayAgenda, currentTime, tasks, expandedRecurringTasks, todayHGSessions, focusModeAvailable,
     showFocusMode, focusPhase, focusTimerSeconds, focusTimerRunning,
-    focusWorkMinutes, focusBreakMinutes,
+    focusCycleCount, focusWorkMinutes, focusBreakMinutes,
     activeHabits, getTodayHabitCount, habitsEnabled,
     todayRoutines, routineCompletions, use24HourClock,
     goals, projects, unscheduledTasks, goalsProjectsEnabled,

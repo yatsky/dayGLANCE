@@ -25,6 +25,7 @@ export class FocusAction extends SingletonAction<Settings> {
       this.lastState = s;
       void this.render(s);
     });
+    if (this.lastState) await this.render(this.lastState);
   }
 
   override async onDialRotate(ev: DialRotateEvent<Settings>): Promise<void> {

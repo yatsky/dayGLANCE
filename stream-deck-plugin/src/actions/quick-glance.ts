@@ -27,6 +27,7 @@ export class QuickGlanceAction extends SingletonAction {
       this.lastState = s;
       void this.render(s);
     });
+    if (this.lastState) await this.render(this.lastState);
   }
 
   override async onDialRotate(ev: DialRotateEvent): Promise<void> {

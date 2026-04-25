@@ -6,20 +6,24 @@ import {
   MSG_DAY_FOCUS_STOP,
   MSG_DAY_FOCUS_SKIP,
   MSG_DAY_TASK_COMPLETE,
+  MSG_DAY_HABIT_INCREMENT,
+  MSG_DAY_ROUTINE_COMPLETE,
   type DayGlanceState,
   type InboundCommand,
 } from "../../electron/protocol";
 
 // Re-export everything action files need — keeps their imports pointing at ../client only
 export type { DayGlanceState, Task, FocusState } from "../../electron/protocol";
-export { MSG_DAY_FOCUS_START, MSG_DAY_FOCUS_STOP, MSG_DAY_FOCUS_SKIP, MSG_DAY_TASK_COMPLETE } from "../../electron/protocol";
+export { MSG_DAY_FOCUS_START, MSG_DAY_FOCUS_STOP, MSG_DAY_FOCUS_SKIP, MSG_DAY_TASK_COMPLETE, MSG_DAY_HABIT_INCREMENT, MSG_DAY_ROUTINE_COMPLETE } from "../../electron/protocol";
 
 // CommandPayload is the caller-facing API — send() stamps v internally
 type CommandPayload =
   | { type: typeof MSG_DAY_FOCUS_START }
   | { type: typeof MSG_DAY_FOCUS_STOP }
   | { type: typeof MSG_DAY_FOCUS_SKIP }
-  | { type: typeof MSG_DAY_TASK_COMPLETE; id: string };
+  | { type: typeof MSG_DAY_TASK_COMPLETE; id: string }
+  | { type: typeof MSG_DAY_HABIT_INCREMENT; id: string }
+  | { type: typeof MSG_DAY_ROUTINE_COMPLETE; id: string };
 
 type StateListener = (state: DayGlanceState) => void;
 

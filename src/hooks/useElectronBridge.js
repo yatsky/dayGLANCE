@@ -167,8 +167,8 @@ export default function useElectronBridge({
           .map(mapTask),
       ],
       today: {
-        total: todayTasks.length,
-        completed: todayTasks.filter(t => t.completed).length,
+        total: todayTasks.length + allDayTasks.length,
+        completed: todayTasks.filter(t => t.completed).length + allDayTasks.filter(t => t.completed).length,
         date: todayStr,
       },
       focus: {

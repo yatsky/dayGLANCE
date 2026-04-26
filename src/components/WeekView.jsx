@@ -577,23 +577,29 @@ const WeekView = () => {
         className={`flex-shrink-0 border-r ${borderClass} flex flex-col relative`}
         style={{ width: WEEK_GUTTER_W }}
       >
-        {weekTimelineStartHour > 0 && (
-          <button
-            onClick={() => setShowAllHours(v => !v)}
-            className={`absolute top-1 left-0 right-0 z-10 text-[9px] text-center leading-none px-1 transition-colors ${showAllHours ? 'text-blue-500' : textSecondary} hover:text-blue-500`}
-          >
-            {showAllHours ? 'trim' : `▲ ${use24HourClock ? `${String(weekTimelineStartHour).padStart(2,'0')}:00` : weekTimelineStartHour < 12 ? `${weekTimelineStartHour}am` : '12pm'}`}
-          </button>
-        )}
         {Array.from({ length: visibleHours }, (_, i) => {
           const hour = startHour + i;
+          const isToggleRow = weekTimelineStartHour > 0 && hour === weekTimelineStartHour;
+          const toggleLabel = use24HourClock
+            ? `${String(weekTimelineStartHour).padStart(2, '0')}:00`
+            : weekTimelineStartHour === 0 ? '12AM'
+            : weekTimelineStartHour === 12 ? '12PM'
+            : weekTimelineStartHour < 12 ? `${weekTimelineStartHour}AM`
+            : `${weekTimelineStartHour - 12}PM`;
           return (
             <div
               key={hour}
               className="relative flex-shrink-0"
               style={{ height: `${hourHeight}px` }}
             >
-              {hour % 3 === 0 && (
+              {isToggleRow ? (
+                <button
+                  onClick={() => setShowAllHours(v => !v)}
+                  className="absolute top-0.5 right-2 text-[10px] leading-none text-blue-500 hover:text-blue-400 transition-colors select-none"
+                >
+                  {showAllHours ? `▼ ${toggleLabel}` : `▲ ${toggleLabel}`}
+                </button>
+              ) : (hour % 3 === 0 && (
                 <span
                   className={`absolute top-0.5 right-2 text-[10px] leading-none ${textSecondary} select-none`}
                 >
@@ -602,7 +608,7 @@ const WeekView = () => {
                     : hour === 0 ? '12 AM' : hour === 12 ? '12 PM' : hour < 12 ? `${hour} AM` : `${hour - 12} PM`
                   }
                 </span>
-              )}
+              ))}
             </div>
           );
         })}

@@ -21,7 +21,7 @@ if $FULL_CLEAN; then
   echo "==> Full clean..."
   cd "$ANDROID_DIR" && ./gradlew clean
   cd "$SCRIPT_DIR"
-  rm -rf dist dist-electron dist-app
+  rm -rf dist
 else
   # Vite produces a new content-hashed bundle on every build, so Gradle's
   # incremental asset pipeline accumulates stale .jar files for the old
@@ -51,21 +51,8 @@ if $RELEASE; then
   cp "app/build/outputs/bundle/release/app-release.aab" "$OUT_DIR/dayglance.aab"
   echo "    AAB  → outputs/dayglance.aab"
 
-  # ── Desktop ────────────────────────────────────────────────────────────
-  echo "==> Building desktop app (this platform only)..."
-  cd "$SCRIPT_DIR"
-  npm run build:electron
-
-  # Copy DMG, macOS zip, Windows installer, and Linux AppImage to outputs/
-  while IFS= read -r -d '' f; do
-    cp "$f" "$OUT_DIR/"
-    echo "    $(basename "$f")  → outputs/"
-  done < <(find "$SCRIPT_DIR/dist-app" -maxdepth 1 \
-    \( -name "*.dmg" -o -name "*-mac.zip" -o -name "*.exe" -o -name "*.AppImage" \) \
-    -print0)
-
   echo ""
-  echo "==> Release build complete. outputs/:"
+  echo "==> Android release build complete. outputs/:"
   ls -lh "$OUT_DIR"
 
 else

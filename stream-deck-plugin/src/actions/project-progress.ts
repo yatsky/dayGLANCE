@@ -10,14 +10,14 @@ import {
   WillDisappearEvent,
 } from "@elgato/streamdeck";
 import { DayGlanceState, onState } from "../client";
-import { renderGoalKey, renderGoalStrip } from "../render";
+import { renderProjectKey, renderProjectStrip } from "../render";
 
-@action({ UUID: "com.dayglance.streamdeck.goal-progress" })
-export class GoalProgressAction extends SingletonAction {
+@action({ UUID: "com.dayglance.streamdeck.project-progress" })
+export class ProjectProgressAction extends SingletonAction {
   private unsubscribe: (() => void) | null = null;
   private lastState: DayGlanceState | null = null;
   private visibleCount = 0;
-  // 0 = overview, 1..N = goal at index (viewIndex - 1)
+  // 0 = overview, 1..N = project at index (viewIndex - 1)
   private viewIndex = 0;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private encoderRefs = new Set<any>();
@@ -33,9 +33,9 @@ export class GoalProgressAction extends SingletonAction {
       this.viewIndex = 0;
       this.unsubscribe = onState((s) => {
         this.lastState = s;
-        const count = s.goals?.length ?? 0;
+        const count = s.projects?.length ?? 0;
         if (this.viewIndex > count) this.viewIndex = 0;
-        this.renderAll(s).catch(e => console.error("[dayGLANCE] goal-progress render:", e));
+        this.renderAll(s).catch(e => console.error("[dayGLANCE] project-progress render:", e));
       });
     }
     if (this.lastState) await this.renderOne(ev.action, this.lastState);
@@ -55,13 +55,13 @@ export class GoalProgressAction extends SingletonAction {
   }
 
   override async onDialUp(_ev: DialUpEvent): Promise<void> {
-    // No action for goals from the deck yet
+    // No action for projects from the deck yet
   }
 
   override async onKeyDown(_ev: KeyDownEvent): Promise<void> {
     this.keyLongPressTimer = setTimeout(async () => {
       this.keyLongPressTimer = null;
-      // No long-press action for goals yet
+      // No long-press action for projects yet
     }, 500);
   }
 
@@ -81,7 +81,7 @@ export class GoalProgressAction extends SingletonAction {
 
   private async cycleView(delta: number): Promise<void> {
     if (!this.lastState) return;
-    const count = this.lastState.goals?.length ?? 0;
+    const count = this.lastState.projects?.length ?? 0;
     if (count === 0) return;
     const total = count + 1;
     this.viewIndex = ((this.viewIndex + delta) % total + total) % total;
@@ -97,23 +97,23 @@ export class GoalProgressAction extends SingletonAction {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async renderOne(act: any, state: DayGlanceState): Promise<void> {
     const isEncoder = this.encoderRefs.has(act);
-    const goals = state.goals ?? [];
+    const projects = state.projects ?? [];
 
     let keyImg: string;
     let stripImg: string;
 
-    if (this.viewIndex === 0 || goals.length === 0) {
-      const avgProgress = goals.length > 0
-        ? Math.round(goals.reduce((s, g) => s + g.progress, 0) / goals.length)
+    if (this.viewIndex === 0 || projects.length === 0) {
+      const avgProgress = projects.length > 0
+        ? Math.round(projects.reduce((s, p) => s + p.progress, 0) / projects.length)
         : 0;
-      const opts = { title: "", progress: 0, colorHex: "#f97316", overview: true, goalCount: goals.length, avgProgress };
-      keyImg = renderGoalKey(opts);
-      stripImg = renderGoalStrip(opts);
+      const opts = { title: "", progress: 0, colorHex: "#f97316", overview: true, projectCount: projects.length, avgProgress };
+      keyImg = renderProjectKey(opts);
+      stripImg = renderProjectStrip(opts);
     } else {
-      const goal = goals[this.viewIndex - 1];
-      const opts = { title: goal.title, progress: goal.progress, colorHex: goal.colorHex };
-      keyImg = renderGoalKey(opts);
-      stripImg = renderGoalStrip(opts);
+      const project = projects[this.viewIndex - 1];
+      const opts = { title: project.title, progress: project.progress, colorHex: project.colorHex, goalTitle: project.goalTitle };
+      keyImg = renderProjectKey(opts);
+      stripImg = renderProjectStrip(opts);
     }
 
     await act.setImage(keyImg);

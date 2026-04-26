@@ -1,15 +1,27 @@
 import { useEffect, useRef } from 'react';
-import { taskColorToHex } from '../utils/colorUtils.js';
+import { taskColorToHex, TAILWIND_TO_HEX } from '../utils/colorUtils.js';
 import { dateToString } from '../utils/taskUtils.js';
+import { calculateGoalProgress } from '../utils/goalProgress.js';
+import { calculateProjectProgress } from '../utils/projectProgress.js';
 import {
   PROTOCOL_VERSION,
   MSG_DAY_STATE,
   MSG_DAY_FOCUS_START,
+  MSG_DAY_FOCUS_TIMER_START,
   MSG_DAY_FOCUS_STOP,
   MSG_DAY_FOCUS_SKIP,
+  MSG_DAY_FOCUS_SET_DURATION,
   MSG_DAY_TASK_COMPLETE,
   MSG_DAY_HABIT_INCREMENT,
   MSG_DAY_ROUTINE_COMPLETE,
+  MSG_DAY_FOCUS_DISMISS_STATS,
+  MSG_DAY_HG_START,
+  MSG_DAY_HG_TIMER_START,
+  MSG_DAY_HG_STOP,
+  MSG_DAY_HG_SKIP,
+  MSG_DAY_HG_SET_DURATION,
+  MSG_DAY_HG_COMPLETE,
+  MSG_DAY_HG_TASK_COMPLETE,
 } from '../../electron/protocol';
 
 const timeToMinutes = (time) => {
@@ -42,17 +54,53 @@ export default function useElectronBridge({
   todayAgenda,
   currentTime,
   tasks,
+  expandedRecurringTasks,
+  todayHGSessions,
   focusModeAvailable,
   showFocusMode,
   focusPhase,
   focusTimerSeconds,
   focusTimerRunning,
+  focusCycleCount,
   focusWorkMinutes,
   focusBreakMinutes,
+  focusLongBreakMinutes,
+  focusShowSettings,
+  focusShowStats,
+  focusBlockTasks,
+  focusCompletedTasks,
   enterFocusModeRef,
   exitFocusModeRef,
+  startFocusTimerRef,
+  dismissFocusStats,
   skipFocusPhase,
+  setFocusWorkMinutes,
+  setFocusBreakMinutes,
+  setFocusLongBreakMinutes,
+  focusCompleteTask,
+  hgCompleteTask,
   toggleComplete,
+  // HyperGLANCE
+  showHyperGlanceMode,
+  hyperGlanceProjectId,
+  hyperGlanceSessionDate,
+  hgTimerSeconds,
+  hgTimerRunning,
+  hgTimerPhase,
+  hgWorkMinutes,
+  hgBreakMinutes,
+  hgLongBreakMinutes,
+  hgCycleCount,
+  hgShowSettings,
+  hgCompleted,
+  startHyperGlanceTimer,
+  skipHyperGlancePhase,
+  setHgWorkMinutes,
+  setHgBreakMinutes,
+  setHgLongBreakMinutes,
+  enterHyperGlanceMode,
+  exitHyperGlanceMode,
+  setHgCompleted,
   // Habits
   activeHabits,
   getTodayHabitCount,
@@ -62,15 +110,50 @@ export default function useElectronBridge({
   todayRoutines,
   routineCompletions,
   toggleRoutineCompletion,
+  // Settings
+  use24HourClock,
+  // Goals
+  goals,
+  projects,
+  unscheduledTasks,
+  goalsProjectsEnabled,
 }) {
   const skipFocusPhaseRef = useRef(skipFocusPhase);
+  const dismissFocusStatsRef = useRef(dismissFocusStats);
+  const focusCompleteTaskRef = useRef(focusCompleteTask);
+  const hgCompleteTaskRef = useRef(hgCompleteTask);
   const toggleCompleteRef = useRef(toggleComplete);
   const incrementHabitRef = useRef(incrementHabit);
   const toggleRoutineCompletionRef = useRef(toggleRoutineCompletion);
+  const setFocusWorkMinutesRef = useRef(setFocusWorkMinutes);
+  const setFocusBreakMinutesRef = useRef(setFocusBreakMinutes);
+  const setFocusLongBreakMinutesRef = useRef(setFocusLongBreakMinutes);
+  const startHyperGlanceTimerRef = useRef(startHyperGlanceTimer);
+  const skipHyperGlancePhaseRef = useRef(skipHyperGlancePhase);
+  const enterHyperGlanceModeRef = useRef(enterHyperGlanceMode);
+  const exitHyperGlanceModeRef = useRef(exitHyperGlanceMode);
+  const setHgWorkMinutesRef = useRef(setHgWorkMinutes);
+  const setHgBreakMinutesRef = useRef(setHgBreakMinutes);
+  const setHgLongBreakMinutesRef = useRef(setHgLongBreakMinutes);
+  const setHgCompletedRef = useRef(setHgCompleted);
   skipFocusPhaseRef.current = skipFocusPhase;
+  dismissFocusStatsRef.current = dismissFocusStats;
+  focusCompleteTaskRef.current = focusCompleteTask;
+  hgCompleteTaskRef.current = hgCompleteTask;
   toggleCompleteRef.current = toggleComplete;
   incrementHabitRef.current = incrementHabit;
   toggleRoutineCompletionRef.current = toggleRoutineCompletion;
+  setFocusWorkMinutesRef.current = setFocusWorkMinutes;
+  setFocusBreakMinutesRef.current = setFocusBreakMinutes;
+  setFocusLongBreakMinutesRef.current = setFocusLongBreakMinutes;
+  startHyperGlanceTimerRef.current = startHyperGlanceTimer;
+  skipHyperGlancePhaseRef.current = skipHyperGlancePhase;
+  enterHyperGlanceModeRef.current = enterHyperGlanceMode;
+  exitHyperGlanceModeRef.current = exitHyperGlanceMode;
+  setHgWorkMinutesRef.current = setHgWorkMinutes;
+  setHgBreakMinutesRef.current = setHgBreakMinutes;
+  setHgLongBreakMinutesRef.current = setHgLongBreakMinutes;
+  setHgCompletedRef.current = setHgCompleted;
 
   // Subscribe to commands from WebSocket clients once on mount.
   useEffect(() => {
@@ -81,20 +164,55 @@ export default function useElectronBridge({
         case MSG_DAY_FOCUS_START:
           enterFocusModeRef.current?.();
           break;
+        case MSG_DAY_FOCUS_TIMER_START:
+          startFocusTimerRef.current?.();
+          break;
         case MSG_DAY_FOCUS_STOP:
           exitFocusModeRef.current?.();
           break;
         case MSG_DAY_FOCUS_SKIP:
           skipFocusPhaseRef.current?.();
           break;
+        case MSG_DAY_FOCUS_SET_DURATION:
+          if (cmd.workMinutes !== undefined) setFocusWorkMinutesRef.current?.(Math.max(1, Math.min(120, cmd.workMinutes)));
+          if (cmd.breakMinutes !== undefined) setFocusBreakMinutesRef.current?.(Math.max(1, Math.min(60, cmd.breakMinutes)));
+          if (cmd.longBreakMinutes !== undefined) setFocusLongBreakMinutesRef.current?.(Math.max(1, Math.min(60, cmd.longBreakMinutes)));
+          break;
+        case MSG_DAY_FOCUS_DISMISS_STATS:
+          dismissFocusStatsRef.current?.();
+          break;
         case MSG_DAY_TASK_COMPLETE:
-          if (cmd.id) toggleCompleteRef.current?.(cmd.id);
+          if (cmd.id) focusCompleteTaskRef.current?.(cmd.id);
           break;
         case MSG_DAY_HABIT_INCREMENT:
           if (cmd.id) incrementHabitRef.current?.(cmd.id);
           break;
         case MSG_DAY_ROUTINE_COMPLETE:
           if (cmd.id) toggleRoutineCompletionRef.current?.(cmd.id);
+          break;
+        case MSG_DAY_HG_START:
+          if (cmd.projectId && cmd.date) enterHyperGlanceModeRef.current?.(cmd.projectId, cmd.date);
+          break;
+        case MSG_DAY_HG_TIMER_START:
+          startHyperGlanceTimerRef.current?.();
+          break;
+        case MSG_DAY_HG_STOP:
+          exitHyperGlanceModeRef.current?.();
+          break;
+        case MSG_DAY_HG_SKIP:
+          skipHyperGlancePhaseRef.current?.();
+          break;
+        case MSG_DAY_HG_SET_DURATION:
+          if (cmd.workMinutes !== undefined) setHgWorkMinutesRef.current?.(Math.max(1, Math.min(120, cmd.workMinutes)));
+          if (cmd.breakMinutes !== undefined) setHgBreakMinutesRef.current?.(Math.max(1, Math.min(60, cmd.breakMinutes)));
+          if (cmd.longBreakMinutes !== undefined) setHgLongBreakMinutesRef.current?.(Math.max(1, Math.min(60, cmd.longBreakMinutes)));
+          break;
+        case MSG_DAY_HG_COMPLETE:
+          setHgCompletedRef.current?.(true);
+          exitHyperGlanceModeRef.current?.();
+          break;
+        case MSG_DAY_HG_TASK_COMPLETE:
+          if (cmd.id) hgCompleteTaskRef.current?.(cmd.id);
           break;
       }
     });
@@ -106,7 +224,11 @@ export default function useElectronBridge({
     if (!window.electronAPI) return;
 
     const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
-    const scheduled = todayAgenda.filter(t => t._agendaType === 'scheduled' && !t.completed && t.startTime);
+    const hgSessions = (todayHGSessions || []);
+    const scheduled = [
+      ...todayAgenda.filter(t => t._agendaType === 'scheduled' && !t.completed && t.startTime),
+      ...hgSessions,
+    ].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
 
     const inProgress = scheduled.find(t => {
       const start = timeToMinutes(t.startTime);
@@ -120,14 +242,27 @@ export default function useElectronBridge({
     const mapTask = (t) => t ? {
       id: t.id,
       title: t.title,
-      startTime: t.startTime,
+      startTime: t.startTime ?? null,
       duration: t.duration || 0,
-      colorHex: taskColorToHex(t.color, t.nativeCalendarColor),
+      colorHex: t.colorHex || taskColorToHex(t.color, t.nativeCalendarColor),
       tags: t.tags || [],
+      completed: !!t.completed,
+      isAllDay: !!t.isAllDay,
+      isHGSession: !!t.isHGSession,
     } : null;
 
     const todayStr = dateToString(currentTime);
-    const todayTasks = tasks.filter(t => t.date === todayStr && t.startTime && !t.isAllDay);
+    const todayRecurring = (expandedRecurringTasks || []).filter(t => t.date === todayStr);
+    // Include recurring instances in counts (stable denominator — all tasks regardless of completion/time)
+    const todayTasks = [
+      ...tasks.filter(t => t.date === todayStr && t.startTime && !t.isAllDay),
+      ...todayRecurring.filter(t => t.startTime && !t.isAllDay),
+      ...hgSessions,
+    ];
+    const allDayTasks = [
+      ...tasks.filter(t => t.date === todayStr && t.isAllDay),
+      ...todayRecurring.filter(t => t.isAllDay),
+    ];
 
     // ── Habits ────────────────────────────────────────────────────────────
     const habits = habitsEnabled ? (activeHabits ?? []).map(h => {
@@ -152,27 +287,66 @@ export default function useElectronBridge({
       .filter(r => r.startTime && !r.isAllDay && !routineCompletions?.[r.id])
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))[0] ?? null;
 
+    // ── Goals ─────────────────────────────────────────────────────────────
+    const allTasksForGoals = [...tasks, ...(unscheduledTasks || [])];
+    const todayMs = new Date(dateToString(currentTime) + 'T00:00:00').getTime();
+    const goalsPayload = goalsProjectsEnabled ? (goals || [])
+      .filter(g => g.status === 'active')
+      .map(g => {
+        const progress = Math.round(calculateGoalProgress(g.id, projects || [], allTasksForGoals) * 100);
+        const colorHex = TAILWIND_TO_HEX[g.color] || '#3b82f6';
+        const daysLeft = g.targetDate
+          ? Math.round((new Date(g.targetDate + 'T00:00:00').getTime() - todayMs) / 86400000)
+          : null;
+        return { id: g.id, title: g.title, progress, colorHex, daysLeft };
+      }) : [];
+
+    // ── Projects ──────────────────────────────────────────────────────────
+    const mapProject = (p) => {
+      const progress = Math.round(calculateProjectProgress(p.id, allTasksForGoals) * 100);
+      const colorHex = TAILWIND_TO_HEX[p.color] || '#3b82f6';
+      const parentGoal = p.goalId ? (goals || []).find(g => g.id === p.goalId) : null;
+      return { id: p.id, title: p.title, progress, colorHex, goalTitle: parentGoal?.title ?? null };
+    };
+    const sortByProgressAsc = (a, b) => a.progress - b.progress;
+    const activeProjects = goalsProjectsEnabled ? (projects || []).filter(p => p.status === 'active') : [];
+    const projectsPayload = [
+      ...activeProjects.filter(p => p.goalId).map(mapProject).sort(sortByProgressAsc),
+      ...activeProjects.filter(p => !p.goalId).map(mapProject).sort(sortByProgressAsc),
+    ];
+
     window.electronAPI.pushState({
       v: PROTOCOL_VERSION,
       type: MSG_DAY_STATE,
       currentTask: mapTask(inProgress),
       nextTask: mapTask(nextUpcoming),
-      scheduledTasks: [...todayTasks]
-        .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
-        .map(mapTask),
+      scheduledTasks: [
+        ...allDayTasks.map(mapTask),
+        ...[...todayTasks]
+          .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))
+          .map(mapTask),
+      ],
       today: {
-        total: todayTasks.length,
-        completed: todayTasks.filter(t => t.completed).length,
+        total: todayTasks.length + allDayTasks.length,
+        completed: todayTasks.filter(t => t.completed).length + allDayTasks.filter(t => t.completed).length,
         date: todayStr,
       },
       focus: {
         available: focusModeAvailable,
         active: showFocusMode,
+        setup: !!focusShowSettings,
+        showStats: !!focusShowStats,
         phase: focusPhase,
         secondsRemaining: focusTimerSeconds,
         running: focusTimerRunning,
         workMinutes: focusWorkMinutes,
         breakMinutes: focusBreakMinutes,
+        longBreakMinutes: focusLongBreakMinutes,
+        cycleCount: focusCycleCount || 0,
+        nextFocusTask: (() => {
+          const t = (focusBlockTasks || []).find(t => !t.completed && !focusCompletedTasks?.has(t.id));
+          return t ? { id: t.id, title: t.title } : null;
+        })(),
       },
       habits,
       nextRoutine: nextRoutineRaw ? {
@@ -181,12 +355,50 @@ export default function useElectronBridge({
         startTime: nextRoutineRaw.startTime,
         completed: false,
       } : null,
+      use24Hour: !!use24HourClock,
+      goals: goalsPayload,
+      projects: projectsPayload,
+      hg: {
+        scheduled: (todayHGSessions || []).slice(0, 4).map(s => ({
+          projectId: s.id,
+          title: s.title,
+          colorHex: s.colorHex,
+          startTime: s.startTime,
+          reachable: !!s.reachable,
+          date: s.date,
+        })),
+        active: showHyperGlanceMode ? {
+          projectId: hyperGlanceProjectId || '',
+          title: (() => { const p = (projects || []).find(p => p.id === hyperGlanceProjectId); return p?.title || ''; })(),
+          colorHex: (() => { const p = (projects || []).find(p => p.id === hyperGlanceProjectId); return p?.hyperglance?.color || '#4f46e5'; })(),
+          setup: !!hgShowSettings,
+          completed: !!hgCompleted,
+          phase: hgTimerPhase || 'work',
+          secondsRemaining: hgTimerSeconds || 0,
+          running: !!hgTimerRunning,
+          cycleCount: hgCycleCount || 0,
+          workMinutes: hgWorkMinutes || 25,
+          breakMinutes: hgBreakMinutes || 5,
+          longBreakMinutes: hgLongBreakMinutes || 15,
+          nextTask: (() => {
+            if (!hyperGlanceProjectId) return null;
+            const allT = [...(tasks || []), ...(unscheduledTasks || [])];
+            const t = allT.find(t => t.projectId === hyperGlanceProjectId && !t.archived && !t.completed);
+            return t ? { id: t.id, title: t.title } : null;
+          })(),
+        } : null,
+      },
     });
   }, [
-    todayAgenda, currentTime, tasks, focusModeAvailable,
-    showFocusMode, focusPhase, focusTimerSeconds, focusTimerRunning,
-    focusWorkMinutes, focusBreakMinutes,
+    todayAgenda, currentTime, tasks, expandedRecurringTasks, todayHGSessions, focusModeAvailable,
+    showFocusMode, focusShowSettings, focusShowStats, focusPhase, focusTimerSeconds, focusTimerRunning,
+    focusCycleCount, focusWorkMinutes, focusBreakMinutes, focusLongBreakMinutes,
+    focusBlockTasks, focusCompletedTasks,
+    showHyperGlanceMode, hyperGlanceProjectId, hyperGlanceSessionDate,
+    hgTimerSeconds, hgTimerRunning, hgTimerPhase, hgCycleCount,
+    hgWorkMinutes, hgBreakMinutes, hgLongBreakMinutes, hgShowSettings, hgCompleted,
     activeHabits, getTodayHabitCount, habitsEnabled,
-    todayRoutines, routineCompletions,
+    todayRoutines, routineCompletions, use24HourClock,
+    goals, projects, unscheduledTasks, goalsProjectsEnabled,
   ]);
 }

@@ -868,7 +868,7 @@ const SettingsModal = () => {
                                 <ul className={`${textSecondary} space-y-1 ml-3 list-disc mb-2`}>
                                   <li>Ollama must be running on your computer</li>
                                   <li>CORS must be enabled for this site&apos;s origin</li>
-                                  <li>Set: <code className={`text-xs px-1 py-0.5 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>OLLAMA_ORIGINS={window.location.origin}</code></li>
+                                  <li>Set: <code className={`text-xs px-1 py-0.5 rounded ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>OLLAMA_ORIGINS={window.electronAPI?.isElectron ? '*' : window.location.origin}</code></li>
                                 </ul>
                                 <a
                                   href="https://github.com/ollama/ollama/blob/main/docs/faq.md#how-do-i-configure-ollama-server"

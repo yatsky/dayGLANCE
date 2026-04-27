@@ -1,6 +1,7 @@
 {
   "appId": "com.dayglance.app",
   "productName": "dayGLANCE",
+  "afterPack": "./scripts/codesign-ad-hoc.cjs",
   "directories": {
     "buildResources": "public",
     "output": "dist-app"

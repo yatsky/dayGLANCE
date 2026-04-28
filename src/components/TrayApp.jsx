@@ -21,7 +21,7 @@ export default function TrayApp({ bgClass, darkMode }) {
         <TrayVoice darkMode={darkMode} onClose={() => setOverlay(null)} />
       )}
       {!overlay && (
-        <div className="flex-1 overflow-y-auto px-3 pb-3">
+        <div className="flex-1 overflow-y-auto px-3 py-3">
           <GlanceSidebar variant="tray" />
         </div>
       )}

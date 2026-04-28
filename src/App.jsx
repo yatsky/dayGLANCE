@@ -6236,6 +6236,7 @@ const DayPlanner = () => {
     setUnscheduledTasks,
     goalsProjectsEnabled,
     goToDate,
+    scrollToHour,
   });
 
   // ── Native Android widget snapshot sync ──────────────────────────────────

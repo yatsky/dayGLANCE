@@ -579,7 +579,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
                       target.classList.add('ring-2', 'ring-blue-400');
                       setTimeout(() => target.classList.remove('ring-2', 'ring-blue-400'), 2000);
                     };
-                    if (isTray) { openMainAt({ action: 'goto-task', taskId: task.id, date: task.date }); return; }
+                    if (isTray) { openMainAt({ action: 'goto-task', taskId: task.id, date: task.date, startTime: task.startTime }); return; }
                     if (el) { applyRing(); } else if (task.date) { goToDate(task.date); setTimeout(applyRing, 200); }
                   }}
                 >
@@ -862,7 +862,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
               target.classList.add('ring-2', 'ring-blue-400');
               setTimeout(() => target.classList.remove('ring-2', 'ring-blue-400'), 2000);
             };
-            if (isTray) { openMainAt({ action: 'goto-task', taskId: task.id, date: task.date }); return; }
+            if (isTray) { openMainAt({ action: 'goto-task', taskId: task.id, date: task.date, startTime: task.startTime }); return; }
             if (el) { applyRing(); } else if (task.date) { goToDate(task.date); setTimeout(applyRing, 200); }
           }}
         >
@@ -1115,7 +1115,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
     const handleGlanceAheadClick = () => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
-      if (isTray) { openMainAt({ action: 'goto-date', date: tomorrow.toISOString() }); return; }
+      if (isTray) { openMainAt({ action: 'goto-date', date: dateToString(tomorrow) }); return; }
       goToDate(tomorrow);
       if (firstStartTime) setTimeout(() => scrollToHour(firstStartTime), 150);
     };

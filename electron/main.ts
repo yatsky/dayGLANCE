@@ -90,12 +90,15 @@ function createTrayWindow(): BrowserWindow {
 }
 
 function createTray(): void {
-  const iconPath = DEV
-    ? path.join(process.cwd(), 'public/icon-16x16.png')
-    : path.join(__dirname, '../dist/icon-16x16.png');
-
-  const icon = nativeImage.createFromPath(iconPath);
-  icon.setTemplateImage(true); // auto-adapts to light/dark menu bar (white on dark)
+  // Downsample the high-res app icon to 44×44 px, then tell Electron it's a
+  // @2x image so macOS renders it at 22 logical points — the standard menu bar
+  // icon size. setTemplateImage makes it white on dark bars, dark on light bars.
+  const srcPath = DEV
+    ? path.join(process.cwd(), 'public/icon-512.png')
+    : path.join(__dirname, '../dist/icon-512.png');
+  const iconBuf = nativeImage.createFromPath(srcPath).resize({ width: 44, height: 44 }).toPNG();
+  const icon = nativeImage.createFromBuffer(iconBuf, { scaleFactor: 2 });
+  icon.setTemplateImage(true);
   tray = new Tray(icon);
   tray.setToolTip('dayGLANCE');
   trayWindow = createTrayWindow();

@@ -27,6 +27,7 @@ export default function TraySpotlight({ darkMode, onClose }) {
       action: 'goto-task',
       taskId: result.task.id,
       date: result.date ?? result.task.date,
+      startTime: result.task.startTime,
     });
   };
 

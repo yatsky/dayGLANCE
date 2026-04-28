@@ -324,6 +324,9 @@ export default function useElectronBridge({
       ...activeProjects.filter(p => !p.goalId).map(mapProject).sort(sortByProgressAsc),
     ];
 
+    // Dock badge: incomplete scheduled tasks today
+    window.electronAPI.setBadgeCount?.(todayTasks.filter(t => !t.completed).length);
+
     window.electronAPI.pushState({
       v: PROTOCOL_VERSION,
       type: MSG_DAY_STATE,

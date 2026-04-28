@@ -25,4 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // external servers (WebDAV, CalDAV) without hitting Chromium CORS restrictions.
   proxyFetch: (method: string, url: string, headers: Record<string, string>, body: string | null) =>
     ipcRenderer.invoke('proxy-fetch', method, url, headers, body),
+
+  // Sets the macOS dock badge to the number of incomplete tasks today.
+  setBadgeCount: (count: number) => ipcRenderer.send('set-badge-count', count),
 });

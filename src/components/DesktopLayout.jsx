@@ -428,10 +428,34 @@ const DesktopLayout = () => {
 
   return (
       <>
-      {/* macOS traffic-light drag region — sits above the header so content clears the buttons */}
-      {isElectronMac && (
-        <div style={{ height: titlebarH, WebkitAppRegion: 'drag', flexShrink: 0 }} />
-      )}
+      {/* macOS traffic-light drag region — doubles as the NOW bar when a task is running */}
+      {isElectronMac && (() => {
+        const todayStr = dateToString(new Date());
+        const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+        const runningTask = [...tasks, ...expandedRecurringTasks].find(t =>
+          t.date === todayStr && !t.isAllDay && !t.completed &&
+          !(t.imported && !t.isTaskCalendar) &&
+          nowMin >= timeToMinutes(t.startTime || '0:00') &&
+          nowMin < timeToMinutes(t.startTime || '0:00') + (t.duration || 0)
+        );
+        return (
+          <div
+            style={{ height: titlebarH, WebkitAppRegion: 'drag', flexShrink: 0, paddingLeft: '85px' }}
+            className={`flex items-center gap-2 text-xs font-semibold overflow-hidden ${
+              runningTask
+                ? (darkMode ? 'bg-amber-900/40 text-amber-300' : 'bg-amber-50 text-amber-800')
+                : ''
+            }`}
+          >
+            {runningTask && (
+              <>
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+                <span className="truncate">Now: {runningTask.title}</span>
+              </>
+            )}
+          </div>
+        );
+      })()}
       {/* Desktop & Tablet Layout */}
       {!isTablet && <DesktopHeader />}
 

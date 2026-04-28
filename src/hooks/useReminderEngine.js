@@ -272,7 +272,7 @@ export default function useReminderEngine({
   // or HG sessions change. On device reboot, ReminderReceiver.BOOT_COMPLETED
   // re-registers from the persisted list stored by nativeSyncReminders.
   useEffect(() => {
-    if (!isNativeAndroid()) return;
+    if (isTrayMode || !isNativeAndroid()) return;
 
     const todayStr = dateToString(new Date());
     const todayMidnight = new Date();

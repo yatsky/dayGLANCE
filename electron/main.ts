@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, net } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, net, Tray, Menu, nativeImage } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createWsServer } from './ws-server.js';
@@ -12,8 +12,12 @@ app.setPath('userData', path.join(app.getPath('appData'), 'dayGLANCE'));
 const DEV = !app.isPackaged;
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL'] ?? 'http://localhost:5173';
 
+let mainWindow: BrowserWindow | null = null;
+let tray: Tray | null = null;
+let trayWindow: BrowserWindow | null = null;
+
 function createWindow(): BrowserWindow {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 800,
@@ -28,18 +32,76 @@ function createWindow(): BrowserWindow {
   });
 
   if (DEV) {
-    win.loadURL(VITE_DEV_SERVER_URL);
+    mainWindow.loadURL(VITE_DEV_SERVER_URL);
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
   // Open external links in the system browser
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
 
+  return mainWindow;
+}
+
+function createTrayWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 320,
+    height: 560,
+    show: false,
+    frame: false,
+    resizable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+
+  if (DEV) {
+    win.loadURL(`${VITE_DEV_SERVER_URL}?tray=1`);
+  } else {
+    win.loadFile(path.join(__dirname, '../dist/index.html'), { query: { tray: '1' } });
+  }
+
+  // Hide when the user clicks outside the popup
+  win.on('blur', () => win.hide());
+
   return win;
+}
+
+function createTray(): void {
+  const iconPath = DEV
+    ? path.join(process.cwd(), 'public/icon-16x16.png')
+    : path.join(__dirname, '../dist/icon-16x16.png');
+
+  tray = new Tray(nativeImage.createFromPath(iconPath));
+  tray.setToolTip('dayGLANCE');
+  trayWindow = createTrayWindow();
+
+  // Left-click: toggle the Glance popup
+  tray.on('click', (_event, bounds) => {
+    if (!trayWindow) return;
+    if (trayWindow.isVisible()) { trayWindow.hide(); return; }
+    const { x, y, width: iconW, height: iconH } = bounds;
+    const { width: popW } = trayWindow.getBounds();
+    trayWindow.setPosition(Math.round(x - popW / 2 + iconW / 2), Math.round(y + iconH));
+    trayWindow.show();
+    trayWindow.focus();
+  });
+
+  // Right-click: native Open / Quit menu
+  tray.on('right-click', () => {
+    tray?.popUpContextMenu(Menu.buildFromTemplate([
+      { label: 'Open dayGLANCE', click: () => { mainWindow?.show(); mainWindow?.focus(); } },
+      { type: 'separator' },
+      { label: 'Quit', click: () => app.quit() },
+    ]));
+  });
 }
 
 // Proxy outbound HTTP requests from the renderer so they aren't subject to
@@ -54,15 +116,24 @@ ipcMain.handle('proxy-fetch', async (_event, method: string, url: string, header
   return { status: response.status, ok: response.ok, statusText: response.statusText, body: text };
 });
 
+// Dock badge — macOS only
+ipcMain.on('set-badge-count', (_event, count: number) => {
+  if (process.platform === 'darwin') app.setBadgeCount(count);
+});
+
 app.whenReady().then(() => {
   const win = createWindow();
   createWsServer(win);
+  if (process.platform === 'darwin') createTray();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+    else createWindow();
   });
 });
 
 app.on('window-all-closed', () => {
+  // On macOS the app stays alive in the tray; the user can reopen from there or the dock.
   if (process.platform !== 'darwin') app.quit();
 });
+

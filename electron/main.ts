@@ -129,8 +129,10 @@ ipcMain.on('set-badge-count', (_event, count: number) => {
 });
 
 // Keep tray popup in sync: reload it in the background whenever state changes
-ipcMain.on('ws:push-state', () => {
+ipcMain.on('ws:push-state', (event) => {
   if (!trayWindow) return;
+  // Ignore pushes from the tray window itself to prevent a reload loop
+  if (event.sender === trayWindow.webContents) return;
   if (trayWindow.isVisible()) {
     trayNeedsReload = true; // reload on next blur so the open popup isn't disrupted
   } else {

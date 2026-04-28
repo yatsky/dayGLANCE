@@ -326,7 +326,14 @@ export default function useElectronBridge({
       completed: !!t.completed,
       isAllDay: !!t.isAllDay,
       isHGSession: !!t.isHGSession,
+      imported: !!t.imported,
+      isTaskCalendar: !!t.isTaskCalendar,
     } : null;
+
+    // A read-only calendar event whose time window has passed is effectively done.
+    const isPastCalendarEvent = (t) =>
+      t.imported && !t.isTaskCalendar && !t.isAllDay && t.startTime &&
+      timeToMinutes(t.startTime) + (t.duration || 0) <= nowMin;
 
     const todayStr = dateToString(currentTime);
     const todayRecurring = (expandedRecurringTasks || []).filter(t => t.date === todayStr);
@@ -411,7 +418,7 @@ export default function useElectronBridge({
       ],
       today: {
         total: todayTasks.length + allDayTasks.length,
-        completed: todayTasks.filter(t => t.completed).length + allDayTasks.filter(t => t.completed).length,
+        completed: todayTasks.filter(t => t.completed || isPastCalendarEvent(t)).length + allDayTasks.filter(t => t.completed).length,
         date: todayStr,
       },
       focus: {

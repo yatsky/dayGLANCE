@@ -100,7 +100,10 @@ export class AgendaAction extends SingletonAction {
   private async completeCurrentTask(): Promise<void> {
     if (!this.lastState || this.viewIndex === 0) return;
     const task = this.lastState.scheduledTasks?.[this.viewIndex - 1];
-    if (task && !task.isHGSession) send({ type: MSG_DAY_TASK_COMPLETE, id: task.id });
+    // Read-only calendar events (imported, not the user's task calendar) can't be completed
+    if (task && !task.isHGSession && !(task.imported && !task.isTaskCalendar)) {
+      send({ type: MSG_DAY_TASK_COMPLETE, id: task.id });
+    }
   }
 
   private async renderAll(state: DayGlanceState): Promise<void> {
@@ -124,11 +127,13 @@ export class AgendaAction extends SingletonAction {
       const task = tasks[this.viewIndex - 1];
       const title = truncate(stripTags(task.title), 12);
       const use24Hour = state.use24Hour ?? false;
-      const sub = task.completed ? "Completed"
+      const calDone = !task.completed && isCalendarEventDone(task);
+      const effectivelyDone = task.completed || calDone;
+      const sub = effectivelyDone ? "Done"
         : task.isAllDay ? "All Day"
         : task.startTime ? statusLabel(task.startTime, task.duration, use24Hour)
         : "";
-      renderOpts = { value: title, sub, barColor: task.colorHex, strikethrough: task.completed };
+      renderOpts = { value: title, sub, barColor: task.colorHex, strikethrough: effectivelyDone };
     }
 
     await act.setImage(renderKey(renderOpts));
@@ -166,4 +171,11 @@ function statusLabel(startTime: string, duration: number, use24Hour: boolean): s
   if (start > now) return formatTime(startTime, use24Hour);
   if (duration > 0 && start + duration > now) return "In Progress";
   return "Overdue";
+}
+
+// Read-only calendar events (imported, not the user's task calendar) are
+// "done" once their time window has passed — they can't be completed manually.
+function isCalendarEventDone(task: { imported?: boolean; isTaskCalendar?: boolean; isAllDay?: boolean; startTime: string | null; duration: number }): boolean {
+  if (!task.imported || task.isTaskCalendar || task.isAllDay || !task.startTime) return false;
+  return toMin(task.startTime) + task.duration <= nowMin();
 }

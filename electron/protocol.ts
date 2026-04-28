@@ -37,6 +37,8 @@ export type Task = {
   completed: boolean;
   isAllDay?: boolean;
   isHGSession?: boolean;
+  imported?: boolean;       // true for events imported from external calendar feeds
+  isTaskCalendar?: boolean; // true only for the user's own task calendar (completable)
 };
 
 export type FocusState = {

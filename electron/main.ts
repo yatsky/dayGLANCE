@@ -18,6 +18,12 @@ let trayWindow: BrowserWindow | null = null;
 let trayNeedsReload = false;
 let trayReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
+// Safe accessor — returns null if the window has been destroyed so callers
+// never have to scatter isDestroyed() checks throughout the file.
+function live(win: BrowserWindow | null): BrowserWindow | null {
+  return win && !win.isDestroyed() ? win : null;
+}
+
 function createWindow(): BrowserWindow {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -72,6 +78,7 @@ function createTrayWindow(): BrowserWindow {
 
   // Hide when the user clicks outside the popup; reload if state changed while it was open
   win.on('blur', () => {
+    if (win.isDestroyed()) return;
     win.hide();
     if (trayNeedsReload) {
       trayNeedsReload = false;
@@ -93,19 +100,20 @@ function createTray(): void {
 
   // Left-click: toggle the Glance popup
   tray.on('click', (_event, bounds) => {
-    if (!trayWindow) return;
-    if (trayWindow.isVisible()) { trayWindow.hide(); return; }
+    const tw = live(trayWindow);
+    if (!tw) return;
+    if (tw.isVisible()) { tw.hide(); return; }
     const { x, y, width: iconW, height: iconH } = bounds;
-    const { width: popW } = trayWindow.getBounds();
-    trayWindow.setPosition(Math.round(x - popW / 2 + iconW / 2), Math.round(y + iconH));
-    trayWindow.show();
-    trayWindow.focus();
+    const { width: popW } = tw.getBounds();
+    tw.setPosition(Math.round(x - popW / 2 + iconW / 2), Math.round(y + iconH));
+    tw.show();
+    tw.focus();
   });
 
   // Right-click: native Open / Quit menu
   tray.on('right-click', () => {
     tray?.popUpContextMenu(Menu.buildFromTemplate([
-      { label: 'Open dayGLANCE', click: () => { mainWindow?.show(); mainWindow?.focus(); } },
+      { label: 'Open dayGLANCE', click: () => { live(mainWindow)?.show(); live(mainWindow)?.focus(); } },
       { type: 'separator' },
       { label: 'Quit', click: () => app.quit() },
     ]));
@@ -129,19 +137,25 @@ ipcMain.on('set-badge-count', (_event, count: number) => {
   if (process.platform === 'darwin') app.setBadgeCount(count);
 });
 
+// Tray popup requests the main window to show and navigate to a specific location.
+ipcMain.on('tray:open-main', (_event, payload: unknown) => {
+  live(trayWindow)?.hide();
+  const mw = live(mainWindow);
+  if (mw) { mw.show(); mw.focus(); mw.webContents.send('tray:navigate', payload); }
+});
+
 // Keep tray popup in sync: reload it in the background whenever state changes
 ipcMain.on('ws:push-state', (event) => {
-  if (!trayWindow || trayWindow.isDestroyed()) return;
-  // Ignore pushes from the tray window itself to prevent a reload loop
-  if (event.sender === trayWindow.webContents) return;
-  if (trayWindow.isVisible()) {
-    trayNeedsReload = true; // reload on next blur so the open popup isn't disrupted
+  const tw = live(trayWindow);
+  if (!tw) return;
+  if (event.sender === tw.webContents) return;
+  if (tw.isVisible()) {
+    trayNeedsReload = true;
   } else {
-    // Debounce: coalesce rapid pushes (e.g. hover/interaction) into one reload
     if (trayReloadTimer) clearTimeout(trayReloadTimer);
     trayReloadTimer = setTimeout(() => {
       trayReloadTimer = null;
-      if (trayWindow && !trayWindow.isDestroyed()) trayWindow.webContents.reload();
+      live(trayWindow)?.webContents.reload();
     }, 500);
   }
 });
@@ -152,8 +166,8 @@ app.whenReady().then(() => {
   if (process.platform === 'darwin') createTray();
 
   app.on('activate', () => {
-    if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
-    else createWindow();
+    const mw = live(mainWindow);
+    if (mw) { mw.show(); mw.focus(); } else createWindow();
   });
 });
 
@@ -161,4 +175,3 @@ app.on('window-all-closed', () => {
   // On macOS the app stays alive in the tray; the user can reopen from there or the dock.
   if (process.platform !== 'darwin') app.quit();
 });
-

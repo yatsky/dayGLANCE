@@ -20,6 +20,13 @@ let trayNeedsReload = false;
 let trayReloadTimer: ReturnType<typeof setTimeout> | null = null;
 let registeredHotkey: string | null = null;
 
+// Tray menu bar title: focus countdown takes priority over the reminder dot.
+let trayIndicatorOn = false;
+let trayFocusTitle = '';
+function refreshTrayTitle() {
+  tray?.setTitle(trayFocusTitle || (trayIndicatorOn ? '●' : ''));
+}
+
 // Safe accessor — returns null if the window has been destroyed so callers
 // never have to scatter isDestroyed() checks throughout the file.
 function live(win: BrowserWindow | null): BrowserWindow | null {
@@ -147,7 +154,8 @@ function createTray(): void {
     const { x, y, width: iconW, height: iconH } = bounds;
     const { width: popW } = tw.getBounds();
     tw.setPosition(Math.round(x - popW / 2 + iconW / 2), Math.round(y + iconH));
-    tray?.setTitle('');
+    trayIndicatorOn = false;
+    refreshTrayTitle();
     tw.show();
     tw.focus();
   });
@@ -193,7 +201,26 @@ ipcMain.on('tray:background-action', (_event, payload: unknown) => {
 
 // Reminder indicator: show/clear the dot next to the tray icon.
 ipcMain.on('tray:set-indicator', (_event, on: boolean) => {
-  tray?.setTitle(on ? '●' : '');
+  trayIndicatorOn = on;
+  refreshTrayTitle();
+});
+
+// Reminder list: forward to tray popup whenever it changes.
+ipcMain.on('tray:push-reminders', (_event, reminders: unknown) => {
+  live(trayWindow)?.webContents.send('tray:reminders', reminders);
+});
+
+// Focus state: update menu bar countdown and forward to tray popup.
+ipcMain.on('tray:push-focus-state', (_event, state: { active: boolean; secondsRemaining: number }) => {
+  if (state.active) {
+    const m = Math.floor(state.secondsRemaining / 60);
+    const s = state.secondsRemaining % 60;
+    trayFocusTitle = `${m}:${s.toString().padStart(2, '0')}`;
+  } else {
+    trayFocusTitle = '';
+  }
+  refreshTrayTitle();
+  live(trayWindow)?.webContents.send('tray:focus-state', state);
 });
 
 // Global hotkey: show tray popup and focus quick-add input.
@@ -213,7 +240,8 @@ ipcMain.handle('hotkey:register', (_event, accelerator: string) => {
       const { width: popW } = tw.getBounds();
       tw.setPosition(Math.round(x - popW / 2 + iconW / 2), Math.round(y + iconH));
     }
-    tray?.setTitle('');
+    trayIndicatorOn = false;
+    refreshTrayTitle();
     tw.show();
     tw.focus();
     tw.webContents.send('tray:focus-quick-add');

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, net, Tray, Menu, nativeImage, globalShortcut } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, net, Tray, Menu, nativeImage, globalShortcut, session } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -343,6 +343,32 @@ ipcMain.on('ws:push-state', (event) => {
 });
 
 app.whenReady().then(() => {
+  // Content Security Policy — applied to every response the renderer loads.
+  // script-src 'self': only scripts from the app bundle (no inline scripts, no eval).
+  // style-src 'self' 'unsafe-inline': Tailwind generates inline styles at runtime.
+  // connect-src 'self' https:: allows XHR/fetch to any https origin (AI APIs, CalDAV, etc.).
+  // img-src 'self' data: blob:: covers favicons, base64 images, and blob URLs.
+  // object-src / base-uri 'none': closes classic plugin and base-tag injection vectors.
+  const CSP = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "connect-src 'self' https:",
+    "img-src 'self' data: blob:",
+    "font-src 'self' data:",
+    "object-src 'none'",
+    "base-uri 'none'",
+  ].join('; ');
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [CSP],
+      },
+    });
+  });
+
   const win = createWindow();
   createWsServer(() => live(mainWindow));
   if (process.platform === 'darwin') createTray();

@@ -51,6 +51,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Show or clear the reminder dot (●) next to the tray icon.
   setTrayIndicator: (on: boolean) => ipcRenderer.send('tray:set-indicator', on),
 
+  // Main window pushes live focus state to main process (every second when active).
+  pushFocusState: (state: unknown) => ipcRenderer.send('tray:push-focus-state', state),
+
+  // Tray popup receives live focus state forwarded from the main window.
+  onFocusState: (callback: (state: unknown) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, state: unknown) => callback(state);
+    ipcRenderer.on('tray:focus-state', handler);
+    return () => ipcRenderer.removeListener('tray:focus-state', handler);
+  },
+
   // Registers (or clears) a system-wide hotkey that shows the tray popup.
   // Pass an empty string to unregister. Returns true if registration succeeded.
   setGlobalHotkey: (accelerator: string) => ipcRenderer.invoke('hotkey:register', accelerator),

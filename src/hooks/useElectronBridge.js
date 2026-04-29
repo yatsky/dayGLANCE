@@ -292,6 +292,10 @@ export default function useElectronBridge({
         moveToRecycleBinRef.current?.(payload.taskId, !!payload.isInbox);
       } else if (payload.action === 'clear-deadline' && payload.taskId) {
         clearDeadlineRef.current?.(payload.taskId);
+      } else if (payload.action === 'focus-stop') {
+        exitFocusModeRef.current?.(true);
+      } else if (payload.action === 'focus-skip') {
+        skipFocusPhaseRef.current?.();
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -302,6 +306,19 @@ export default function useElectronBridge({
     const stored = localStorage.getItem('dg-tray-hotkey');
     if (stored) window.electronAPI.setGlobalHotkey(stored);
   }, []);
+
+  // Push live focus state to main process every second when active (drives menu
+  // bar countdown and tray popup focus view). Guarded to main window only.
+  useEffect(() => {
+    if (isTrayMode || !window.electronAPI?.pushFocusState) return;
+    window.electronAPI.pushFocusState({
+      active: showFocusMode,
+      phase: focusPhase,
+      secondsRemaining: focusTimerSeconds,
+      running: focusTimerRunning,
+      cycleCount: focusCycleCount,
+    });
+  }, [showFocusMode, focusPhase, focusTimerSeconds, focusTimerRunning, focusCycleCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Push state snapshot whenever relevant state changes.
   useEffect(() => {

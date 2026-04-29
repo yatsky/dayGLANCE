@@ -47,4 +47,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('tray:background-action', handler);
     return () => ipcRenderer.removeListener('tray:background-action', handler);
   },
+
+  // Show or clear the reminder dot (●) next to the tray icon.
+  setTrayIndicator: (on: boolean) => ipcRenderer.send('tray:set-indicator', on),
 });

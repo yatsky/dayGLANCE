@@ -138,7 +138,7 @@ function createTray(): void {
   tray.setToolTip('dayGLANCE');
   trayWindow = createTrayWindow();
 
-  // Left-click: toggle the Glance popup
+  // Left-click: toggle the Glance popup; clear any pending reminder indicator.
   tray.on('click', (_event, bounds) => {
     const tw = live(trayWindow);
     if (!tw) return;
@@ -146,6 +146,7 @@ function createTray(): void {
     const { x, y, width: iconW, height: iconH } = bounds;
     const { width: popW } = tw.getBounds();
     tw.setPosition(Math.round(x - popW / 2 + iconW / 2), Math.round(y + iconH));
+    tray?.setTitle('');
     tw.show();
     tw.focus();
   });
@@ -187,6 +188,11 @@ ipcMain.on('tray:open-main', (_event, payload: unknown) => {
 // Tray sends background mutations (e.g. toggle-complete) to the main window without showing it.
 ipcMain.on('tray:background-action', (_event, payload: unknown) => {
   live(mainWindow)?.webContents.send('tray:background-action', payload);
+});
+
+// Reminder indicator: show/clear the dot next to the tray icon.
+ipcMain.on('tray:set-indicator', (_event, on: boolean) => {
+  tray?.setTitle(on ? '●' : '');
 });
 
 // Keep tray popup in sync: reload it in the background whenever state changes

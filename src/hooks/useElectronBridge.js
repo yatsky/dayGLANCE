@@ -134,6 +134,12 @@ export default function useElectronBridge({
   setShowRescheduleModal,
   setRescheduleResults,
   setRescheduleError,
+  // Routines / frames / habit modal (opened from tray navigate)
+  openRoutinesDashboardRef,
+  setShowFramesModal,
+  setFramesModalTab,
+  setEditingFrame,
+  setShowHabitModal,
 }) {
   const [pushTrigger, setPushTrigger] = useState(0);
 
@@ -166,6 +172,10 @@ export default function useElectronBridge({
   const setShowRescheduleModalRef = useRef(setShowRescheduleModal);
   const setRescheduleResultsRef = useRef(setRescheduleResults);
   const setRescheduleErrorRef = useRef(setRescheduleError);
+  const setShowFramesModalRef = useRef(setShowFramesModal);
+  const setFramesModalTabRef = useRef(setFramesModalTab);
+  const setEditingFrameRef = useRef(setEditingFrame);
+  const setShowHabitModalRef = useRef(setShowHabitModal);
   skipFocusPhaseRef.current = skipFocusPhase;
   dismissFocusStatsRef.current = dismissFocusStats;
   focusCompleteTaskRef.current = focusCompleteTask;
@@ -195,6 +205,10 @@ export default function useElectronBridge({
   setShowRescheduleModalRef.current = setShowRescheduleModal;
   setRescheduleResultsRef.current = setRescheduleResults;
   setRescheduleErrorRef.current = setRescheduleError;
+  setShowFramesModalRef.current = setShowFramesModal;
+  setFramesModalTabRef.current = setFramesModalTab;
+  setEditingFrameRef.current = setEditingFrame;
+  setShowHabitModalRef.current = setShowHabitModal;
 
   // Subscribe to commands from WebSocket clients once on mount.
   useEffect(() => {
@@ -288,6 +302,14 @@ export default function useElectronBridge({
         setShowRescheduleModalRef.current?.(true);
         setRescheduleResultsRef.current?.(null);
         setRescheduleErrorRef.current?.('');
+      } else if (action === 'routines') {
+        openRoutinesDashboardRef?.current?.();
+      } else if (action === 'habits') {
+        setShowHabitModalRef.current?.(true);
+      } else if (action === 'schedule-inbox') {
+        setShowFramesModalRef.current?.(true);
+        setFramesModalTabRef.current?.('schedule');
+        setEditingFrameRef.current?.(null);
       }
     });
   }, [goToDate]); // eslint-disable-line react-hooks/exhaustive-deps

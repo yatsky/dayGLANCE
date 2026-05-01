@@ -8502,6 +8502,17 @@ function renderFocusSetupSlot(slotIndex, workMinutes, breakMinutes, longBreakMin
 </svg>`;
     return "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64");
 }
+function formatDaysLeft(days) {
+    if (days === null || days === undefined)
+        return "No target";
+    if (days < 0)
+        return "Overdue";
+    if (days === 0)
+        return "Today";
+    if (days === 1)
+        return "1d left";
+    return `${days}d left`;
+}
 function arcPath(cx, cy, r, pct) {
     if (pct <= 0)
         return "";
@@ -8517,7 +8528,7 @@ function arcPath(cx, cy, r, pct) {
     return `M ${cx} ${cy - r} A ${r} ${r} 0 ${largeArc} 1 ${ex} ${ey}`;
 }
 function renderGoalKey(opts) {
-    const { title, progress, colorHex, overview = false, goalCount = 0, avgProgress = 0 } = opts;
+    const { title, progress, colorHex, overview = false, avgProgress = 0, linkedProjectCount = 0, daysLeft } = opts;
     const pct = overview ? avgProgress : Math.round(progress);
     const arc = arcPath(72, 74, 44, pct);
     const arcEl = arc
@@ -8526,13 +8537,14 @@ function renderGoalKey(opts) {
     let centerEl;
     let bottomEl;
     if (overview) {
-        centerEl = `
-  <text x="72" y="71" font-family="${FONT}" font-size="22" fill="white" fill-opacity="0.95" text-anchor="middle" font-weight="700">${goalCount}</text>
-  <text x="72" y="88" font-family="${FONT}" font-size="13" fill="white" fill-opacity="0.45" text-anchor="middle">goals</text>`;
-        bottomEl = `<text x="72" y="134" font-family="${FONT}" font-size="12" fill="white" fill-opacity="0.45" text-anchor="middle">${pct}% avg</text>`;
+        centerEl = `<text x="72" y="82" font-family="${FONT}" font-size="26" fill="white" fill-opacity="0.95" text-anchor="middle" font-weight="700">${pct}%</text>`;
+        const projLabel = `${linkedProjectCount} project${linkedProjectCount !== 1 ? "s" : ""}`;
+        bottomEl = `<text x="72" y="134" font-family="${FONT}" font-size="12" fill="white" fill-opacity="0.55" text-anchor="middle">${projLabel}</text>`;
     }
     else {
-        centerEl = `<text x="72" y="82" font-family="${FONT}" font-size="26" fill="white" fill-opacity="0.95" text-anchor="middle" font-weight="700">${pct}%</text>`;
+        centerEl = `
+  <text x="72" y="71" font-family="${FONT}" font-size="22" fill="white" fill-opacity="0.95" text-anchor="middle" font-weight="700">${pct}%</text>
+  <text x="72" y="88" font-family="${FONT}" font-size="13" fill="white" fill-opacity="0.55" text-anchor="middle">${formatDaysLeft(daysLeft)}</text>`;
         bottomEl = `<text x="72" y="134" font-family="${FONT}" font-size="12" fill="white" fill-opacity="0.55" text-anchor="middle">${escape(truncate(title, 15))}</text>`;
     }
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
@@ -8546,14 +8558,16 @@ function renderGoalKey(opts) {
     return "data:image/svg+xml;base64," + Buffer.from(svg).toString("base64");
 }
 function renderGoalStrip(opts) {
-    const { title, progress, colorHex, overview = false, goalCount = 0, avgProgress = 0 } = opts;
+    const { title, progress, colorHex, overview = false, goalCount = 0, avgProgress = 0, linkedProjectCount = 0, daysLeft } = opts;
     const pct = overview ? avgProgress : Math.round(progress);
     const arc = arcPath(48, 50, 30, pct);
     const arcEl = arc
         ? `<path d="${arc}" fill="none" stroke="${colorHex}" stroke-width="6" stroke-linecap="round"/>`
         : "";
     const mainText = overview ? `${goalCount} Goal${goalCount !== 1 ? "s" : ""}` : escape(truncate(title, 11));
-    const subText = overview ? `${pct}% avg` : `${pct}% done`;
+    const subText = overview
+        ? `${linkedProjectCount} project${linkedProjectCount !== 1 ? "s" : ""}`
+        : formatDaysLeft(daysLeft);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SW}" height="${SH}">
   <rect width="${SW}" height="${SH}" fill="#111"/>
   <rect width="${SW}" height="4" fill="${colorHex}"/>
@@ -9174,20 +9188,21 @@ let GoalProgressAction = (() => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         async renderOne(act, state) {
             const isEncoder = this.encoderRefs.has(act);
-            const goals = state.goals ?? [];
+            const goals = sortGoals(state.goals ?? []);
+            const linkedProjectCount = (state.projects ?? []).filter(p => p.goalTitle).length;
             let keyImg;
             let stripImg;
             if (this.viewIndex === 0 || goals.length === 0) {
                 const avgProgress = goals.length > 0
                     ? Math.round(goals.reduce((s, g) => s + g.progress, 0) / goals.length)
                     : 0;
-                const opts = { title: "", progress: 0, colorHex: "#f97316", overview: true, goalCount: goals.length, avgProgress };
+                const opts = { title: "", progress: 0, colorHex: "#f97316", overview: true, goalCount: goals.length, avgProgress, linkedProjectCount };
                 keyImg = renderGoalKey(opts);
                 stripImg = renderGoalStrip(opts);
             }
             else {
                 const goal = goals[this.viewIndex - 1];
-                const opts = { title: goal.title, progress: goal.progress, colorHex: goal.colorHex };
+                const opts = { title: goal.title, progress: goal.progress, colorHex: goal.colorHex, daysLeft: goal.daysLeft };
                 keyImg = renderGoalKey(opts);
                 stripImg = renderGoalStrip(opts);
             }
@@ -9202,6 +9217,19 @@ let GoalProgressAction = (() => {
     });
     return _classThis;
 })();
+// Sort by target date asc (soonest first); goals without a target go last,
+// ordered by progress desc so unstarted ones sit at the bottom.
+function sortGoals(goals) {
+    return [...goals].sort((a, b) => {
+        if (a.daysLeft !== null && b.daysLeft !== null)
+            return a.daysLeft - b.daysLeft;
+        if (a.daysLeft !== null)
+            return -1;
+        if (b.daysLeft !== null)
+            return 1;
+        return b.progress - a.progress;
+    });
+}
 
 let ProjectProgressAction = (() => {
     let _classDecorators = [action({ UUID: "com.dayglance.streamdeck.project-progress" })];

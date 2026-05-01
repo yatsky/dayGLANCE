@@ -10179,7 +10179,9 @@ let HyperGlanceAction = (() => {
                 send({ type: MSG_DAY_HG_TIMER_START });
             }
             else {
-                const session = hg.scheduled[0];
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const slotIndex = this.slotIndexMap.get(ev.action) ?? 0;
+                const session = hg.scheduled[slotIndex];
                 if (session)
                     send({ type: MSG_DAY_HG_START, projectId: session.projectId, date: session.date });
             }

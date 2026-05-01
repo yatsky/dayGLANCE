@@ -339,8 +339,8 @@ function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeigh
             position: 'absolute',
             top: '50%', transform: 'translateY(-50%)',
             left: '50%', marginLeft: -1,
-            width: 2, height: 28, zIndex: 1, pointerEvents: 'none',
-            background: `linear-gradient(to bottom, transparent, ${pageBg} 30%, ${pageBg} 70%, transparent)`,
+            width: 2, height: 56, zIndex: 1, pointerEvents: 'none',
+            background: `linear-gradient(to bottom, transparent, ${pageBg} 40%, ${pageBg} 60%, transparent)`,
           }} />
         )}
         {marker}
@@ -450,8 +450,8 @@ function NowRow({ nowMin, nextItem, formatTime, textSecondary, darkMode, use24Ho
             position: 'absolute',
             top: '50%', transform: 'translateY(-50%)',
             left: '50%', marginLeft: -1,
-            width: 2, height: 28, zIndex: 1, pointerEvents: 'none',
-            background: `linear-gradient(to bottom, transparent, ${pageBg} 30%, ${pageBg} 70%, transparent)`,
+            width: 2, height: 56, zIndex: 1, pointerEvents: 'none',
+            background: `linear-gradient(to bottom, transparent, ${pageBg} 40%, ${pageBg} 60%, transparent)`,
           }} />
         )}
         {/* Red clock marker */}

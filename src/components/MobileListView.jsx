@@ -3,7 +3,7 @@ import React, {
   useMemo, useCallback,
 } from 'react';
 import {
-  Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
+  Check, ChevronDown, ChevronRight, ChevronUp,
   Clock, Edit2, ExternalLink, FileText, Inbox, SkipForward, Zap,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -751,14 +751,19 @@ const MobileListView = () => {
     return () => clearTimeout(timer);
   }, [dateStr, isToday, calendarRef]);
 
-  // ── Keep inbox handle anchored to the top of the scroll container ──────────
+  // ── Keep inbox handle anchored to the bottom of the sticky header ──────────
+  // calendarRef's first child is the sticky header group (date row + optional
+  // "Now" banner). Measuring its bottom edge keeps the handle correctly aligned
+  // regardless of whether the banner is visible or not.
   useLayoutEffect(() => {
     const el = calendarRef?.current;
     if (!el) return;
-    const update = () => setInboxHandleTop(el.getBoundingClientRect().top);
+    const stickyHeader = el.firstElementChild;
+    if (!stickyHeader) return;
+    const update = () => setInboxHandleTop(stickyHeader.getBoundingClientRect().bottom);
     update();
     const ro = new ResizeObserver(update);
-    ro.observe(el);
+    ro.observe(stickyHeader);
     window.addEventListener('resize', update);
     return () => { ro.disconnect(); window.removeEventListener('resize', update); };
   }, [calendarRef]);
@@ -1126,7 +1131,6 @@ const MobileListView = () => {
             >
               <span className={textSecondary}>Inbox</span>
             </span>
-            <ChevronLeft size={11} className={textSecondary} style={{ opacity: 0.5 }} />
           </button>
         </div>
       )}

@@ -117,7 +117,7 @@ function SpineMarker({ kind, completed, colour }) {
 
 // ─── Connector (horizontal line from spine to card) ───────────────────────────
 
-function Connector({ colour, cardHeight }) {
+function Connector({ colour }) {
   return (
     <div
       style={{
@@ -125,7 +125,8 @@ function Connector({ colour, cardHeight }) {
         right: '100%',
         width: CONNECTOR_W,
         height: 2,
-        top: Math.round(cardHeight / 2) - 1,
+        top: '50%',
+        marginTop: -1,
         background: colour,
         pointerEvents: 'none',
       }}
@@ -360,7 +361,7 @@ function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeigh
 
       {/* Col 3 — content */}
       <div style={{ flex: 1, minWidth: 0, position: 'relative', paddingTop: 4, paddingBottom: 4, paddingRight: 8 }}>
-        {accentHex && <Connector colour={accentHex} cardHeight={cardHeight} />}
+        {accentHex && <Connector colour={accentHex} />}
         {children}
       </div>
     </div>
@@ -443,8 +444,10 @@ function NowRow({ nowMin, nextItem, formatTime, textSecondary, darkMode, use24Ho
   })();
 
   const diff = nextItem ? timeToMinutes_pure(nextItem.startTime) - nowMin : null;
+  const rawTitle = nextItem?.title || nextItem?.name || nextItem?.label || '';
+  const cleanTitle = rawTitle.replace(/#\S+/g, '').replace(/\s+/g, ' ').trim();
   const countdownStr = diff !== null && diff > 0
-    ? `${countdownText(diff)} until ${nextItem.title || nextItem.name || nextItem.label}`
+    ? `${countdownText(diff)} until ${cleanTitle}`
     : 'Nothing planned';
 
   return (

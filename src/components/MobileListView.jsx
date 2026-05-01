@@ -4,24 +4,25 @@ import React, {
 } from 'react';
 import {
   Check, ChevronDown, ChevronUp, Clock, Edit2, ExternalLink,
-  FileText, Inbox, SkipForward,
+  FileText, Inbox, SkipForward, Zap,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { renderTitle, isLinkOnlyTask, getLinkUrl, hasNotesOrSubtasks } from '../utils/textFormatting.jsx';
 import { dateToString } from '../utils/taskUtils.js';
-import { taskColorToHex, frameColorBg, frameColorBorder } from '../utils/colorUtils.js';
+import { taskColorToHex } from '../utils/colorUtils.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { getHGBarsForDate, isHGSessionReachable } from '../hooks/useHyperGlance.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SPINE_COL_W = 32;   // w-8
-const TIME_COL_W  = 56;   // w-14
-const CONNECTOR_W = 16;   // half of spine col — reaches spine centre
-const TASK_H      = 72;
-const ROUTINE_H   = 38;
-const FRAME_H     = 68;
-const ALLDAY_H    = 44;
+const SPINE_COL_W    = 32;   // w-8
+const TIME_COL_W     = 56;   // w-14
+const CONNECTOR_W    = 16;   // half of spine col — reaches spine centre
+const TASK_H         = 72;
+const ROUTINE_H      = 38;
+const HG_SESSION_H   = 84;
+const ALLDAY_H       = 44;
 
 // ─── Spine colour gradient (orange→green→blue, 6 am→noon→6 pm) ───────────────
 
@@ -90,9 +91,11 @@ function SpineMarker({ kind, completed, colour, pageBg }) {
       <div style={{ ...base, borderRadius: '50%', background: colour, opacity: completed ? 0.5 : 1 }} />
     );
   }
-  if (kind === 'frame') {
+  if (kind === 'hg-session') {
     return (
-      <div style={{ ...base, borderRadius: '50%', border: `2px solid ${colour}`, background: pageBg }} />
+      <div style={{ ...base, borderRadius: '50%', background: colour, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: completed ? 0.5 : 1 }}>
+        <Zap size={8} color="#fff" strokeWidth={2.5} />
+      </div>
     );
   }
   if (kind === 'calendar-event') {
@@ -264,48 +267,99 @@ function RoutineChip({ routine, completed, onToggle, darkMode }) {
   );
 }
 
-// ─── FrameCard (hyperGLANCE session) ─────────────────────────────────────────
+// ─── HGSessionCard ────────────────────────────────────────────────────────────
 
-function FrameCard({ frame, darkMode, textPrimary, textSecondary, openFrameAdjust, dateStr }) {
-  const bg     = frameColorBg(frame.color, darkMode);
-  const border = frameColorBorder(frame.color, darkMode);
-  const ProjIcon = frame.icon ? LucideIcons[frame.icon] : null;
+const HGSessionCard = React.memo(({
+  bar, accentHex, darkMode, textPrimary, textSecondary,
+  formatTime, canEnter, incompleteTaskCount,
+  enterHyperGlanceMode, setPendingEditProjectId,
+}) => {
+  const { project, date, isCompleted, isOverdue } = bar;
+  const hg = project.hyperglance;
+  const IconComp = LucideIcons[hg.icon] || LucideIcons.Sparkles;
+
+  const effectiveTime = hg.scheduledTimeOverrides?.[date] || hg.scheduledTime || '0:0';
+  const [startH, startM] = effectiveTime.split(':').map(Number);
+  const durationMin = hg.scheduledDurationOverrides?.[date] || hg.scheduledDuration || 60;
+  const normalizedTime = `${String(startH).padStart(2, '0')}:${String(startM || 0).padStart(2, '0')}`;
+  const endH = Math.floor((startH * 60 + (startM || 0) + durationMin) / 60);
+  const endM = (startH * 60 + (startM || 0) + durationMin) % 60;
+  const endTime = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+  const timeStr = `${formatTime(normalizedTime)}–${formatTime(endTime)}`;
+  const taskLabel = incompleteTaskCount > 0
+    ? `${incompleteTaskCount} task${incompleteTaskCount !== 1 ? 's' : ''}`
+    : null;
 
   const cardStyle = {
     display: 'flex', borderRadius: 6, overflow: 'hidden',
-    border: `1px solid ${border}`,
-    background: bg,
-    minHeight: FRAME_H,
+    border: `1px solid ${accentHex}44`,
+    background: `${accentHex}18`,
+    minHeight: HG_SESSION_H,
+    opacity: isCompleted ? 0.65 : 1,
   };
-  const barStyle = { width: 4, flexShrink: 0, background: border, borderRadius: '6px 0 0 6px' };
+  const barStyle = { width: 4, flexShrink: 0, background: accentHex, borderRadius: '6px 0 0 6px' };
 
   return (
     <div style={cardStyle}>
       <div style={barStyle} />
-      <div style={{ flex: 1, minWidth: 0, padding: '8px 8px 8px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div className={`text-sm font-semibold leading-snug ${textPrimary} flex items-center gap-1.5`}>
-              {ProjIcon && <ProjIcon size={13} style={{ color: border, flexShrink: 0 }} />}
-              <span className="truncate">{frame.label}</span>
-            </div>
-          </div>
-          {/* Edit pencil */}
-          <button
-            onClick={e => { e.stopPropagation(); openFrameAdjust(frame.frameId, dateStr); }}
-            className={`flex items-center justify-center rounded p-1 flex-shrink-0 transition-colors ${darkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
-            title="Adjust session"
+      <div style={{ flex: 1, minWidth: 0, padding: '7px 6px 7px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {/* Title row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <IconComp size={13} style={{ color: accentHex, flexShrink: 0 }} />
+          <span
+            className={`text-sm font-semibold flex-1 min-w-0 truncate ${isCompleted ? 'line-through opacity-60' : ''}`}
+            style={{ color: accentHex }}
           >
-            <Edit2 size={13} style={{ color: border, opacity: 0.8 }} />
+            {project.title}
+          </span>
+          <button
+            onClick={e => { e.stopPropagation(); setPendingEditProjectId(project.id); }}
+            className={`flex items-center justify-center rounded p-1 flex-shrink-0 transition-colors ${darkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
+            title="Edit project"
+          >
+            <Edit2 size={12} style={{ color: accentHex, opacity: 0.7 }} />
           </button>
         </div>
+        {/* Time + task count */}
         <div className={`text-[10px] leading-none ${textSecondary}`}>
-          {frame.start}–{frame.end}
+          {timeStr}
+          {taskLabel && <span className="ml-1.5">· {taskLabel}</span>}
+          {isOverdue && <span className="ml-1.5 text-orange-500 font-semibold">overdue</span>}
         </div>
+        {/* hG button row */}
+        {!isCompleted && (
+          <div style={{ marginTop: 2 }}>
+            {canEnter ? (
+              <button
+                onClick={e => { e.stopPropagation(); enterHyperGlanceMode(project.id, date); }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-[10px] font-bold animate-pulse"
+                style={{ background: accentHex }}
+              >
+                <Zap size={9} />
+                hyperGLANCE
+              </button>
+            ) : isOverdue ? (
+              <button
+                onClick={e => { e.stopPropagation(); enterHyperGlanceMode(project.id, date); }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-[10px] font-bold opacity-80"
+                style={{ background: accentHex }}
+              >
+                <Zap size={9} />
+                Start
+              </button>
+            ) : (
+              <span className="text-[10px] font-bold opacity-30" style={{ color: accentHex }}>hG</span>
+            )}
+          </div>
+        )}
+        {isCompleted && (
+          <span className="text-[10px] font-semibold opacity-50" style={{ color: accentHex }}>✓ Completed</span>
+        )}
       </div>
     </div>
   );
-}
+});
+HGSessionCard.displayName = 'HGSessionCard';
 
 // ─── Row wrapper (3 columns) ──────────────────────────────────────────────────
 
@@ -515,7 +569,7 @@ const MobileListView = () => {
 
   const {
     routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion,
-    getFrameInstancesForDate, openFrameAdjust,
+    projects, enterHyperGlanceMode, setPendingEditProjectId,
   } = useFeaturesCtx();
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -554,20 +608,27 @@ const MobileListView = () => {
     [routinesEnabled, isToday, todayRoutines],
   );
 
-  const frameInstances = useMemo(() => {
-    try { return getFrameInstancesForDate(selectedDate) || []; }
-    catch { return []; }
-  }, [getFrameInstancesForDate, selectedDate]);
+  const hgBars = useMemo(() => {
+    const nowMin = isToday ? currentTime.getHours() * 60 + currentTime.getMinutes() : undefined;
+    return getHGBarsForDate(projects || [], dateStr, nowMin);
+  }, [projects, dateStr, isToday, currentTime]);
 
   // Combine and sort all scheduled items
   const allItems = useMemo(() => {
     const items = [
       ...scheduledTasks.map(t => ({ ...t, _kind: t.imported && !t.isTaskCalendar ? 'calendar-event' : 'task' })),
       ...scheduledRoutines.map(r => ({ ...r, _kind: 'routine', _routineId: r.id, id: `routine-${r.id}`, title: r.name, startTime: r.startTime })),
-      ...frameInstances.map(f => ({ ...f, _kind: 'frame', id: `frame-${f.frameId}`, startTime: f.start })),
+      ...hgBars.map(bar => {
+        const hg = bar.project.hyperglance;
+        const rawTime = hg.scheduledTimeOverrides?.[bar.date] || hg.scheduledTime || '0:0';
+        const [h, m] = rawTime.split(':').map(Number);
+        const normalizedTime = `${String(h).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
+        const duration = hg.scheduledDurationOverrides?.[bar.date] || hg.scheduledDuration || 60;
+        return { ...bar, _kind: 'hg-session', id: `hg-${bar.project.id}`, startTime: normalizedTime, duration };
+      }),
     ];
     return items.sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
-  }, [scheduledTasks, scheduledRoutines, frameInstances, timeToMinutes]);
+  }, [scheduledTasks, scheduledRoutines, hgBars, timeToMinutes]);
 
   const isItemPast = useCallback((item) => {
     if (!isToday) return false;
@@ -776,8 +837,8 @@ const MobileListView = () => {
       if (seg.type === 'gap') {
         y += gapHeight(seg.toMin - seg.fromMin);
       } else {
-        const cardH = seg.item._kind === 'routine' ? ROUTINE_H
-                    : seg.item._kind === 'frame'   ? FRAME_H
+        const cardH = seg.item._kind === 'routine'    ? ROUTINE_H
+                    : seg.item._kind === 'hg-session' ? HG_SESSION_H
                     : TASK_H;
         const rowH = cardH + 8; // 4px marginTop + 4px marginBottom on card wrapper
         ys.push(y + rowH / 2);
@@ -817,8 +878,8 @@ const MobileListView = () => {
       const s = getTaskCalendarStyle(item, darkMode);
       return s?.backgroundColor || '#6b7280';
     }
-    if (item._kind === 'routine') return darkMode ? '#14b8a6' : '#0d9488';
-    if (item._kind === 'frame')   return frameColorBorder(item.color, darkMode);
+    if (item._kind === 'routine')    return darkMode ? '#14b8a6' : '#0d9488';
+    if (item._kind === 'hg-session') return item.project.hyperglance.color || '#4f46e5';
     return taskColorToHex(item.color) || '#3b82f6';
   };
 
@@ -954,26 +1015,43 @@ const MobileListView = () => {
             );
           }
 
-          if (item._kind === 'frame') {
+          if (item._kind === 'hg-session') {
+            const hg = item.project.hyperglance;
+            const allProjectTasks = [...(tasks || []), ...(unscheduledTasks || [])];
+            const alreadyInstantiated = allProjectTasks.some(
+              t => t.projectId === item.project.id && t.hyperglanceSessionDate === item.date,
+            );
+            const incompleteTaskCount =
+              allProjectTasks.filter(t => t.projectId === item.project.id && !t.archived && !t.completed).length
+              + (alreadyInstantiated ? 0 : (hg.templateTasks?.length || 0));
+            const canEnter = !item.isCompleted && isHGSessionReachable(
+              { date: item.date, isOverdue: item.isOverdue },
+              hg, currentTime,
+            );
+            const isPast = isItemPast(item);
             return (
               <Row
                 key={seg.id}
                 timeLabel={formatTime(item.startTime)}
                 spineColour={sc}
                 spineStyle="solid"
-                marker={<SpineMarker kind="frame" colour={accentHex} pageBg={pageBg} />}
-                cardHeight={FRAME_H}
+                marker={<SpineMarker kind="hg-session" colour={accentHex} completed={item.isCompleted} pageBg={pageBg} />}
+                cardHeight={HG_SESSION_H}
                 accentHex={accentHex}
                 pageBg={pageBg}
               >
-                <div style={{ marginTop: 4, marginBottom: 4 }}>
-                  <FrameCard
-                    frame={item}
+                <div style={{ opacity: isPast && !item.isCompleted ? 0.5 : 1, marginTop: 4, marginBottom: 4 }}>
+                  <HGSessionCard
+                    bar={item}
+                    accentHex={accentHex}
                     darkMode={darkMode}
                     textPrimary={textPrimary}
                     textSecondary={textSecondary}
-                    openFrameAdjust={openFrameAdjust}
-                    dateStr={dateStr}
+                    formatTime={formatTime}
+                    canEnter={canEnter}
+                    incompleteTaskCount={incompleteTaskCount}
+                    enterHyperGlanceMode={enterHyperGlanceMode}
+                    setPendingEditProjectId={setPendingEditProjectId}
                   />
                 </div>
               </Row>

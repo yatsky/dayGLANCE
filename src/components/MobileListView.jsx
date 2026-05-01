@@ -956,8 +956,17 @@ const MobileListView = () => {
         {/* Empty state */}
         {visibleItems.length === 0 && (
           <div className={`flex flex-col items-center justify-center py-16 ${textSecondary}`}>
-            <p className="text-sm">No items scheduled</p>
-            {isToday && <p className="text-xs mt-1 opacity-60">Tap + to add a task</p>}
+            {isToday && pastItems.length > 0 ? (
+              <>
+                <p className="text-sm font-medium">Nothing left for today</p>
+                <p className="text-xs mt-1 opacity-60">All done — or tap + to add more</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm">No items scheduled</p>
+                {isToday && <p className="text-xs mt-1 opacity-60">Tap + to add a task</p>}
+              </>
+            )}
           </div>
         )}
 

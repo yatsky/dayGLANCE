@@ -3,8 +3,8 @@ import React, {
   useMemo, useCallback,
 } from 'react';
 import {
-  Check, ChevronDown, ChevronUp, Clock, Edit2, ExternalLink,
-  FileText, Inbox, SkipForward, Zap,
+  Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp,
+  Clock, Edit2, ExternalLink, FileText, Inbox, SkipForward, Zap,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { renderTitle, isLinkOnlyTask, getLinkUrl, hasNotesOrSubtasks } from '../utils/textFormatting.jsx';
@@ -21,7 +21,7 @@ const TIME_COL_W     = 56;   // w-14
 const CONNECTOR_W    = 16;   // half of spine col — reaches spine centre
 const TASK_H         = 72;
 const ROUTINE_H      = 38;
-const HG_SESSION_H   = 84;
+const HG_SESSION_H   = 64;
 const ALLDAY_H       = 44;
 
 // ─── Spine colour gradient (orange→green→blue, 6 am→noon→6 pm) ───────────────
@@ -93,9 +93,7 @@ function SpineMarker({ kind, completed, colour, pageBg }) {
   }
   if (kind === 'hg-session') {
     return (
-      <div style={{ ...base, borderRadius: '50%', background: colour, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: completed ? 0.5 : 1 }}>
-        <Zap size={8} color="#fff" strokeWidth={2.5} />
-      </div>
+      <Zap size={14} strokeWidth={2.5} style={{ color: colour, opacity: completed ? 0.4 : 1, flexShrink: 0 }} />
     );
   }
   if (kind === 'calendar-event') {
@@ -142,7 +140,7 @@ function Connector({ colour }) {
 const TaskCard = React.memo(({
   item, accentHex, isCalendarEvent, darkMode, textPrimary, textSecondary,
   formatTime, minutesToTime, timeToMinutes,
-  toggleComplete, setExpandedNotesTaskId, postponeTask, moveToInbox, openMobileEditTask,
+  setExpandedNotesTaskId, postponeTask, moveToInbox, openMobileEditTask,
   dateStr,
 }) => {
   const endMin = timeToMinutes(item.startTime) + (item.duration || 30);
@@ -165,84 +163,71 @@ const TaskCard = React.memo(({
     <div style={cardStyle}>
       {/* Left colour bar */}
       <div style={barStyle} />
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0, padding: '6px 6px 6px 8px', display: 'flex', flexDirection: 'column' }}>
-        {/* Top row: completion + title/time + action grid */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
-          {/* Completion circle (tasks only, not pure calendar events) */}
-          {!isCalendarEvent && (
-            <button
-              onClick={e => { e.stopPropagation(); toggleComplete(item.id); }}
-              style={{
-                flexShrink: 0, marginTop: 2,
-                width: 16, height: 16, borderRadius: '50%',
-                border: `2px solid ${accentHex}`,
-                background: item.completed ? accentHex : 'transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              {item.completed && <Check size={8} strokeWidth={3} color="#fff" />}
-            </button>
-          )}
-          {/* Title + time meta */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div
-              className={`text-sm font-medium leading-snug ${textPrimary} ${item.completed ? 'line-through opacity-50' : ''}`}
-              style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
-            >
-              {renderTitle(item.title)}
-            </div>
-            <div className={`text-[10px] leading-none ${textSecondary}`} style={{ marginTop: 3 }}>
-              {timeStr}
-            </div>
-          </div>
-          {/* 2×2 action grid (tasks only) */}
-          {!isCalendarEvent && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, flexShrink: 0 }}>
-              {/* Notes */}
-              <button
-                onClick={e => {
-                  e.stopPropagation();
-                  if (isLinkOnlyTask(item)) window.open(getLinkUrl(item), '_blank', 'noopener,noreferrer');
-                  else setExpandedNotesTaskId(prev => prev === item.id ? null : item.id);
-                }}
-                className={`flex items-center justify-center rounded p-1 transition-colors ${darkMode ? 'hover:bg-white/10 active:bg-white/20' : 'hover:bg-black/10 active:bg-black/15'}`}
-                style={{ opacity: hasNotes ? 0.85 : 0.35 }}
-                title="Notes / links"
-              >
-                <NoteIcon size={12} style={{ color: accentHex }} />
-              </button>
-              {/* Postpone */}
-              <button
-                onClick={e => { e.stopPropagation(); postponeTask(item.id); }}
-                className={`flex items-center justify-center rounded p-1 transition-colors ${darkMode ? 'hover:bg-white/10 active:bg-white/20' : 'hover:bg-black/10 active:bg-black/15'}`}
-                style={{ opacity: 0.7 }}
-                title="Postpone"
-              >
-                <SkipForward size={12} style={{ color: accentHex }} />
-              </button>
-              {/* Move to inbox */}
-              <button
-                onClick={e => { e.stopPropagation(); moveToInbox(item.id, dateStr); }}
-                className={`flex items-center justify-center rounded p-1 transition-colors ${darkMode ? 'hover:bg-white/10 active:bg-white/20' : 'hover:bg-black/10 active:bg-black/15'}`}
-                style={{ opacity: 0.7 }}
-                title="Move to inbox"
-              >
-                <Inbox size={12} style={{ color: accentHex }} />
-              </button>
-              {/* Edit */}
-              <button
-                onClick={e => { e.stopPropagation(); openMobileEditTask(item, false); }}
-                className={`flex items-center justify-center rounded p-1 transition-colors ${darkMode ? 'hover:bg-white/10 active:bg-white/20' : 'hover:bg-black/10 active:bg-black/15'}`}
-                style={{ opacity: 0.7 }}
-                title="Edit"
-              >
-                <Edit2 size={12} style={{ color: accentHex }} />
-              </button>
-            </div>
-          )}
+      {/* Text content */}
+      <div style={{ flex: 1, minWidth: 0, padding: '7px 0 7px 8px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3 }}>
+        {/* Title */}
+        <div
+          className={`text-sm font-medium leading-snug ${textPrimary} ${item.completed ? 'line-through opacity-50' : ''}`}
+          style={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
+        >
+          {renderTitle(item.title)}
+        </div>
+        {/* Time meta */}
+        <div className={`text-[10px] leading-none ${textSecondary}`}>
+          {timeStr}
         </div>
       </div>
+      {/* Full-height 2×2 action grid (tasks only) */}
+      {!isCalendarEvent && (
+        <div
+          style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr',
+            flexShrink: 0, alignSelf: 'stretch', width: 72,
+            borderLeft: `1px solid ${accentHex}22`,
+          }}
+        >
+          {/* Notes */}
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              if (isLinkOnlyTask(item)) window.open(getLinkUrl(item), '_blank', 'noopener,noreferrer');
+              else setExpandedNotesTaskId(prev => prev === item.id ? null : item.id);
+            }}
+            className={`flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-white/10 active:bg-white/20' : 'hover:bg-black/10 active:bg-black/15'}`}
+            style={{ opacity: hasNotes ? 0.85 : 0.35 }}
+            title="Notes / links"
+          >
+            <NoteIcon size={14} style={{ color: accentHex }} />
+          </button>
+          {/* Postpone */}
+          <button
+            onClick={e => { e.stopPropagation(); postponeTask(item.id); }}
+            className={`flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-white/10 active:bg-white/20' : 'hover:bg-black/10 active:bg-black/15'}`}
+            style={{ opacity: 0.7 }}
+            title="Postpone"
+          >
+            <SkipForward size={14} style={{ color: accentHex }} />
+          </button>
+          {/* Move to inbox */}
+          <button
+            onClick={e => { e.stopPropagation(); moveToInbox(item.id, dateStr); }}
+            className={`flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-white/10 active:bg-white/20' : 'hover:bg-black/10 active:bg-black/15'}`}
+            style={{ opacity: 0.7 }}
+            title="Move to inbox"
+          >
+            <Inbox size={14} style={{ color: accentHex }} />
+          </button>
+          {/* Edit */}
+          <button
+            onClick={e => { e.stopPropagation(); openMobileEditTask(item, false); }}
+            className={`flex items-center justify-center transition-colors ${darkMode ? 'hover:bg-white/10 active:bg-white/20' : 'hover:bg-black/10 active:bg-black/15'}`}
+            style={{ opacity: 0.7 }}
+            title="Edit"
+          >
+            <Edit2 size={14} style={{ color: accentHex }} />
+          </button>
+        </div>
+      )}
     </div>
   );
 });
@@ -299,10 +284,32 @@ const HGSessionCard = React.memo(({
   };
   const barStyle = { width: 4, flexShrink: 0, background: accentHex, borderRadius: '6px 0 0 6px' };
 
+  const hgControl = isCompleted ? (
+    <span className="text-[9px] font-semibold opacity-50" style={{ color: accentHex }}>✓</span>
+  ) : canEnter ? (
+    <button
+      onClick={e => { e.stopPropagation(); enterHyperGlanceMode(project.id, date); }}
+      className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white text-[9px] font-bold animate-pulse flex-shrink-0"
+      style={{ background: accentHex }}
+    >
+      <Zap size={8} />hyperGLANCE
+    </button>
+  ) : isOverdue ? (
+    <button
+      onClick={e => { e.stopPropagation(); enterHyperGlanceMode(project.id, date); }}
+      className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-white text-[9px] font-bold opacity-80 flex-shrink-0"
+      style={{ background: accentHex }}
+    >
+      <Zap size={8} />Start
+    </button>
+  ) : (
+    <span className="text-[9px] font-bold opacity-30 flex-shrink-0" style={{ color: accentHex }}>hG</span>
+  );
+
   return (
     <div style={cardStyle}>
       <div style={barStyle} />
-      <div style={{ flex: 1, minWidth: 0, padding: '7px 6px 7px 10px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ flex: 1, minWidth: 0, padding: '7px 6px 7px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
         {/* Title row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <IconComp size={13} style={{ color: accentHex, flexShrink: 0 }} />
@@ -320,41 +327,15 @@ const HGSessionCard = React.memo(({
             <Edit2 size={12} style={{ color: accentHex, opacity: 0.7 }} />
           </button>
         </div>
-        {/* Time + task count */}
-        <div className={`text-[10px] leading-none ${textSecondary}`}>
-          {timeStr}
-          {taskLabel && <span className="ml-1.5">· {taskLabel}</span>}
-          {isOverdue && <span className="ml-1.5 text-orange-500 font-semibold">overdue</span>}
+        {/* Time + task count + hG control on one row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span className={`text-[10px] leading-none ${textSecondary}`}>
+            {timeStr}
+            {taskLabel && <span className="ml-1.5">· {taskLabel}</span>}
+            {isOverdue && <span className="ml-1.5 text-orange-500 font-semibold">overdue</span>}
+          </span>
+          {hgControl}
         </div>
-        {/* hG button row */}
-        {!isCompleted && (
-          <div style={{ marginTop: 2 }}>
-            {canEnter ? (
-              <button
-                onClick={e => { e.stopPropagation(); enterHyperGlanceMode(project.id, date); }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-[10px] font-bold animate-pulse"
-                style={{ background: accentHex }}
-              >
-                <Zap size={9} />
-                hyperGLANCE
-              </button>
-            ) : isOverdue ? (
-              <button
-                onClick={e => { e.stopPropagation(); enterHyperGlanceMode(project.id, date); }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-[10px] font-bold opacity-80"
-                style={{ background: accentHex }}
-              >
-                <Zap size={9} />
-                Start
-              </button>
-            ) : (
-              <span className="text-[10px] font-bold opacity-30" style={{ color: accentHex }}>hG</span>
-            )}
-          </div>
-        )}
-        {isCompleted && (
-          <span className="text-[10px] font-semibold opacity-50" style={{ color: accentHex }}>✓ Completed</span>
-        )}
       </div>
     </div>
   );
@@ -363,7 +344,7 @@ HGSessionCard.displayName = 'HGSessionCard';
 
 // ─── Row wrapper (3 columns) ──────────────────────────────────────────────────
 
-function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeight, accentHex, children, isNow, pageBg }) {
+function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeight, accentHex, children, isNow, pageBg, onMarkerClick }) {
   return (
     <div style={{ display: 'flex', minHeight: cardHeight }}>
       {/* Col 1 — time */}
@@ -385,13 +366,15 @@ function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeigh
         {isNow && <Clock size={11} style={{ color: timeColour, marginLeft: 'auto', marginTop: 2 }} />}
       </div>
 
-      {/* Col 2 — spine: background spine handles the line; just render the marker here */}
-      <div style={{ width: SPINE_COL_W, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      {/* Col 2 — spine marker; tappable for completion when onMarkerClick is provided */}
+      <div
+        style={{ width: SPINE_COL_W, flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: onMarkerClick ? 'pointer' : undefined }}
+        onClick={onMarkerClick}
+      >
         {marker}
       </div>
 
-      {/* Col 3 — no padding; card provides its own internal padding so top:50% on
-          the connector always matches the spine marker's vertical centre */}
+      {/* Col 3 — card area */}
       <div style={{ flex: 1, minWidth: 0, position: 'relative', paddingRight: 8 }}>
         {accentHex && <Connector colour={accentHex} />}
         {children}
@@ -768,11 +751,16 @@ const MobileListView = () => {
     return () => clearTimeout(timer);
   }, [dateStr, isToday, calendarRef]);
 
-  // ── Position inbox handle below sticky header ──────────────────────────────
+  // ── Keep inbox handle anchored to the top of the scroll container ──────────
   useLayoutEffect(() => {
-    if (!calendarRef?.current) return;
-    const rect = calendarRef.current.getBoundingClientRect();
-    setInboxHandleTop(rect.top + 24);
+    const el = calendarRef?.current;
+    if (!el) return;
+    const update = () => setInboxHandleTop(el.getBoundingClientRect().top);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('resize', update);
+    return () => { ro.disconnect(); window.removeEventListener('resize', update); };
   }, [calendarRef]);
 
   // ── Segment builder ────────────────────────────────────────────────────────
@@ -913,10 +901,10 @@ const MobileListView = () => {
       {isToday && pastItems.length > 0 && (
         <button
           onClick={() => setShowPast(v => !v)}
-          className={`w-full flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium ${textSecondary} border-b ${borderClass} ${darkMode ? 'hover:bg-white/5 active:bg-white/10' : 'hover:bg-black/5 active:bg-black/8'} transition-colors`}
+          className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium ${textSecondary} border-b ${borderClass} ${darkMode ? 'hover:bg-white/5 active:bg-white/10' : 'hover:bg-black/5 active:bg-black/8'} transition-colors`}
         >
           {showPast ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-          {showPast ? 'Hide earlier items' : `↑ ${pastItems.length} earlier item${pastItems.length !== 1 ? 's' : ''}`}
+          {showPast ? 'Hide earlier items' : `Show ${pastItems.length} earlier item${pastItems.length !== 1 ? 's' : ''}`}
         </button>
       )}
 
@@ -1078,6 +1066,7 @@ const MobileListView = () => {
               cardHeight={TASK_H}
               accentHex={accentHex}
               pageBg={pageBg}
+              onMarkerClick={isCalendarEvent ? undefined : e => { e.stopPropagation(); toggleComplete(item.id); }}
             >
               <div style={{ opacity: isPast ? 0.5 : 1, marginTop: 4, marginBottom: 4 }}>
                 <TaskCard
@@ -1090,7 +1079,6 @@ const MobileListView = () => {
                   formatTime={formatTime}
                   minutesToTime={minutesToTime}
                   timeToMinutes={timeToMinutes}
-                  toggleComplete={toggleComplete}
                   setExpandedNotesTaskId={setExpandedNotesTaskId}
                   postponeTask={postponeTask}
                   moveToInbox={moveToInbox}
@@ -1138,6 +1126,7 @@ const MobileListView = () => {
             >
               <span className={textSecondary}>Inbox</span>
             </span>
+            <ChevronLeft size={11} className={textSecondary} style={{ opacity: 0.5 }} />
           </button>
         </div>
       )}
@@ -1167,7 +1156,7 @@ const MobileListView = () => {
               onClick={() => { setInboxOpen(false); setInboxPinned(false); }}
               className={`p-0.5 rounded transition-colors ${darkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'}`}
             >
-              <ChevronDown size={14} className={textSecondary} />
+              <ChevronRight size={14} className={textSecondary} />
             </button>
           </div>
 

@@ -101,7 +101,7 @@ function SpineMarker({ kind, completed, colour, pageBg }) {
           width: 12, height: 2, background: colour,
           opacity: completed ? 0.4 : 1, zIndex: 1,
         }} />
-        <Zap size={20} strokeWidth={2.5}
+        <Zap size={19} strokeWidth={2.5}
           style={{ color: colour, opacity: completed ? 0.4 : 1, position: 'relative', zIndex: 2 }}
         />
       </div>

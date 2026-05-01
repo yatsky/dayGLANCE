@@ -333,10 +333,10 @@ function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeigh
 
       {/* Col 2 — spine */}
       <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        {/* Full-height line; marker (zIndex 2, opaque bg) sits on top of it */}
+        {/* -1/+1 overreach ensures flush join with adjacent rows — no pixel gaps */}
         <div
           style={{
-            position: 'absolute', top: 0, bottom: 0,
+            position: 'absolute', top: -1, bottom: -1,
             left: '50%', transform: 'translateX(-50%)',
             width: 2, zIndex: 0,
             background: spineStyle === 'dashed'
@@ -347,8 +347,9 @@ function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeigh
         {marker}
       </div>
 
-      {/* Col 3 — content */}
-      <div style={{ flex: 1, minWidth: 0, position: 'relative', paddingTop: 4, paddingBottom: 4, paddingRight: 8 }}>
+      {/* Col 3 — no padding; card provides its own internal padding so top:50% on
+          the connector always matches the spine marker's vertical centre */}
+      <div style={{ flex: 1, minWidth: 0, position: 'relative', paddingRight: 8 }}>
         {accentHex && <Connector colour={accentHex} />}
         {children}
       </div>
@@ -379,7 +380,7 @@ function GapRow({ fromMin, toMin, spineColour, textSecondary, formatTime, minute
       </div>
       {/* Spine col */}
       <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, background: dashedGradient(spineColour + '88') }} />
+        <div style={{ position: 'absolute', top: -1, bottom: -1, left: '50%', transform: 'translateX(-50%)', width: 2, background: dashedGradient(spineColour + '88') }} />
         {/* Drag preview indicator on spine */}
         {isTarget && (
           <div
@@ -446,7 +447,7 @@ function NowRow({ nowMin, nextItem, formatTime, textSecondary, darkMode, use24Ho
       </div>
       {/* Spine col */}
       <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, zIndex: 0, background: '#ef444440' }} />
+        <div style={{ position: 'absolute', top: -1, bottom: -1, left: '50%', transform: 'translateX(-50%)', width: 2, zIndex: 0, background: '#ef444440' }} />
         {/* Red clock marker */}
         <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, position: 'relative' }}>
           <Clock size={9} color="#fff" />
@@ -805,7 +806,7 @@ const MobileListView = () => {
         <div style={{ display: 'flex', height: 16 }}>
           <div style={{ width: TIME_COL_W, flexShrink: 0 }} />
           <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, background: spineColorAt(nowMin) }} />
+            <div style={{ position: 'absolute', top: -1, bottom: -1, left: '50%', transform: 'translateX(-50%)', width: 2, background: spineColorAt(nowMin) }} />
           </div>
           <div style={{ flex: 1 }} />
         </div>
@@ -830,7 +831,7 @@ const MobileListView = () => {
         <div style={{ display: 'flex', height: 12 }}>
           <div style={{ width: TIME_COL_W, flexShrink: 0 }} />
           <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, background: spineColorAt(nowMin) }} />
+            <div style={{ position: 'absolute', top: -1, bottom: -1, left: '50%', transform: 'translateX(-50%)', width: 2, background: spineColorAt(nowMin) }} />
           </div>
           <div style={{ flex: 1 }} />
         </div>
@@ -881,12 +882,14 @@ const MobileListView = () => {
                 cardHeight={ROUTINE_H}
                 accentHex="#14b8a6"
               >
-                <RoutineChip
-                  routine={item}
-                  completed={completed}
-                  onToggle={toggleRoutineCompletion}
-                  darkMode={darkMode}
-                />
+                <div style={{ marginTop: 4, marginBottom: 4 }}>
+                  <RoutineChip
+                    routine={item}
+                    completed={completed}
+                    onToggle={toggleRoutineCompletion}
+                    darkMode={darkMode}
+                  />
+                </div>
               </Row>
             );
           }
@@ -902,14 +905,16 @@ const MobileListView = () => {
                 cardHeight={FRAME_H}
                 accentHex={accentHex}
               >
-                <FrameCard
-                  frame={item}
-                  darkMode={darkMode}
-                  textPrimary={textPrimary}
-                  textSecondary={textSecondary}
-                  openFrameAdjust={openFrameAdjust}
-                  dateStr={dateStr}
-                />
+                <div style={{ marginTop: 4, marginBottom: 4 }}>
+                  <FrameCard
+                    frame={item}
+                    darkMode={darkMode}
+                    textPrimary={textPrimary}
+                    textSecondary={textSecondary}
+                    openFrameAdjust={openFrameAdjust}
+                    dateStr={dateStr}
+                  />
+                </div>
               </Row>
             );
           }
@@ -934,7 +939,7 @@ const MobileListView = () => {
               cardHeight={TASK_H}
               accentHex={accentHex}
             >
-              <div style={{ opacity: isPast ? 0.5 : 1 }}>
+              <div style={{ opacity: isPast ? 0.5 : 1, marginTop: 4, marginBottom: 4 }}>
                 <TaskCard
                   item={item}
                   accentHex={accentHex}

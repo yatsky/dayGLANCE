@@ -1153,6 +1153,14 @@ const MobileListView = () => {
         mobileDateHeaderRef.current
       )}
 
+      {/* Tap-outside backdrop — dismisses the expanded panel */}
+      {(inboxOpen || inboxPinned) && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 39 }}
+          onClick={() => { setInboxOpen(false); setInboxPinned(false); }}
+        />
+      )}
+
       {/* Expanded panel — fixed to viewport; top captured at open time */}
       {(inboxOpen || inboxPinned) && (
         <div

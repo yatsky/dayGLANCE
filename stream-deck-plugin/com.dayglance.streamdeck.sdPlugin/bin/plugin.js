@@ -9978,6 +9978,10 @@ let HyperGlanceAction = (() => {
         LONG_PRESS_MS = 400;
         pulseOn = false;
         pulseTimer = null;
+        // Keypad-only: cursor into hg.scheduled[] for previewing/starting sessions
+        // when there's no encoder column to drive the slot.
+        keypadCursor = 0;
+        keyLongPressTimer = null;
         async onWillAppear(ev) {
             this.visibleCount++;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -9990,6 +9994,8 @@ let HyperGlanceAction = (() => {
             if (!this.unsubscribe) {
                 this.unsubscribe = onState((s) => {
                     this.lastState = s;
+                    if (this.keypadCursor >= s.hg.scheduled.length)
+                        this.keypadCursor = 0;
                     this.updatePulse(s);
                     this.renderAll(s).catch(e => console.error("[dayGLANCE] hg render:", e));
                 });
@@ -10064,7 +10070,7 @@ let HyperGlanceAction = (() => {
                 send({ type: MSG_DAY_HG_SET_DURATION, longBreakMinutes: Math.max(1, Math.min(60, longBreakMinutes + ev.payload.ticks)) });
             }
         }
-        async onKeyDown(ev) {
+        async onKeyDown(_ev) {
             const hg = this.lastState?.hg;
             if (!hg)
                 return;
@@ -10078,12 +10084,28 @@ let HyperGlanceAction = (() => {
                 send({ type: MSG_DAY_HG_TIMER_START });
             }
             else {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const slotIndex = this.slotIndexMap.get(ev.action) ?? 0;
-                const session = hg.scheduled[slotIndex];
-                if (session)
-                    send({ type: MSG_DAY_HG_START, projectId: session.projectId, date: session.date });
+                // Idle: short release cycles the cursor; 500ms hold starts the session
+                // currently under the cursor. Keypads have no slot mapping, so without
+                // this every key press would always start hg.scheduled[0].
+                this.keyLongPressTimer = setTimeout(() => {
+                    this.keyLongPressTimer = null;
+                    const session = this.lastState?.hg.scheduled[this.keypadCursor];
+                    if (session)
+                        send({ type: MSG_DAY_HG_START, projectId: session.projectId, date: session.date });
+                }, 500);
             }
+        }
+        async onKeyUp(_ev) {
+            if (this.keyLongPressTimer === null)
+                return;
+            clearTimeout(this.keyLongPressTimer);
+            this.keyLongPressTimer = null;
+            const count = this.lastState?.hg.scheduled.length ?? 0;
+            if (count === 0)
+                return;
+            this.keypadCursor = (this.keypadCursor + 1) % count;
+            if (this.lastState)
+                await this.renderAll(this.lastState);
         }
         async onTouchTap(ev) {
             if (ev.payload.hold) {
@@ -10190,7 +10212,7 @@ let HyperGlanceAction = (() => {
                 await act.setImage(renderKey({ value, sub: "press to start", barColor }));
             }
             else {
-                const session = hg.scheduled[0] ?? null;
+                const session = hg.scheduled[this.keypadCursor] ?? null;
                 await act.setImage(renderHGIdleKey(session, session?.reachable && this.pulseOn));
             }
             await act.setTitle("");

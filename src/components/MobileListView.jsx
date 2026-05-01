@@ -331,18 +331,20 @@ function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeigh
         {isNow && <Clock size={11} style={{ color: timeColour, marginLeft: 'auto', marginTop: 2 }} />}
       </div>
 
-      {/* Col 2 — spine (background line drawn by container; halo + marker here) */}
+      {/* Col 2 — spine */}
       <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        {/* Gradient halo: fades the background spine into the marker */}
-        {pageBg && (
-          <div style={{
-            position: 'absolute',
-            top: '50%', transform: 'translateY(-50%)',
-            left: '50%', marginLeft: -1,
-            width: 2, height: 56, zIndex: 1, pointerEvents: 'none',
-            background: `linear-gradient(to bottom, transparent, ${pageBg} 40%, ${pageBg} 60%, transparent)`,
-          }} />
-        )}
+        {/* Top half: spine colour fades to transparent as it reaches the marker */}
+        <div style={{
+          position: 'absolute', top: 0, bottom: '50%',
+          left: '50%', marginLeft: -1, width: 2, zIndex: 1, pointerEvents: 'none',
+          background: `linear-gradient(to bottom, ${spineColour}, ${spineColour} 60%, transparent)`,
+        }} />
+        {/* Bottom half: fades from transparent back to spine colour */}
+        <div style={{
+          position: 'absolute', top: '50%', bottom: 0,
+          left: '50%', marginLeft: -1, width: 2, zIndex: 1, pointerEvents: 'none',
+          background: `linear-gradient(to bottom, transparent, ${spineColour} 40%, ${spineColour})`,
+        }} />
         {marker}
       </div>
 
@@ -377,8 +379,14 @@ function GapRow({ fromMin, toMin, spineColour, textSecondary, formatTime, minute
           </span>
         )}
       </div>
-      {/* Spine col (line drawn by container; only drag indicator here) */}
-      <div style={{ width: SPINE_COL_W, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Spine col */}
+      <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* Solid spine segment through free time */}
+        <div style={{
+          position: 'absolute', top: 0, bottom: 0,
+          left: '50%', marginLeft: -1, width: 2, zIndex: 1, pointerEvents: 'none',
+          background: spineColour,
+        }} />
         {/* Drag preview indicator on spine */}
         {isTarget && (
           <div
@@ -443,17 +451,18 @@ function NowRow({ nowMin, nextItem, formatTime, textSecondary, darkMode, use24Ho
       <div style={{ width: TIME_COL_W, flexShrink: 0, paddingRight: 8, textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
         <span className="text-[11px] font-bold" style={{ color: '#ef4444' }}>{nowLabel}</span>
       </div>
-      {/* Spine col (line drawn by container; halo + marker here) */}
+      {/* Spine col */}
       <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {pageBg && (
-          <div style={{
-            position: 'absolute',
-            top: '50%', transform: 'translateY(-50%)',
-            left: '50%', marginLeft: -1,
-            width: 2, height: 56, zIndex: 1, pointerEvents: 'none',
-            background: `linear-gradient(to bottom, transparent, ${pageBg} 40%, ${pageBg} 60%, transparent)`,
-          }} />
-        )}
+        <div style={{
+          position: 'absolute', top: 0, bottom: '50%',
+          left: '50%', marginLeft: -1, width: 2, zIndex: 1, pointerEvents: 'none',
+          background: 'linear-gradient(to bottom, #ef4444, #ef4444 60%, transparent)',
+        }} />
+        <div style={{
+          position: 'absolute', top: '50%', bottom: 0,
+          left: '50%', marginLeft: -1, width: 2, zIndex: 1, pointerEvents: 'none',
+          background: 'linear-gradient(to bottom, transparent, #ef4444 40%, #ef4444)',
+        }} />
         {/* Red clock marker */}
         <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, position: 'relative' }}>
           <Clock size={9} color="#fff" />
@@ -832,6 +841,7 @@ const MobileListView = () => {
               left: TIME_COL_W + SPINE_COL_W / 2 - 1,
               width: 2,
               background: bgSpineGradient,
+              opacity: 0.12,
             }}
           />
         )}

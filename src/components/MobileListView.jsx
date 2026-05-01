@@ -332,26 +332,26 @@ function Row({ timeLabel, timeColour, spineColour, spineStyle, marker, cardHeigh
 
       {/* Col 2 — spine */}
       <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        {/* Top spine segment — stops just above the marker */}
+        {/* Top spine segment — fades to transparent near the marker */}
         <div
           style={{
             position: 'absolute', top: 0, bottom: 'calc(50% + 9px)',
             left: '50%', transform: 'translateX(-50%)',
             width: 2,
-            ...(spineStyle === 'dashed'
-              ? { background: dashedGradient(spineColour + '88') }
-              : { background: spineColour }),
+            background: spineStyle === 'dashed'
+              ? dashedGradient(spineColour + '88')
+              : `linear-gradient(to bottom, ${spineColour}, ${spineColour} calc(100% - 10px), transparent)`,
           }}
         />
-        {/* Bottom spine segment — resumes just below the marker */}
+        {/* Bottom spine segment — fades in from transparent below the marker */}
         <div
           style={{
             position: 'absolute', top: 'calc(50% + 9px)', bottom: 0,
             left: '50%', transform: 'translateX(-50%)',
             width: 2,
-            ...(spineStyle === 'dashed'
-              ? { background: dashedGradient(spineColour + '88') }
-              : { background: spineColour }),
+            background: spineStyle === 'dashed'
+              ? dashedGradient(spineColour + '88')
+              : `linear-gradient(to bottom, transparent, ${spineColour} 10px, ${spineColour})`,
           }}
         />
         {/* Marker */}
@@ -450,13 +450,13 @@ function NowRow({ nowMin, nextItem, formatTime, textSecondary, darkMode, use24Ho
   return (
     <div style={{ display: 'flex', minHeight: 40, alignItems: 'center' }}>
       {/* Time col */}
-      <div style={{ width: TIME_COL_W, flexShrink: 0, paddingRight: 8, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', gap: 2 }}>
+      <div style={{ width: TIME_COL_W, flexShrink: 0, paddingRight: 8, textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
         <span className="text-[11px] font-bold" style={{ color: '#ef4444' }}>{nowLabel}</span>
-        <Clock size={11} style={{ color: '#ef4444' }} />
       </div>
       {/* Spine col */}
       <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, background: '#ef4444', opacity: 0.4 }} />
+        <div style={{ position: 'absolute', top: 0, bottom: 'calc(50% + 9px)', left: '50%', transform: 'translateX(-50%)', width: 2, background: 'linear-gradient(to bottom, #ef444466, transparent)' }} />
+        <div style={{ position: 'absolute', top: 'calc(50% + 9px)', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 2, background: 'linear-gradient(to bottom, transparent, #ef444466)' }} />
         {/* Red clock marker */}
         <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2, position: 'relative' }}>
           <Clock size={9} color="#fff" />
@@ -595,15 +595,25 @@ const MobileListView = () => {
   const futureItems = useMemo(() => allItems.filter(i => !isItemPast(i)), [allItems, isItemPast]);
   const visibleItems = showPast ? allItems : futureItems;
 
-  // Next non-completed item after now
+  // Item currently in progress (overlaps nowMin)
+  const inProgressItem = useMemo(() => {
+    if (!isToday) return null;
+    return allItems.find(item => {
+      const s = timeToMinutes(item.startTime);
+      return nowMin >= s && nowMin < s + (item.duration || 30);
+    });
+  }, [allItems, isToday, nowMin, timeToMinutes]);
+
+  // Next non-completed item starting after now
   const nextItem = useMemo(() => {
     return futureItems.find(i => {
-      if (i._kind === 'routine')       return !routineCompletions[i._routineId];
-      if (i._kind === 'frame')         return true;
+      if (timeToMinutes(i.startTime) <= nowMin) return false; // skip in-progress
+      if (i._kind === 'routine')        return !routineCompletions[i._routineId];
+      if (i._kind === 'frame')          return true;
       if (i._kind === 'calendar-event') return true;
       return !i.completed;
     });
-  }, [futureItems, routineCompletions]);
+  }, [futureItems, routineCompletions, nowMin, timeToMinutes]);
 
   // Inbox tasks
   const inboxTasks = useMemo(() =>
@@ -798,7 +808,7 @@ const MobileListView = () => {
       )}
 
       {/* ── Spine spacer (padding above "now") ── */}
-      {isToday && (
+      {isToday && !inProgressItem && (
         <div style={{ display: 'flex', height: 16 }}>
           <div style={{ width: TIME_COL_W, flexShrink: 0 }} />
           <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative' }}>
@@ -808,8 +818,8 @@ const MobileListView = () => {
         </div>
       )}
 
-      {/* ── Now row ── */}
-      {isToday && (
+      {/* ── Now row — hidden when something is currently in progress ── */}
+      {isToday && !inProgressItem && (
         <div ref={nowRowRef}>
           <NowRow
             nowMin={nowMin}
@@ -823,7 +833,7 @@ const MobileListView = () => {
       )}
 
       {/* ── Spine spacer (padding below "now") ── */}
-      {isToday && visibleItems.length > 0 && (
+      {isToday && !inProgressItem && visibleItems.length > 0 && (
         <div style={{ display: 'flex', height: 12 }}>
           <div style={{ width: TIME_COL_W, flexShrink: 0 }} />
           <div style={{ width: SPINE_COL_W, flexShrink: 0, position: 'relative' }}>

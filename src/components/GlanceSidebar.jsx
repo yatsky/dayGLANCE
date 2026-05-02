@@ -371,15 +371,15 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
 
         {/* Goals page */}
         {hasGoals && (!showCarousel || effectivePage === 1) && (
-          <div className="relative">
+          <div className="relative pr-5">
             <button
               onClick={() => setShowGoalsDashboard(true)}
-              className={`absolute -bottom-0.5 -right-0.5 p-1 rounded ${hoverBg} ${darkMode ? 'text-gray-700' : 'text-stone-300'} transition-colors z-10`}
+              className={`absolute top-0 right-0 p-1 rounded ${hoverBg} ${darkMode ? 'text-gray-700' : 'text-stone-300'} transition-colors z-10`}
               title="Manage goals"
             >
               <Settings size={11} />
             </button>
-            <div className="flex items-start gap-1 justify-center flex-wrap">
+            <div className="flex flex-col gap-2">
               {activeGoalsList.slice(0, 4).map(g => (
                 <GoalRing
                   key={g.id}
@@ -387,15 +387,13 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
                   progressPct={g.progressPct}
                   daysLeft={g.daysLeft}
                   darkMode={darkMode}
-                  size={60}
                   onClick={() => setShowGoalsDashboard(true)}
                 />
               ))}
               {activeGoalsList.length > 4 && (
-                <div className={`flex items-center justify-center text-xs font-bold ${darkMode ? 'text-gray-400' : 'text-stone-500'}`}
-                  style={{ width: 76, height: 60 }}>
-                  +{activeGoalsList.length - 4}
-                </div>
+                <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-stone-400'}`}>
+                  +{activeGoalsList.length - 4} more
+                </span>
               )}
             </div>
           </div>

@@ -267,14 +267,12 @@ function RoutineChip({ routine, completed, onToggle, darkMode, compact }) {
 
 function OverlapRow({ overlapMin, textSecondary }) {
   return (
-    <div style={{ display: 'flex', height: 12, alignItems: 'center' }}>
-      <div style={{ width: TIME_COL_W, flexShrink: 0 }} />
-      <div style={{ width: SPINE_COL_W, flexShrink: 0 }} />
-      <div style={{ flex: 1, paddingLeft: 4 }}>
-        <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.5 }}>
-          {durLabel(overlapMin)} overlap
-        </span>
-      </div>
+    <div style={{ display: 'flex', height: 20, alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+      <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.4 }}>↑</span>
+      <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.4 }}>
+        {durLabel(overlapMin)} overlap
+      </span>
+      <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.4 }}>↓</span>
     </div>
   );
 }
@@ -610,7 +608,9 @@ const MobileListView = () => {
   const inboxPanelTop   = useRef(0);
   const listDragRef     = useRef({ active: false, item: null, startX: 0, startY: 0, timer: null, ignoreRoutineId: null, targetAllDay: false });
   const lastDragEndMs   = useRef(0); // suppress stale click after drag completes
-  const dragRef    = useRef({ active: false, task: null, startX: 0, startY: 0 });
+  const dragRef         = useRef({ active: false, task: null, startX: 0, startY: 0 });
+  const autoScrollRaf   = useRef(null);
+  const dragTouchPos    = useRef({ x: 0, y: 0 });
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const dateStr = dateToString(selectedDate);
@@ -808,6 +808,42 @@ const MobileListView = () => {
   }, [dragTargetMin, dragBlocked, minutesToTime, dateStr, pushUndo,
       setTasks, setUnscheduledTasks, playUISound, inboxOpen]);
 
+  // ── Auto-scroll during list-item drag ─────────────────────────────────────
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollRaf.current) {
+      cancelAnimationFrame(autoScrollRaf.current);
+      autoScrollRaf.current = null;
+    }
+  }, []);
+
+  const startAutoScroll = useCallback(() => {
+    if (autoScrollRaf.current) return;
+    const ZONE = 80;      // px from edge where auto-scroll activates
+    const MAX_SPEED = 14; // px per frame at the very edge
+    const tick = () => {
+      const container = calendarRef?.current;
+      if (!container || !listDragRef.current.active) {
+        autoScrollRaf.current = null;
+        return;
+      }
+      const rect = container.getBoundingClientRect();
+      const y = dragTouchPos.current.y;
+      const distTop = y - rect.top;
+      const distBot = rect.bottom - y;
+      if (distTop >= 0 && distTop < ZONE) {
+        container.scrollTop -= Math.round((1 - distTop / ZONE) * MAX_SPEED);
+      } else if (distBot >= 0 && distBot < ZONE) {
+        container.scrollTop += Math.round((1 - distBot / ZONE) * MAX_SPEED);
+      }
+      autoScrollRaf.current = requestAnimationFrame(tick);
+    };
+    autoScrollRaf.current = requestAnimationFrame(tick);
+  }, [calendarRef]);
+
+  // Stop auto-scroll if component unmounts mid-drag
+  useEffect(() => () => stopAutoScroll(), [stopAutoScroll]);
+
+
   // ── List-item drag handlers ────────────────────────────────────────────────
   const handleListItemTouchStart = useCallback((e, item) => {
     if (item._kind === 'calendar-event') return;
@@ -821,10 +857,12 @@ const MobileListView = () => {
     ref.timer = setTimeout(() => {
       navigator.vibrate?.(10);
       ref.active = true;
+      dragTouchPos.current = { x: t.clientX, y: t.clientY };
       setListDragItem(item);
       setListDragGhost({ x: t.clientX, y: t.clientY });
+      startAutoScroll();
     }, 400);
-  }, []);
+  }, [startAutoScroll]);
 
   const handleListItemTouchMove = useCallback((e) => {
     const state = listDragRef.current;
@@ -841,7 +879,8 @@ const MobileListView = () => {
       }
       return;
     }
-    e.preventDefault();
+    // Allow native scroll — auto-scroll loop handles edge scrolling during drag
+    dragTouchPos.current = { x: t.clientX, y: t.clientY };
     setListDragGhost({ x: t.clientX, y: t.clientY });
 
     const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -883,6 +922,7 @@ const MobileListView = () => {
   }, [getSnapMin, isBlockedByRoutine]);
 
   const handleListItemTouchEnd = useCallback(() => {
+    stopAutoScroll();
     const state = listDragRef.current;
     clearTimeout(state.timer);
 
@@ -937,7 +977,7 @@ const MobileListView = () => {
     setListDragTargetAllDay(false);
     setDragTargetMin(null);
     setDragBlocked(false);
-  }, [dragTargetMin, dragBlocked, minutesToTime, pushUndo,
+  }, [stopAutoScroll, dragTargetMin, dragBlocked, minutesToTime, pushUndo,
       setTasks, setTodayRoutines, updateProject, dateStr, playUISound, setListDragTargetAllDay]);
 
   // ── Scroll to "now" on mount / date change ─────────────────────────────────
@@ -1045,7 +1085,7 @@ const MobileListView = () => {
       if (seg.type === 'gap') {
         y += gapHeight(seg.toMin - seg.fromMin);
       } else if (seg.type === 'overlap') {
-        y += 12;
+        y += 20;
       } else if (seg.type === 'multi-routine') {
         const rowH = ROUTINE_H + 8;
         ys.push(y + rowH / 2);

@@ -1,27 +1,34 @@
 import React from 'react';
 import { TAILWIND_TO_HEX } from '../utils/colorUtils.js';
 
-const GoalRing = ({ goal, progressPct, daysLeft, darkMode, size = 60, onClick }) => {
+const GoalRing = ({ goal, progressPct, daysLeft, darkMode, onClick }) => {
   const hex = goal.color?.startsWith('#')
     ? goal.color
     : (TAILWIND_TO_HEX[goal.color] || '#3b82f6');
+
+  const size = 36;
   const radius = size * 0.38;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
-  const strokeWidth = 3.5;
+  const strokeWidth = 3;
   const dashOffset = circumference * (1 - Math.min(progressPct / 100, 1));
 
-  const badgeBg = daysLeft !== null && daysLeft <= 0 ? '#ef4444'
+  const urgencyColor = daysLeft !== null && daysLeft <= 0 ? '#ef4444'
     : daysLeft !== null && daysLeft <= 3 ? '#f59e0b'
-    : '#3b82f6';
+    : null;
+
+  const daysLabel = daysLeft === null ? null
+    : daysLeft <= 0 ? 'overdue'
+    : daysLeft === 1 ? '1d left'
+    : `${daysLeft}d left`;
 
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1 active:scale-95 transition-transform select-none"
-      style={{ width: size + 16 }}
+      className="w-full flex items-center gap-2.5 active:opacity-70 transition-opacity select-none text-left"
     >
-      <div className="relative">
+      {/* Arc ring */}
+      <div className="relative flex-shrink-0">
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
           <circle
             cx={center} cy={center} r={radius}
@@ -38,34 +45,34 @@ const GoalRing = ({ goal, progressPct, daysLeft, darkMode, size = 60, onClick })
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[11px] font-bold leading-none" style={{ color: hex }}>
+          <span className="text-[9px] font-bold leading-none" style={{ color: hex }}>
             {progressPct}%
           </span>
         </div>
-        {daysLeft !== null && daysLeft <= 7 && (
-          <div
-            className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 rounded-full flex items-center justify-center px-0.5"
-            style={{ backgroundColor: badgeBg }}
-          >
-            <span className="text-[8px] font-bold text-white leading-none">
-              {daysLeft <= 0 ? '!' : daysLeft}
-            </span>
-          </div>
-        )}
       </div>
-      <span
-        className={`text-[10px] font-medium leading-tight text-center ${darkMode ? 'text-gray-400' : 'text-stone-500'}`}
-        style={{
-          maxWidth: size + 8,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          wordBreak: 'break-word',
-        }}
-      >
-        {goal.title}
-      </span>
+
+      {/* Text column */}
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm font-medium truncate leading-tight ${darkMode ? 'text-gray-200' : 'text-stone-800'}`}>
+          {goal.title}
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <div className={`flex-1 h-1 rounded-full ${darkMode ? 'bg-gray-600' : 'bg-stone-200'}`}>
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{ width: `${progressPct}%`, backgroundColor: hex }}
+            />
+          </div>
+          {daysLabel && (
+            <span
+              className="text-[10px] flex-shrink-0 font-medium"
+              style={{ color: urgencyColor || (darkMode ? '#9ca3af' : '#78716c') }}
+            >
+              {daysLabel}
+            </span>
+          )}
+        </div>
+      </div>
     </button>
   );
 };

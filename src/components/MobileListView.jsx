@@ -267,14 +267,12 @@ function RoutineChip({ routine, completed, onToggle, darkMode, compact }) {
 
 function OverlapRow({ overlapMin, textSecondary }) {
   return (
-    <div style={{ display: 'flex', height: 12, alignItems: 'center' }}>
-      <div style={{ width: TIME_COL_W, flexShrink: 0 }} />
-      <div style={{ width: SPINE_COL_W, flexShrink: 0 }} />
-      <div style={{ flex: 1, paddingLeft: 4 }}>
-        <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.5 }}>
-          {durLabel(overlapMin)} overlap
-        </span>
-      </div>
+    <div style={{ display: 'flex', height: 20, alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+      <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.4 }}>↑</span>
+      <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.4 }}>
+        {durLabel(overlapMin)} overlap
+      </span>
+      <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.4 }}>↓</span>
     </div>
   );
 }
@@ -1086,7 +1084,7 @@ const MobileListView = () => {
       if (seg.type === 'gap') {
         y += gapHeight(seg.toMin - seg.fromMin);
       } else if (seg.type === 'overlap') {
-        y += 12;
+        y += 20;
       } else if (seg.type === 'multi-routine') {
         const rowH = ROUTINE_H + 8;
         ys.push(y + rowH / 2);

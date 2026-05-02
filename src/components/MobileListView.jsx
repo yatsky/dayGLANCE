@@ -843,6 +843,7 @@ const MobileListView = () => {
   // Stop auto-scroll if component unmounts mid-drag
   useEffect(() => () => stopAutoScroll(), [stopAutoScroll]);
 
+
   // ── List-item drag handlers ────────────────────────────────────────────────
   const handleListItemTouchStart = useCallback((e, item) => {
     if (item._kind === 'calendar-event') return;

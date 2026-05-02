@@ -279,6 +279,7 @@ function OverlapRow({ overlapMin, textSecondary }) {
   );
 }
 
+
 // ─── HGSessionCard ────────────────────────────────────────────────────────────
 
 const HGSessionCard = React.memo(({
@@ -1005,6 +1006,7 @@ const MobileListView = () => {
 
     flushMultiRoutine();
 
+
     // Trailing gap so last item isn't at very bottom
     segs.push({ type: 'gap', id: 'gap-trail', fromMin: cursor, toMin: cursor + 30 });
     return segs;
@@ -1338,6 +1340,7 @@ const MobileListView = () => {
             </div>
           );
         }
+
 
         if (seg.type === 'item') {
           const { item, startMin } = seg;

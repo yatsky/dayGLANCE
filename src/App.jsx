@@ -248,6 +248,10 @@ const DayPlanner = () => {
     const saved = localStorage.getItem('day-planner-day-view-mode');
     return saved ? JSON.parse(saved) : 'calendar-day';
   });
+  const [mobileViewMode, setMobileViewMode] = useState(() => {
+    const saved = localStorage.getItem('day-planner-mobile-view-mode');
+    return saved ? JSON.parse(saved) : 'grid';
+  });
   const [weekViewMode, setWeekViewMode] = useState(() => {
     const saved = localStorage.getItem('day-planner-week-view-mode');
     return saved ? JSON.parse(saved) : 'strict';
@@ -962,6 +966,7 @@ const DayPlanner = () => {
     selectedDate,
     isMobile, isTablet,
     mobileActiveTab,
+    mobileViewMode,
     viewMode: effectiveViewMode,
   });
 
@@ -1061,6 +1066,9 @@ const DayPlanner = () => {
   useEffect(() => {
     localStorage.setItem('day-planner-week-view-mode', JSON.stringify(weekViewMode));
   }, [weekViewMode]);
+  useEffect(() => {
+    localStorage.setItem('day-planner-mobile-view-mode', JSON.stringify(mobileViewMode));
+  }, [mobileViewMode]);
 
   // Lock body/html scrolling to prevent scroll chaining (all devices incl. desktop PWA)
   useEffect(() => {
@@ -7146,6 +7154,7 @@ const DayPlanner = () => {
     // ── Layout / navigation ───────────────────────────────────────────────────
     tabletActiveTab, setTabletActiveTab,
     mobileActiveTab, setMobileActiveTab,
+    mobileViewMode, setMobileViewMode,
     mobileWelcomeStep, setMobileWelcomeStep,
     desktopWelcomeStep, setDesktopWelcomeStep,
     showMonthView, setShowMonthView,
@@ -8509,8 +8518,8 @@ const DayPlanner = () => {
         </div>
       )}
 
-      {/* Refocus timeline toast — all form factors */}
-      {timelineScrolledAway && effectiveViewMode === 'multi' && (
+      {/* Refocus timeline toast — all form factors except mobile list view */}
+      {timelineScrolledAway && effectiveViewMode === 'multi' && !(isMobile && mobileViewMode === 'list') && (
         <div className="fixed left-1/2 -translate-x-1/2 z-50 pointer-events-auto" style={{ bottom: isMobile ? 'calc(5rem + env(safe-area-inset-bottom, 0px))' : '1.5rem' }}>
           <button
             onClick={() => { setTimelineScrolledAway(false); scrollToCurrentHour(true); }}

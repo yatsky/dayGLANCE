@@ -245,14 +245,15 @@ TaskCard.displayName = 'TaskCard';
 
 // ─── RoutineChip ──────────────────────────────────────────────────────────────
 
-function RoutineChip({ routine, completed, onToggle, darkMode }) {
+function RoutineChip({ routine, completed, onToggle, darkMode, compact }) {
   return (
     <button
       onClick={e => { e.stopPropagation(); onToggle(routine.id); }}
-      className={`flex items-center gap-1.5 px-3 rounded-full text-xs font-medium transition-colors
+      className={`flex items-center rounded-full font-medium transition-colors
+        ${compact ? 'gap-1 px-2 text-[10px]' : 'gap-1.5 px-3 text-xs'}
         ${darkMode ? 'bg-teal-700 text-teal-100 active:bg-teal-600' : 'bg-teal-600 text-white active:bg-teal-700'}
         ${completed ? 'opacity-50 line-through' : ''}`}
-      style={{ height: ROUTINE_H, maxWidth: '100%' }}
+      style={{ height: compact ? 28 : ROUTINE_H, maxWidth: '100%' }}
     >
       <span className="truncate">{routine.name}</span>
       {routine.duration ? (
@@ -261,6 +262,23 @@ function RoutineChip({ routine, completed, onToggle, darkMode }) {
     </button>
   );
 }
+
+// ─── OverlapRow ────────────────────────────────────────────────────────────────
+
+function OverlapRow({ overlapMin, textSecondary }) {
+  return (
+    <div style={{ display: 'flex', height: 12, alignItems: 'center' }}>
+      <div style={{ width: TIME_COL_W, flexShrink: 0 }} />
+      <div style={{ width: SPINE_COL_W, flexShrink: 0 }} />
+      <div style={{ flex: 1, paddingLeft: 4 }}>
+        <span className={`text-[9px] ${textSecondary}`} style={{ opacity: 0.5 }}>
+          {durLabel(overlapMin)} overlap
+        </span>
+      </div>
+    </div>
+  );
+}
+
 
 // ─── HGSessionCard ────────────────────────────────────────────────────────────
 
@@ -524,31 +542,6 @@ function timeToMinutes_pure(t) {
 }
 
 // ─── AllDayCard ───────────────────────────────────────────────────────────────
-
-function AllDayPill({ item, textPrimary, toggleComplete, toggleRoutineCompletion, onTouchStart, onTouchMove, onTouchEnd }) {
-  const isRoutine = item._kind === 'routine';
-  const accentHex = isRoutine ? '#0d9488' : (taskColorToHex(item.color) || '#3b82f6');
-  const completed = isRoutine ? !!item._completed : !!item.completed;
-  return (
-    <button
-      onClick={e => {
-        e.stopPropagation();
-        if (isRoutine) toggleRoutineCompletion?.(item._routineId);
-        else toggleComplete?.(item.id);
-      }}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      className={`flex items-center gap-1.5 flex-shrink-0 rounded-full px-2.5 ${completed ? 'opacity-50' : ''}`}
-      style={{ height: 28, border: `1px solid ${accentHex}55`, background: `${accentHex}20`, maxWidth: 150 }}
-    >
-      <div style={{ width: 6, height: 6, borderRadius: '50%', background: accentHex, flexShrink: 0 }} />
-      <span className={`text-xs font-medium truncate ${completed ? 'line-through' : ''} ${textPrimary}`}>
-        {renderTitle(item.title || item.name || '')}
-      </span>
-    </button>
-  );
-}
 
 function AllDayCard({ item, accentHex, darkMode, textPrimary, toggleComplete }) {
   return (
@@ -969,23 +962,50 @@ const MobileListView = () => {
     const items = visibleItems;
     if (items.length === 0) return segs;
 
-    // Start time of first item (or nowMin for today)
     let cursor = isToday ? Math.min(nowMin, timeToMinutes(items[0]?.startTime ?? '00:00')) : timeToMinutes(items[0]?.startTime ?? '00:00');
+    let pendingMultiRoutine = null;
+
+    const flushMultiRoutine = () => {
+      if (!pendingMultiRoutine) return;
+      const { startMin, items: rItems } = pendingMultiRoutine;
+      const endMin = rItems.reduce((max, r) => Math.max(max, startMin + (r.duration || 30)), startMin);
+      segs.push({ type: 'multi-routine', id: `mr-${startMin}`, startMin, items: rItems });
+      cursor = Math.max(cursor, endMin);
+      pendingMultiRoutine = null;
+    };
 
     items.forEach((item, idx) => {
       const startMin = timeToMinutes(item.startTime);
       const durMin   = item.duration || 30;
       const endMin   = startMin + durMin;
 
-      // Gap before this item
+      // Same-time routine: accumulate into multi-routine group
+      if (item._kind === 'routine' && pendingMultiRoutine && startMin === pendingMultiRoutine.startMin) {
+        pendingMultiRoutine.items.push(item);
+        return;
+      }
+
+      // Flush any pending multi-routine group before processing this item
+      flushMultiRoutine();
+
       const gapMin = startMin - cursor;
       if (gapMin >= 5) {
         segs.push({ type: 'gap', id: `gap-${idx}`, fromMin: cursor, toMin: startMin });
+      } else if (gapMin < 0) {
+        const overlapMin = Math.round(-gapMin);
+        if (overlapMin >= 1) segs.push({ type: 'overlap', id: `overlap-${idx}`, overlapMin });
       }
 
-      segs.push({ type: 'item', id: item.id, item, startMin, endMin });
-      cursor = Math.max(cursor, endMin);
+      if (item._kind === 'routine') {
+        pendingMultiRoutine = { startMin, items: [item] };
+      } else {
+        segs.push({ type: 'item', id: item.id, item, startMin, endMin });
+        cursor = Math.max(cursor, endMin);
+      }
     });
+
+    flushMultiRoutine();
+
 
     // Trailing gap so last item isn't at very bottom
     segs.push({ type: 'gap', id: 'gap-trail', fromMin: cursor, toMin: cursor + 30 });
@@ -1024,11 +1044,17 @@ const MobileListView = () => {
     segments.forEach(seg => {
       if (seg.type === 'gap') {
         y += gapHeight(seg.toMin - seg.fromMin);
+      } else if (seg.type === 'overlap') {
+        y += 12;
+      } else if (seg.type === 'multi-routine') {
+        const rowH = ROUTINE_H + 8;
+        ys.push(y + rowH / 2);
+        y += rowH;
       } else {
         const cardH = seg.item._kind === 'routine'    ? ROUTINE_H
                     : seg.item._kind === 'hg-session' ? HG_SESSION_H
                     : TASK_H;
-        const rowH = cardH + 8; // 4px marginTop + 4px marginBottom on card wrapper
+        const rowH = cardH + 8;
         ys.push(y + rowH / 2);
         y += rowH;
       }
@@ -1106,7 +1132,7 @@ const MobileListView = () => {
               <button
                 onClick={() => setAllDayRoutinesExpanded(v => !v)}
                 className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0
-                  ${darkMode ? 'bg-teal-900/50 text-teal-300 hover:bg-teal-800/50' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'}`}
+                  ${darkMode ? 'bg-teal-800 text-teal-200 hover:bg-teal-700' : 'bg-teal-100 text-teal-800 hover:bg-teal-200'}`}
               >
                 {allDayRoutines.length} routine{allDayRoutines.length !== 1 ? 's' : ''}
                 {allDayRoutinesExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
@@ -1116,7 +1142,7 @@ const MobileListView = () => {
               <button
                 onClick={() => setAllDayTasksExpanded(v => !v)}
                 className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0
-                  ${darkMode ? 'bg-white/10 text-white/60 hover:bg-white/15' : 'bg-black/[0.08] text-black/50 hover:bg-black/[0.12]'}`}
+                  ${darkMode ? 'bg-white/20 text-white/80 hover:bg-white/30' : 'bg-black/[0.12] text-black/70 hover:bg-black/[0.18]'}`}
               >
                 {allDayItems.length} all-day
                 {allDayTasksExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
@@ -1146,6 +1172,7 @@ const MobileListView = () => {
                       completed={!!routineCompletions[r.id]}
                       onToggle={safeToggleRoutine}
                       darkMode={darkMode}
+                      compact
                     />
                   </div>
                 );
@@ -1266,6 +1293,54 @@ const MobileListView = () => {
             />
           );
         }
+
+        if (seg.type === 'overlap') {
+          return <OverlapRow key={seg.id} overlapMin={seg.overlapMin} textSecondary={textSecondary} />;
+        }
+
+        if (seg.type === 'multi-routine') {
+          const { startMin, items: rItems } = seg;
+          const sc = spineColorAt(startMin);
+          const allCompleted = rItems.every(r => !!routineCompletions[r._routineId]);
+          return (
+            <div key={seg.id}>
+              <Row
+                timeLabel={formatTime(rItems[0].startTime)}
+                spineColour={sc}
+                spineStyle="solid"
+                marker={<SpineMarker kind="routine" colour="#14b8a6" completed={allCompleted} pageBg={pageBg} />}
+                cardHeight={ROUTINE_H}
+                accentHex="#14b8a6"
+                pageBg={pageBg}
+              >
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4, marginBottom: 4 }}>
+                  {rItems.map(item => {
+                    const isDragging = listDragItem?.id === item.id;
+                    return (
+                      <div
+                        key={item.id}
+                        data-item-startmin={startMin}
+                        data-item-dur={item.duration || 30}
+                        onTouchStart={e => handleListItemTouchStart(e, item)}
+                        onTouchMove={handleListItemTouchMove}
+                        onTouchEnd={handleListItemTouchEnd}
+                        style={{ opacity: isDragging ? 0.25 : 1, transition: 'opacity 0.15s' }}
+                      >
+                        <RoutineChip
+                          routine={item}
+                          completed={!!routineCompletions[item._routineId]}
+                          onToggle={safeToggleRoutine}
+                          darkMode={darkMode}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </Row>
+            </div>
+          );
+        }
+
 
         if (seg.type === 'item') {
           const { item, startMin } = seg;

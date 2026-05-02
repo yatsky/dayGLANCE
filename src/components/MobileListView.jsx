@@ -1089,7 +1089,12 @@ const MobileListView = () => {
         <div
           data-allday-drop="true"
           className={`border-b ${borderClass} px-3 py-2`}
-          style={{ outline: listDragTargetAllDay ? '2px solid #22c55e' : undefined, outlineOffset: '-2px' }}
+          style={{
+            outline: listDragTargetAllDay ? '2px solid #22c55e' : undefined,
+            outlineOffset: '-2px',
+            background: listDragTargetAllDay ? (darkMode ? '#14532d33' : '#dcfce7cc') : undefined,
+            transition: 'background 0.15s',
+          }}
         >
           {/* Count badges row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

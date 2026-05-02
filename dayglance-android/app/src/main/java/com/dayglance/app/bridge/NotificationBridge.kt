@@ -6,7 +6,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
+import android.view.View
 import android.webkit.JavascriptInterface
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.dayglance.app.DayGlanceApplication
 import com.dayglance.app.MainActivity
@@ -351,6 +354,26 @@ class NotificationBridge(private val context: Context) {
             else         -> "Focus"
         }
 
+        // Use a RemoteViews Chronometer with android:countDown="true" set in XML.
+        // This sets the base directly via SystemClock.elapsedRealtime(), bypassing
+        // NotificationCompat's setChronometerCountDown which is ignored on some OEMs.
+        val views = RemoteViews(context.packageName, R.layout.notification_focus_timer)
+        if (isPaused) {
+            val mm = remainingSeconds / 60
+            val ss = remainingSeconds % 60
+            views.setTextViewText(R.id.notif_status, "Paused")
+            views.setTextViewText(R.id.notif_paused_time, "%02d:%02d".format(mm, ss))
+            views.setViewVisibility(R.id.notif_chronometer, View.GONE)
+            views.setViewVisibility(R.id.notif_paused_time, View.VISIBLE)
+        } else {
+            val base = SystemClock.elapsedRealtime() + remainingSeconds * 1000L
+            android.util.Log.d("DayGlanceFocus", "  elapsedRealtime=${SystemClock.elapsedRealtime()} base=$base remainingMs=${remainingSeconds * 1000L}")
+            views.setTextViewText(R.id.notif_status, "In progress")
+            views.setChronometer(R.id.notif_chronometer, base, null, true)
+            views.setViewVisibility(R.id.notif_chronometer, View.VISIBLE)
+            views.setViewVisibility(R.id.notif_paused_time, View.GONE)
+        }
+
         val builder = NotificationCompat.Builder(context, DayGlanceApplication.CHANNEL_FOCUS)
             .setSmallIcon(R.drawable.ic_notification)
             .setSubText("Focus Mode")
@@ -360,27 +383,16 @@ class NotificationBridge(private val context: Context) {
             .setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(tapPendingIntent())
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomContentView(views)
 
         if (isPaused) {
-            val mm = remainingSeconds / 60
-            val ss = remainingSeconds % 60
-            builder
-                .setContentText("%02d:%02d remaining · Paused".format(mm, ss))
-                .addAction(0, "Resume", focusActionPendingIntent(
-                    NotificationActionReceiver.ACTION_FOCUS_RESUME, FOCUS_RESUME_REQUEST))
+            builder.addAction(0, "Resume", focusActionPendingIntent(
+                NotificationActionReceiver.ACTION_FOCUS_RESUME, FOCUS_RESUME_REQUEST))
         } else {
-            val now = System.currentTimeMillis()
-            val endAtMillis = now + remainingSeconds * 1000L
-            android.util.Log.d("DayGlanceFocus", "  now=$now endAtMillis=$endAtMillis deltaMs=${endAtMillis - now} (should equal remainingSeconds*1000=${remainingSeconds * 1000L})")
-            builder
-                .setWhen(endAtMillis)
-                .setUsesChronometer(true)
-                .setChronometerCountDown(true)
-                .setContentText("In progress")
-                .addAction(0, "Pause", focusActionPendingIntent(
-                    NotificationActionReceiver.ACTION_FOCUS_PAUSE, FOCUS_PAUSE_REQUEST))
+            builder.addAction(0, "Pause", focusActionPendingIntent(
+                NotificationActionReceiver.ACTION_FOCUS_PAUSE, FOCUS_PAUSE_REQUEST))
         }
-
         builder.addAction(0, "Stop", focusActionPendingIntent(
             NotificationActionReceiver.ACTION_FOCUS_STOP, FOCUS_STOP_REQUEST))
 

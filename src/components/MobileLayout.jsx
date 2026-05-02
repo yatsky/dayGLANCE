@@ -32,6 +32,8 @@ import MobileTimeGrid from './MobileTimeGrid.jsx';
 import MobileAllDaySection from './MobileAllDaySection.jsx';
 import MobileBottomSheets from './MobileBottomSheets.jsx';
 import MobileGlanceSection from './MobileGlanceSection.jsx';
+import MobileViewToggle from './MobileViewToggle.jsx';
+import MobileListView from './MobileListView.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
@@ -73,6 +75,7 @@ const MobileLayout = () => {
     hours, firstHour,
     tabletActiveTab, setTabletActiveTab,
     mobileActiveTab, setMobileActiveTab,
+    mobileViewMode, setMobileViewMode,
     mobileWelcomeStep, setMobileWelcomeStep,
     desktopWelcomeStep, setDesktopWelcomeStep,
     showMonthView, setShowMonthView,
@@ -699,9 +702,10 @@ const MobileLayout = () => {
                   })()}
                   <div className={`flex border-b ${borderClass} ${mobileDragPreviewTime === 'all-day' ? 'ring-2 ring-inset ring-blue-500' : ''}`}>
                     <div className={`w-12 flex-shrink-0 border-r ${borderClass} ${mobileDragPreviewTime === 'all-day' ? 'flex items-center justify-center' : ''}`}>
-                      {mobileDragPreviewTime === 'all-day' && (
-                        <span className="text-[9px] font-bold text-blue-500">ALL DAY</span>
-                      )}
+                      {mobileDragPreviewTime === 'all-day'
+                        ? <span className="text-[9px] font-bold text-blue-500">ALL DAY</span>
+                        : <MobileViewToggle />
+                      }
                     </div>
                     {visibleDates.map((date, idx) => {
                       const isDateToday = dateToString(date) === dateToString(new Date());
@@ -751,11 +755,11 @@ const MobileLayout = () => {
                     })}
                   </div>
 
-                  <MobileAllDaySection />
+                  {mobileViewMode === 'grid' && <MobileAllDaySection />}
                   </div>{/* end sticky header group */}
 
-                  {/* Time grid */}
-                  <MobileTimeGrid />
+                  {mobileViewMode === 'grid' && <MobileTimeGrid />}
+                  {mobileViewMode === 'list' && <MobileListView />}
                 </div>
 
                 {/* Mobile notes panel overlay for timeline tasks (including deadline tasks) */}

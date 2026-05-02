@@ -377,7 +377,7 @@ class NotificationBridge(private val context: Context) {
             .setSmallIcon(R.drawable.ic_notification)
             .setSubText("Focus Mode")
             .setContentTitle(phaseLabel)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

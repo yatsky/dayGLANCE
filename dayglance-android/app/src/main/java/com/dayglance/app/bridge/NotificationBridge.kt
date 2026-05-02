@@ -6,7 +6,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
+import android.view.View
 import android.webkit.JavascriptInterface
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.dayglance.app.DayGlanceApplication
 import com.dayglance.app.MainActivity
@@ -320,6 +323,114 @@ class NotificationBridge(private val context: Context) {
         } catch (_: Throwable) { }
     }
 
+    // ── Focus timer persistent notification ─────────────────────────────────
+
+    /**
+     * Posts or updates the persistent focus timer notification shown in the
+     * notification drawer while a Pomodoro / hyperGLANCE session is active.
+     *
+     * Uses Android's native chronometer (setWhen + setChronometerCountDown) so
+     * the countdown ticks independently of the JS layer — the WebView timer
+     * can be throttled when backgrounded, but this notification keeps ticking.
+     *
+     * [remainingSeconds] is used to compute setWhen(now + remainingMs), avoiding
+     * any JS→Java Long precision issues with epoch-millisecond values.
+     *
+     * When paused: shows static "MM:SS remaining · Paused" text.
+     *
+     * Action buttons (Pause/Resume, Stop) write a pendingFocusAction and bring
+     * the app to the foreground. JS reads it via getFocusPendingAction() polling.
+     *
+     * @param phase            "work" | "shortBreak" | "longBreak"
+     * @param remainingSeconds seconds left in the current phase
+     * @param isPaused         true while the timer is paused
+     * @param cycleCount       completed work cycles (0-based; used to show e.g. "1/4")
+     */
+    fun showFocusTimerNotification(phase: String, remainingSeconds: Int, isPaused: Boolean, cycleCount: Int) {
+        val phaseLabel = when (phase) {
+            "shortBreak" -> "Short Break"
+            "longBreak"  -> "Long Break"
+            else         -> "Work"
+        }
+        val cycleInRound = (cycleCount % 4) + 1
+        val statusText = "${if (isPaused) "Paused" else "In Progress"} · $phaseLabel · $cycleInRound/4"
+
+        val views = RemoteViews(context.packageName, R.layout.notification_focus_timer)
+        if (isPaused) {
+            val mm = remainingSeconds / 60
+            val ss = remainingSeconds % 60
+            views.setTextViewText(R.id.notif_paused_time, "%02d:%02d".format(mm, ss))
+            views.setViewVisibility(R.id.notif_chronometer, View.GONE)
+            views.setViewVisibility(R.id.notif_paused_time, View.VISIBLE)
+        } else {
+            val base = SystemClock.elapsedRealtime() + remainingSeconds * 1000L
+            // setBoolean calls Chronometer.setCountDown(true) in the remote process —
+            // the XML android:countDown attribute may not survive RemoteViews inflation.
+            views.setBoolean(R.id.notif_chronometer, "setCountDown", true)
+            views.setChronometer(R.id.notif_chronometer, base, null, true)
+            views.setViewVisibility(R.id.notif_chronometer, View.VISIBLE)
+            views.setViewVisibility(R.id.notif_paused_time, View.GONE)
+        }
+        views.setTextViewText(R.id.notif_status, statusText)
+
+        val builder = NotificationCompat.Builder(context, DayGlanceApplication.CHANNEL_FOCUS)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setSubText("Focus Mode")
+            .setContentTitle(phaseLabel)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setContentIntent(tapPendingIntent())
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomContentView(views)
+
+        if (isPaused) {
+            builder.addAction(0, "Resume", focusActionPendingIntent(
+                NotificationActionReceiver.ACTION_FOCUS_RESUME, FOCUS_RESUME_REQUEST))
+        } else {
+            builder.addAction(0, "Pause", focusActionPendingIntent(
+                NotificationActionReceiver.ACTION_FOCUS_PAUSE, FOCUS_PAUSE_REQUEST))
+        }
+        builder.addAction(0, "Stop", focusActionPendingIntent(
+            NotificationActionReceiver.ACTION_FOCUS_STOP, FOCUS_STOP_REQUEST))
+
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(NOTIF_ID_FOCUS_TIMER, builder.build())
+    }
+
+    /** Cancels the focus timer notification (called when the session ends or is dismissed). */
+    fun dismissFocusTimerNotification() {
+        try {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(NOTIF_ID_FOCUS_TIMER)
+        } catch (_: Throwable) { }
+    }
+
+    /**
+     * Returns and clears any pending focus action written by a notification
+     * button tap ("focus-pause" | "focus-resume" | "focus-stop"), or "" if none.
+     *
+     * Called by JS polling every ~500 ms while a focus session is active so that
+     * notification button taps are picked up even when the app is already in the
+     * foreground (visibilitychange doesn't fire in that case).
+     */
+    fun getFocusPendingAction(): String {
+        val action = dataStore.pendingFocusAction ?: return ""
+        dataStore.pendingFocusAction = null
+        return action
+    }
+
+    private fun focusActionPendingIntent(action: String, requestCode: Int): PendingIntent {
+        val intent = Intent(context, NotificationActionReceiver::class.java).apply {
+            this.action = action
+        }
+        return PendingIntent.getBroadcast(
+            context, requestCode, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
     /** Cancels the Up Next persistent notification (e.g. when no tasks remain today). */
     fun cancelUpNextNotification() {
         try {
@@ -348,5 +459,10 @@ class NotificationBridge(private val context: Context) {
 
     companion object {
         private const val NOTIF_ID_UP_NEXT = 9001
+        private const val NOTIF_ID_FOCUS_TIMER = 9002
+
+        private const val FOCUS_PAUSE_REQUEST = 9010
+        private const val FOCUS_RESUME_REQUEST = 9011
+        private const val FOCUS_STOP_REQUEST = 9012
     }
 }

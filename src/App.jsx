@@ -248,6 +248,15 @@ const DayPlanner = () => {
     const saved = localStorage.getItem('day-planner-day-view-mode');
     return saved ? JSON.parse(saved) : 'calendar-day';
   });
+  const [mobileViewMode, setMobileViewMode] = useState(() => {
+    const saved = localStorage.getItem('day-planner-mobile-view-mode');
+    return saved ? JSON.parse(saved) : 'grid';
+  });
+  const [glancePage, setGlancePage] = useState(() => {
+    const saved = localStorage.getItem('day-planner-glance-page');
+    return saved !== null ? parseInt(saved, 10) : 0;
+  });
+  const [goalsDashboardFocusId, setGoalsDashboardFocusId] = useState(null);
   const [weekViewMode, setWeekViewMode] = useState(() => {
     const saved = localStorage.getItem('day-planner-week-view-mode');
     return saved ? JSON.parse(saved) : 'strict';
@@ -962,6 +971,7 @@ const DayPlanner = () => {
     selectedDate,
     isMobile, isTablet,
     mobileActiveTab,
+    mobileViewMode,
     viewMode: effectiveViewMode,
   });
 
@@ -1061,6 +1071,12 @@ const DayPlanner = () => {
   useEffect(() => {
     localStorage.setItem('day-planner-week-view-mode', JSON.stringify(weekViewMode));
   }, [weekViewMode]);
+  useEffect(() => {
+    localStorage.setItem('day-planner-mobile-view-mode', JSON.stringify(mobileViewMode));
+  }, [mobileViewMode]);
+  useEffect(() => {
+    localStorage.setItem('day-planner-glance-page', String(glancePage));
+  }, [glancePage]);
 
   // Lock body/html scrolling to prevent scroll chaining (all devices incl. desktop PWA)
   useEffect(() => {
@@ -5507,6 +5523,12 @@ const DayPlanner = () => {
         setShowAddTask(true);
       } else if (pending.action === 'complete' && pending.taskId) {
         toggleComplete(pending.taskId);
+      } else if (pending.action === 'focus-pause') {
+        setFocusTimerRunning(false);
+      } else if (pending.action === 'focus-resume') {
+        setFocusTimerRunning(true);
+      } else if (pending.action === 'focus-stop') {
+        exitFocusModeRef.current?.(false);
       } else if (pending.action === 'snooze' && pending.taskId) {
         // Shift the task's start time forward by the snooze duration (default 15 min)
         const snoozeMin = pending.minutes || 15;
@@ -7146,6 +7168,8 @@ const DayPlanner = () => {
     // ── Layout / navigation ───────────────────────────────────────────────────
     tabletActiveTab, setTabletActiveTab,
     mobileActiveTab, setMobileActiveTab,
+    mobileViewMode, setMobileViewMode,
+    glancePage, setGlancePage,
     mobileWelcomeStep, setMobileWelcomeStep,
     desktopWelcomeStep, setDesktopWelcomeStep,
     showMonthView, setShowMonthView,
@@ -7573,6 +7597,7 @@ const DayPlanner = () => {
     goals, setGoals,
     projects, setProjects,
     showGoalsDashboard, setShowGoalsDashboard,
+    goalsDashboardFocusId, setGoalsDashboardFocusId,
     goalsProjectsEnabled, setGoalsProjectsEnabled,
     addGoal, updateGoal, deleteGoal,
     addProject, updateProject, deleteProject, moveProject,
@@ -8509,8 +8534,8 @@ const DayPlanner = () => {
         </div>
       )}
 
-      {/* Refocus timeline toast — all form factors */}
-      {timelineScrolledAway && effectiveViewMode === 'multi' && (
+      {/* Refocus timeline toast — all form factors except mobile list view */}
+      {timelineScrolledAway && effectiveViewMode === 'multi' && !(isMobile && mobileViewMode === 'list') && (
         <div className="fixed left-1/2 -translate-x-1/2 z-50 pointer-events-auto" style={{ bottom: isMobile ? 'calc(5rem + env(safe-area-inset-bottom, 0px))' : '1.5rem' }}>
           <button
             onClick={() => { setTimelineScrolledAway(false); scrollToCurrentHour(true); }}

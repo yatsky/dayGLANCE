@@ -42,6 +42,8 @@ const MobileSettingsPanel = () => {
     cardBg, borderClass, textPrimary, textSecondary, hoverBg, colors,
     formatTime,
     toggleSettingsSection,
+    mobileViewMode, setMobileViewMode,
+    glancePage, setGlancePage,
   } = useDayPlannerCtx();
   const {
     obsidianVaultHandleRef,
@@ -299,6 +301,61 @@ const MobileSettingsPanel = () => {
         <ChevronLeft size={18} />
         <span className="text-sm font-medium">Settings</span>
       </button>
+
+      {/* View default */}
+      <div className="space-y-2">
+        <div className={`font-medium ${textPrimary} flex items-center gap-2`}>
+          <LayoutGrid size={16} className={textSecondary} />
+          View default
+        </div>
+        <p className={`text-xs ${textSecondary}`}>Default view for the Timeline tab</p>
+        <div className="flex gap-2">
+          {['grid', 'list'].map(mode => (
+            <button
+              key={mode}
+              onClick={() => setMobileViewMode(mode)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                mobileViewMode === mode
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : `${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-stone-300'} ${textPrimary}`
+              }`}
+            >
+              {mode === 'grid' ? 'GRID' : 'LIST'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* GLANCE default */}
+      {habitsEnabled && goalsProjectsEnabled && (
+        <>
+          <hr className={borderClass} />
+          <div className="space-y-2">
+            <div className={`font-medium ${textPrimary} flex items-center gap-2`}>
+              <LayoutGrid size={16} className={textSecondary} />
+              GLANCE default
+            </div>
+            <p className={`text-xs ${textSecondary}`}>Starting page of the GLANCE habits/goals carousel</p>
+            <div className="flex gap-2">
+              {[{ value: 0, label: 'HABITS' }, { value: 1, label: 'GOALS' }].map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setGlancePage(value)}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    glancePage === value
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : `${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-stone-300'} ${textPrimary}`
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      <hr className={borderClass} />
 
       {/* Calendar Sync */}
       <div className="space-y-3">

@@ -69,6 +69,7 @@ class UpNextNotificationUpdater : BroadcastReceiver() {
 
             if (nextUpNext == null) {
                 bridge.cancelUpNextNotification()
+                SharedDataStore(context).lastUpNextBody = null
                 cancelAlarms(context)
                 return
             }
@@ -95,17 +96,26 @@ class UpNextNotificationUpdater : BroadcastReceiver() {
             // Task already ended — cancel and stop the chain.
             if (duration > 0 && nowMin >= endMin) {
                 bridge.cancelUpNextNotification()
+                SharedDataStore(context).lastUpNextBody = null
                 cancelAlarms(context)
                 return
             }
 
             val bodyText = buildBodyText(nowMin, startMin, duration, endMin, use24Hour, bodyPrefix)
-            bridge.updateUpNextNotification(
-                JSONObject().apply {
-                    put("title", title)
-                    put("bodyText", bodyText)
-                }.toString()
-            )
+
+            // Skip nm.notify() if the content hasn't changed — avoids repositioning the
+            // notification on every JS state update while a task is in progress.
+            val dataStore = SharedDataStore(context)
+            val cacheKey = "$title|$bodyText"
+            if (cacheKey != dataStore.lastUpNextBody) {
+                dataStore.lastUpNextBody = cacheKey
+                bridge.updateUpNextNotification(
+                    JSONObject().apply {
+                        put("title", title)
+                        put("bodyText", bodyText)
+                    }.toString()
+                )
+            }
             // Keep the UpNextWidget in sync on the same alarm ticks.
             try { com.dayglance.app.widget.UpNextWidget.requestUpdate(context) } catch (_: Throwable) { }
 

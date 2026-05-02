@@ -612,9 +612,10 @@ const MobileListView = () => {
   const [listDragTargetAllDay, setListDragTargetAllDay] = useState(false);
   const [allDayExpanded, setAllDayExpanded]       = useState(false);
 
-  const nowRowRef     = useRef(null);
-  const inboxPanelTop = useRef(0); // captured at open-time; used only for expanded panel
-  const listDragRef   = useRef({ active: false, item: null, startX: 0, startY: 0, timer: null, ignoreRoutineId: null, targetAllDay: false });
+  const nowRowRef       = useRef(null);
+  const inboxPanelTop   = useRef(0);
+  const listDragRef     = useRef({ active: false, item: null, startX: 0, startY: 0, timer: null, ignoreRoutineId: null, targetAllDay: false });
+  const lastDragEndMs   = useRef(0); // suppress stale click after drag completes
   const dragRef    = useRef({ active: false, task: null, startX: 0, startY: 0 });
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -823,12 +824,14 @@ const MobileListView = () => {
     ref.startY = t.clientY;
     ref.active = false;
     ref.ignoreRoutineId = item._kind === 'routine' ? item._routineId : null;
+    // All-day items aren't in a scrollable area so use a shorter hold time
+    const delay = item.isAllDay ? 180 : 400;
     ref.timer = setTimeout(() => {
       navigator.vibrate?.(10);
       ref.active = true;
       setListDragItem(item);
       setListDragGhost({ x: t.clientX, y: t.clientY });
-    }, 400);
+    }, delay);
   }, []);
 
   const handleListItemTouchMove = useCallback((e) => {
@@ -934,6 +937,7 @@ const MobileListView = () => {
         });
       }
       playUISound('pop');
+      lastDragEndMs.current = Date.now();
     }
 
     listDragRef.current = { active: false, item: null, startX: 0, startY: 0, timer: null, ignoreRoutineId: null, targetAllDay: false };
@@ -1068,22 +1072,28 @@ const MobileListView = () => {
     return taskColorToHex(item.color) || '#3b82f6';
   };
 
+  // Click guards — suppress the stale click event that fires after a drag completes
+  const safeToggleComplete = useCallback((id) => {
+    if (Date.now() - lastDragEndMs.current < 400) return;
+    toggleComplete(id);
+  }, [toggleComplete]);
+  const safeToggleRoutine = useCallback((id) => {
+    if (Date.now() - lastDragEndMs.current < 400) return;
+    toggleRoutineCompletion(id);
+  }, [toggleRoutineCompletion]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
       {/* ── All-day section — compact pill row ── */}
       {(allDayAll.length > 0 || listDragItem) && (
-        <div className={`border-b ${borderClass} px-3 py-2`}>
-          {/* Pill row + drop zone */}
-          <div
-            data-allday-drop="true"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              borderRadius: 6, padding: '2px 0',
-              outline: listDragTargetAllDay ? '2px solid #22c55e' : undefined,
-              transition: 'outline 0.1s',
-            }}
-          >
+        <div
+          data-allday-drop="true"
+          className={`border-b ${borderClass} px-3 py-2`}
+          style={{ outline: listDragTargetAllDay ? '2px solid #22c55e' : undefined, outlineOffset: '-2px' }}
+        >
+          {/* Pill row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className={`text-[9px] font-bold uppercase tracking-widest flex-shrink-0 ${textSecondary}`}
               style={{ marginRight: 2 }}>
               All day
@@ -1105,6 +1115,8 @@ const MobileListView = () => {
                       onTouchStart={e => handleListItemTouchStart(e, pill)}
                       onTouchMove={handleListItemTouchMove}
                       onTouchEnd={handleListItemTouchEnd}
+                      toggleComplete={safeToggleComplete}
+                      toggleRoutineCompletion={safeToggleRoutine}
                     />
                     {allDayRoutines.length > 1 && (
                       <button
@@ -1130,8 +1142,8 @@ const MobileListView = () => {
                     key={item.id}
                     item={pill}
                     textPrimary={textPrimary}
-                    toggleComplete={toggleComplete}
-                    toggleRoutineCompletion={toggleRoutineCompletion}
+                    toggleComplete={safeToggleComplete}
+                    toggleRoutineCompletion={safeToggleRoutine}
                     onTouchStart={e => handleListItemTouchStart(e, pill)}
                     onTouchMove={handleListItemTouchMove}
                     onTouchEnd={handleListItemTouchEnd}
@@ -1152,25 +1164,38 @@ const MobileListView = () => {
               )}
             </div>
           </div>
-          {/* Expanded full-card stack */}
+          {/* Expanded full-card stack — each card wrapped with drag handlers */}
           {allDayExpanded && (
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
               {allDayAll.map(item => {
-                if (item._kind === 'routine') {
-                  return (
-                    <div key={item.id} style={{ paddingLeft: 8 }}>
-                      <RoutineChip
-                        routine={item}
-                        completed={!!routineCompletions[item._routineId]}
-                        onToggle={toggleRoutineCompletion}
-                        darkMode={darkMode}
-                      />
-                    </div>
-                  );
-                }
-                const hex = taskColorToHex(item.color) || '#3b82f6';
+                const isDragging = listDragItem?.id === item.id;
                 return (
-                  <AllDayCard key={item.id} item={item} accentHex={hex} darkMode={darkMode} textPrimary={textPrimary} toggleComplete={toggleComplete} />
+                  <div
+                    key={item.id}
+                    onTouchStart={e => handleListItemTouchStart(e, item)}
+                    onTouchMove={handleListItemTouchMove}
+                    onTouchEnd={handleListItemTouchEnd}
+                    style={{ opacity: isDragging ? 0.25 : 1, transition: 'opacity 0.15s' }}
+                  >
+                    {item._kind === 'routine' ? (
+                      <div style={{ paddingLeft: 8 }}>
+                        <RoutineChip
+                          routine={item}
+                          completed={!!routineCompletions[item._routineId]}
+                          onToggle={safeToggleRoutine}
+                          darkMode={darkMode}
+                        />
+                      </div>
+                    ) : (
+                      <AllDayCard
+                        item={item}
+                        accentHex={taskColorToHex(item.color) || '#3b82f6'}
+                        darkMode={darkMode}
+                        textPrimary={textPrimary}
+                        toggleComplete={safeToggleComplete}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>

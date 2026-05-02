@@ -607,10 +607,11 @@ const MobileListView = () => {
   const [dragTargetMin, setDragTargetMin] = useState(null);
   const [dragBlocked, setDragBlocked] = useState(false);
   const [activeDragTask, setActiveDragTask] = useState(null);
-  const [listDragItem, setListDragItem]           = useState(null);
-  const [listDragGhost, setListDragGhost]         = useState({ x: 0, y: 0 });
+  const [listDragItem, setListDragItem]               = useState(null);
+  const [listDragGhost, setListDragGhost]             = useState({ x: 0, y: 0 });
   const [listDragTargetAllDay, setListDragTargetAllDay] = useState(false);
-  const [allDayExpanded, setAllDayExpanded]       = useState(false);
+  const [allDayRoutinesExpanded, setAllDayRoutinesExpanded] = useState(false);
+  const [allDayTasksExpanded, setAllDayTasksExpanded]       = useState(false);
 
   const nowRowRef       = useRef(null);
   const inboxPanelTop   = useRef(0);
@@ -824,14 +825,12 @@ const MobileListView = () => {
     ref.startY = t.clientY;
     ref.active = false;
     ref.ignoreRoutineId = item._kind === 'routine' ? item._routineId : null;
-    // All-day items aren't in a scrollable area so use a shorter hold time
-    const delay = item.isAllDay ? 180 : 400;
     ref.timer = setTimeout(() => {
       navigator.vibrate?.(10);
       ref.active = true;
       setListDragItem(item);
       setListDragGhost({ x: t.clientX, y: t.clientY });
-    }, delay);
+    }, 400);
   }, []);
 
   const handleListItemTouchMove = useCallback((e) => {
@@ -1085,89 +1084,54 @@ const MobileListView = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ WebkitUserSelect: 'none', userSelect: 'none' }}>
-      {/* ── All-day section — compact pill row ── */}
-      {(allDayAll.length > 0 || listDragItem) && (
+      {/* ── All-day section ── */}
+      {(allDayItems.length > 0 || allDayRoutines.length > 0 || listDragItem) && (
         <div
           data-allday-drop="true"
           className={`border-b ${borderClass} px-3 py-2`}
-          style={{ outline: listDragTargetAllDay ? '2px solid #22c55e' : undefined, outlineOffset: '-2px' }}
+          style={{
+            outline: listDragTargetAllDay ? '2px solid #22c55e' : undefined,
+            outlineOffset: '-2px',
+            background: listDragTargetAllDay ? (darkMode ? '#14532d33' : '#dcfce7cc') : undefined,
+            transition: 'background 0.15s',
+          }}
         >
-          {/* Pill row */}
+          {/* Count badges row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className={`text-[9px] font-bold uppercase tracking-widest flex-shrink-0 ${textSecondary}`}
               style={{ marginRight: 2 }}>
               All day
             </span>
-            {/* Pills — routines group + tasks group, each with own overflow; paddingRight reserves space for INBOX tab */}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 5, paddingRight: 38 }}>
-              {/* Routines — show 1, +N for the rest */}
-              {allDayRoutines.length > 0 && (() => {
-                const r = allDayRoutines[0];
-                const pill = { ...r, _kind: 'routine', _routineId: r.id, _completed: routineCompletions[r.id], id: `allday-routine-${r.id}`, title: r.name, isAllDay: true };
-                return (
-                  <>
-                    <AllDayPill
-                      key={pill.id}
-                      item={pill}
-                      textPrimary={textPrimary}
-                      toggleComplete={toggleComplete}
-                      toggleRoutineCompletion={toggleRoutineCompletion}
-                      onTouchStart={e => handleListItemTouchStart(e, pill)}
-                      onTouchMove={handleListItemTouchMove}
-                      onTouchEnd={handleListItemTouchEnd}
-                      toggleComplete={safeToggleComplete}
-                      toggleRoutineCompletion={safeToggleRoutine}
-                    />
-                    {allDayRoutines.length > 1 && (
-                      <button
-                        onClick={() => setAllDayExpanded(v => !v)}
-                        className={`flex-shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full
-                          ${darkMode ? 'bg-teal-900/60 text-teal-300 hover:bg-teal-800/60' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'}`}
-                      >
-                        +{allDayRoutines.length - 1}
-                      </button>
-                    )}
-                    {/* Divider between routines and tasks */}
-                    {allDayItems.length > 0 && (
-                      <div style={{ width: 1, height: 16, background: 'currentColor', opacity: 0.2, flexShrink: 0 }} />
-                    )}
-                  </>
-                );
-              })()}
-              {/* Tasks — show 3, +N for the rest */}
-              {allDayItems.slice(0, 3).map(item => {
-                const pill = { ...item, _kind: item.imported && !item.isTaskCalendar ? 'calendar-event' : 'task' };
-                return (
-                  <AllDayPill
-                    key={item.id}
-                    item={pill}
-                    textPrimary={textPrimary}
-                    toggleComplete={safeToggleComplete}
-                    toggleRoutineCompletion={safeToggleRoutine}
-                    onTouchStart={e => handleListItemTouchStart(e, pill)}
-                    onTouchMove={handleListItemTouchMove}
-                    onTouchEnd={handleListItemTouchEnd}
-                  />
-                );
-              })}
-              {allDayItems.length > 3 && (
-                <button
-                  onClick={() => setAllDayExpanded(v => !v)}
-                  className={`flex-shrink-0 text-[11px] font-semibold px-2.5 py-0.5 rounded-full
-                    ${darkMode ? 'bg-white/10 text-white/60 hover:bg-white/15' : 'bg-black/[0.08] text-black/50 hover:bg-black/[0.12]'}`}
-                >
-                  {allDayExpanded ? 'Less' : `+${allDayItems.length - 3}`}
-                </button>
-              )}
-              {allDayAll.length === 0 && listDragItem && (
-                <span className={`text-[10px] ${textSecondary} opacity-50`}>Drop here to make all-day</span>
-              )}
-            </div>
+            {allDayRoutines.length > 0 && (
+              <button
+                onClick={() => setAllDayRoutinesExpanded(v => !v)}
+                className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0
+                  ${darkMode ? 'bg-teal-900/50 text-teal-300 hover:bg-teal-800/50' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'}`}
+              >
+                {allDayRoutines.length} routine{allDayRoutines.length !== 1 ? 's' : ''}
+                {allDayRoutinesExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+              </button>
+            )}
+            {allDayItems.length > 0 && (
+              <button
+                onClick={() => setAllDayTasksExpanded(v => !v)}
+                className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0
+                  ${darkMode ? 'bg-white/10 text-white/60 hover:bg-white/15' : 'bg-black/[0.08] text-black/50 hover:bg-black/[0.12]'}`}
+              >
+                {allDayItems.length} all-day
+                {allDayTasksExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+              </button>
+            )}
+            {allDayItems.length === 0 && allDayRoutines.length === 0 && listDragItem && (
+              <span className={`text-[10px] ${textSecondary} opacity-50`}>Drop here to make all-day</span>
+            )}
           </div>
-          {/* Expanded full-card stack — each card wrapped with drag handlers */}
-          {allDayExpanded && (
+
+          {/* Expanded routines */}
+          {allDayRoutinesExpanded && (
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {allDayAll.map(item => {
+              {allDayRoutines.map(r => {
+                const item = { ...r, _kind: 'routine', _routineId: r.id, _completed: routineCompletions[r.id], id: `allday-routine-${r.id}`, title: r.name, isAllDay: true };
                 const isDragging = listDragItem?.id === item.id;
                 return (
                   <div
@@ -1175,26 +1139,41 @@ const MobileListView = () => {
                     onTouchStart={e => handleListItemTouchStart(e, item)}
                     onTouchMove={handleListItemTouchMove}
                     onTouchEnd={handleListItemTouchEnd}
+                    style={{ opacity: isDragging ? 0.25 : 1, transition: 'opacity 0.15s', paddingLeft: 8 }}
+                  >
+                    <RoutineChip
+                      routine={r}
+                      completed={!!routineCompletions[r.id]}
+                      onToggle={safeToggleRoutine}
+                      darkMode={darkMode}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Expanded all-day tasks */}
+          {allDayTasksExpanded && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {allDayItems.map(item => {
+                const draggable = { ...item, _kind: item.imported && !item.isTaskCalendar ? 'calendar-event' : 'task' };
+                const isDragging = listDragItem?.id === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    onTouchStart={e => handleListItemTouchStart(e, draggable)}
+                    onTouchMove={handleListItemTouchMove}
+                    onTouchEnd={handleListItemTouchEnd}
                     style={{ opacity: isDragging ? 0.25 : 1, transition: 'opacity 0.15s' }}
                   >
-                    {item._kind === 'routine' ? (
-                      <div style={{ paddingLeft: 8 }}>
-                        <RoutineChip
-                          routine={item}
-                          completed={!!routineCompletions[item._routineId]}
-                          onToggle={safeToggleRoutine}
-                          darkMode={darkMode}
-                        />
-                      </div>
-                    ) : (
-                      <AllDayCard
-                        item={item}
-                        accentHex={taskColorToHex(item.color) || '#3b82f6'}
-                        darkMode={darkMode}
-                        textPrimary={textPrimary}
-                        toggleComplete={safeToggleComplete}
-                      />
-                    )}
+                    <AllDayCard
+                      item={item}
+                      accentHex={taskColorToHex(item.color) || '#3b82f6'}
+                      darkMode={darkMode}
+                      textPrimary={textPrimary}
+                      toggleComplete={safeToggleComplete}
+                    />
                   </div>
                 );
               })}

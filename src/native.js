@@ -455,10 +455,10 @@ export const nativeRequestDndPermission = () => {
  * @param remainingSeconds seconds remaining in the current phase
  * @param isPaused         true while the timer is paused
  */
-export const nativeShowFocusTimerNotification = (phase, remainingSeconds, isPaused) => {
+export const nativeShowFocusTimerNotification = (phase, remainingSeconds, isPaused, cycleCount) => {
   const bridge = nativeBridge();
   if (!bridge?.showFocusTimerNotification) return;
-  bridge.showFocusTimerNotification(phase, remainingSeconds, isPaused);
+  bridge.showFocusTimerNotification(phase, remainingSeconds, isPaused, cycleCount);
 };
 
 /** Cancels the focus timer notification. Call when the session ends or is dismissed. */

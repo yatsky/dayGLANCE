@@ -68,7 +68,7 @@ const useFocusMode = () => {
       nativeDismissFocusTimerNotification();
       return;
     }
-    nativeShowFocusTimerNotification(focusPhase, focusTimerSecondsRef.current, !focusTimerRunning);
+    nativeShowFocusTimerNotification(focusPhase, focusTimerSecondsRef.current, !focusTimerRunning, focusCycleCount);
   }, [showFocusMode, focusTimerRunning, focusPhase, focusShowSettings, focusShowStats]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Poll for notification button actions while a focus session is active.

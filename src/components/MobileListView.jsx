@@ -843,6 +843,15 @@ const MobileListView = () => {
   // Stop auto-scroll if component unmounts mid-drag
   useEffect(() => () => stopAutoScroll(), [stopAutoScroll]);
 
+  // Block native scroll during active list-item drag so the ghost and drop
+  // targets stay stable. Auto-scroll handles reaching off-screen targets.
+  useEffect(() => {
+    const handler = (e) => {
+      if (listDragRef.current.active) e.preventDefault();
+    };
+    document.addEventListener('touchmove', handler, { passive: false });
+    return () => document.removeEventListener('touchmove', handler);
+  }, []);
 
   // ── List-item drag handlers ────────────────────────────────────────────────
   const handleListItemTouchStart = useCallback((e, item) => {
@@ -894,9 +903,13 @@ const MobileListView = () => {
       const frac    = Math.max(0, Math.min(1, (t.clientY - rect.top) / rect.height));
       const rawMin  = fromMin + frac * (toMin - fromMin);
       const durMin  = state.item.duration || 30;
-      const snapped = getSnapMin(rawMin, durMin, state.ignoreRoutineId);
+      const isDraggingRoutine = state.item._kind === 'routine';
+      // Routines can overlap other routines — skip snap-away and conflict check
+      const snapped = isDraggingRoutine
+        ? Math.round(rawMin / 15) * 15
+        : getSnapMin(rawMin, durMin, state.ignoreRoutineId);
       setDragTargetMin(snapped);
-      setDragBlocked(isBlockedByRoutine(snapped, durMin, state.ignoreRoutineId));
+      setDragBlocked(!isDraggingRoutine && isBlockedByRoutine(snapped, durMin, state.ignoreRoutineId));
     } else {
       const itemEl = el?.closest('[data-item-startmin]');
       if (itemEl) {
@@ -904,9 +917,9 @@ const MobileListView = () => {
         setListDragTargetAllDay(false);
         const targetMin = parseInt(itemEl.dataset.itemStartmin, 10);
         const durMin = state.item.duration || 30;
-        const isRoutine = state.item._kind === 'routine';
+        const isDraggingRoutine = state.item._kind === 'routine';
         setDragTargetMin(targetMin);
-        setDragBlocked(isRoutine && isBlockedByRoutine(targetMin, durMin, state.ignoreRoutineId));
+        setDragBlocked(!isDraggingRoutine && isBlockedByRoutine(targetMin, durMin, state.ignoreRoutineId));
       } else {
         // Check all-day drop zone — only for non-allday tasks and routines
         const allDayEl = el?.closest('[data-allday-drop]');

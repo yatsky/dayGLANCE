@@ -174,6 +174,14 @@ class SharedDataStore(context: Context) {
         get() = prefs.getString(KEY_STEPS_CACHE, null)
         set(value) = prefs.edit { putString(KEY_STEPS_CACHE, value) }
 
+    /** Last body text posted to the Up Next notification; used to suppress redundant nm.notify() calls. */
+    var lastUpNextBody: String?
+        get() = prefs.getString(KEY_LAST_UP_NEXT_BODY, null)
+        set(value) = prefs.edit {
+            if (value != null) putString(KEY_LAST_UP_NEXT_BODY, value)
+            else remove(KEY_LAST_UP_NEXT_BODY)
+        }
+
     companion object {
         private const val PREFS_NAME = "dayglance_shared"
         private const val KEY_VAULT_PATH = "obsidian_vault_path"
@@ -192,6 +200,7 @@ class SharedDataStore(context: Context) {
         private const val KEY_PENDING_SHARE = "pending_share_text"
         private const val KEY_PENDING_FOCUS_ACTION = "pending_focus_action"
         private const val KEY_APP_DARK_MODE = "app_dark_mode"
+        private const val KEY_LAST_UP_NEXT_BODY = "last_up_next_body"
 
         const val DEFAULT_DAILY_NOTE_PATTERN = "yyyy-MM-dd"
         const val DEFAULT_NEW_NOTES_FOLDER = "dayGLANCE"

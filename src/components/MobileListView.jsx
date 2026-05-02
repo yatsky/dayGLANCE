@@ -1389,7 +1389,6 @@ const MobileListView = () => {
                   </Row>
                 );
               })}
-
             </div>
           );
         }

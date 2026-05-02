@@ -95,7 +95,7 @@ const HyperGlanceModeModal = () => {
       nativeDismissFocusTimerNotification();
       return;
     }
-    nativeShowFocusTimerNotification(hgTimerPhase, hgTimerSecondsRef.current, !hgTimerRunning);
+    nativeShowFocusTimerNotification(hgTimerPhase, hgTimerSecondsRef.current, !hgTimerRunning, hgCycleCount);
   }, [hgTimerRunning, hgTimerPhase, hgShowSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dismiss notification when this modal unmounts (session ended / exited).

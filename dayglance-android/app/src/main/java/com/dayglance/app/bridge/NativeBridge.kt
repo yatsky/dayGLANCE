@@ -209,8 +209,8 @@ class NativeBridge(
      * via getFocusPendingAction() polling every ~500 ms.
      */
     @JavascriptInterface
-    fun showFocusTimerNotification(phase: String, remainingSeconds: Int, isPaused: Boolean) =
-        notifications.showFocusTimerNotification(phase, remainingSeconds, isPaused)
+    fun showFocusTimerNotification(phase: String, remainingSeconds: Int, isPaused: Boolean, cycleCount: Int) =
+        notifications.showFocusTimerNotification(phase, remainingSeconds, isPaused, cycleCount)
 
     /** Cancels the focus timer notification. Call when the session ends or is dismissed. */
     @JavascriptInterface

@@ -29,3 +29,7 @@ dayglance-android/app/src/main/assets/web
 
 # Stream Deck pack output
 *.streamDeckPlugin
+
+# Local release signing secrets — never commit
+.env.release
+*.p12

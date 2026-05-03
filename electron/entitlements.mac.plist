@@ -2,8 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
+    <!-- Required by Electron for the V8 JIT compiler under Hardened Runtime -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
+    <!-- Required by Electron to load its own unsigned helper code -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- Outbound network access (CalDAV, AI APIs, WebSocket, etc.) -->
     <key>com.apple.security.network.client</key>
     <true/>
   </dict>

@@ -6,6 +6,10 @@
 // Ad-hoc signing (--sign -) does not require a certificate and is distinct from
 // App Store / notarized signing. It satisfies macOS code signature requirements
 // without being trusted by Gatekeeper's CA chain.
+//
+// When CSC_LINK is set, electron-builder handles real Developer ID signing and
+// the xattr/detritus cleanup still runs (it's harmless and prevents codesign
+// failures on CI), but the ad-hoc --sign - step is skipped.
 
 const { execSync } = require('child_process');
 const path = require('path');
@@ -25,6 +29,10 @@ exports.default = async function codesignAdHoc({ appOutDir, packager }) {
   execSync(`find ${JSON.stringify(appPath)} -name "._*" -delete`);
   console.log(`[codesign-ad-hoc] Clearing xattrs on ${appPath}`);
   execSync(`xattr -cr ${JSON.stringify(appPath)}`);
+  if (process.env.CSC_LINK) {
+    console.log('[codesign-ad-hoc] CSC_LINK set — skipping ad-hoc sign (electron-builder will use Developer ID).');
+    return;
+  }
   console.log(`[codesign-ad-hoc] Signing ${appPath}`);
   execSync(`codesign --sign - --deep --force ${JSON.stringify(appPath)}`);
 };

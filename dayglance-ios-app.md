@@ -6,6 +6,7 @@ This document describes the strategy and phased implementation plan for an iOS v
 
 - [Architecture approach](#architecture-approach)
 - [What transfers for free](#what-transfers-for-free)
+- [macOS ↔ iOS sync (iCloud)](#macos--ios-sync-icloud)
 - [Bridge parity: Android → iOS](#bridge-parity-android--ios)
 - [Feature delta: what changes on iOS](#feature-delta-what-changes-on-ios)
 - [iOS-exclusive features](#ios-exclusive-features)
@@ -56,6 +57,90 @@ The JS bridge communication differs slightly: Android uses synchronous `Javascri
 | WebDAV sync | Works via `URLSession` HTTP bridge |
 | TRMNL integration | No changes needed |
 | localStorage data model | WKWebView uses same Web Storage API |
+
+---
+
+## macOS ↔ iOS sync (iCloud)
+
+Both the macOS (Electron) and iOS apps can sync automatically via a shared iCloud ubiquity container — zero user configuration required beyond being signed into the same Apple ID on both devices. WebDAV remains available alongside iCloud for users who also sync with Android or other platforms.
+
+### Mechanism
+
+The app's data model lives in `localStorage` inside the webview. iCloud sync serialises this to a single JSON file in a shared iCloud container, using the same merge strategy as the existing `mergeSync.js` WebDAV engine (timestamp-per-item, last-write-wins per field).
+
+```
+┌──────────────────────────┐         ┌──────────────────────────┐
+│  macOS (Electron)        │         │  iOS (WKWebView shell)   │
+│                          │         │                          │
+│  Electron main process   │         │  CloudSyncBridge.swift   │
+│  icloud-sync.ts          │◄───────►│  NSMetadataQuery watch   │
+│  fs.watch on container   │         │  FileManager ubiquity    │
+│                          │  iCloud │                          │
+│  IPC: icloud:read/write  │  Drive  │  nativeGetCloudData()    │
+│  → renderer mergeSync    │         │  nativeSetCloudData()    │
+└──────────────────────────┘         └──────────────────────────┘
+              │                                   │
+              └──────────── iCloud container ─────┘
+                   iCloud.com.dayglance.app
+                   Documents/dayglance-data.json
+```
+
+### macOS side (Electron)
+
+Electron apps can access iCloud Drive once the app holds the correct entitlements:
+
+- `com.apple.developer.icloud-container-identifiers` → `["iCloud.com.dayglance.app"]`
+- `com.apple.developer.ubiquity-kvstore-identifier` → `$(TeamIdentifierPrefix)com.dayglance.app`
+
+The container path is predictable: `~/Library/Mobile Documents/iCloud~com~dayglance~app/Documents/dayglance-data.json`. A new `electron/icloud-sync.ts` module:
+
+1. Checks whether the path exists and iCloud Drive is available (the entitlement is present and the user is signed in).
+2. Reads the file on startup and sends the data to the renderer via `icloud:data` IPC.
+3. Watches the file with `fs.watch` for remote changes (iOS writing while the Mac app is open) and re-sends via IPC.
+4. Exposes an `icloud:write` IPC handler the renderer calls after any local mutation, writing the merged JSON back to the container file.
+
+`icloudSyncAvailable()` returns `false` gracefully if the entitlement is missing, iCloud is disabled, or the platform is not macOS — no error surfaces to the user.
+
+### iOS side (Swift)
+
+A new `CloudSyncBridge.swift` exposes two bridge calls:
+
+| JS call | Swift action |
+|---|---|
+| `nativeGetCloudData()` | Reads `dayglance-data.json` from the ubiquity container; returns JSON string or `null` |
+| `nativeSetCloudData(json)` | Writes JSON string to the ubiquity container; iCloud propagates to macOS automatically |
+| `nativeIsCloudSyncAvailable()` | Returns `true` if `ubiquityIdentityToken` is non-nil (user is signed into iCloud) |
+
+On app launch, `CloudSyncBridge` starts an `NSMetadataQuery` scoped to `NSMetadataQueryUbiquitousDocumentsScope` watching for changes to `dayglance-data.json`. When the query fires (macOS wrote a change), the bridge calls `evaluateJavaScript` on the webview to trigger a merge in the web layer — same path as WebDAV's `mergeSync.js` reconcile.
+
+### Merge strategy
+
+No new merge logic is needed. The existing `mergeSync.js` already handles the read-merge-write cycle. iCloud sync is just a new transport that calls into the same merge function:
+
+```
+readCloudData() → mergeSync.merge(local, remote) → writeCloudData(merged)
+```
+
+Conflicts (both sides wrote while offline) are resolved identically to WebDAV: most-recent `updatedAt` timestamp per item wins. The merged result is written back so both sides converge.
+
+### Coexistence with WebDAV
+
+iCloud and WebDAV sync are independent providers and can both be active:
+
+| Scenario | Behaviour |
+|---|---|
+| Apple-only (Mac + iPhone) | iCloud only — no config needed |
+| Cross-platform (+ Android) | WebDAV for Android; iCloud for Mac ↔ iPhone |
+| Both configured | iCloud syncs Apple devices continuously; WebDAV syncs on demand with Android/other |
+
+iCloud sync is enabled by default (if available) and requires no settings UI. WebDAV remains opt-in via the existing settings screen.
+
+### Entitlements + App Store requirements
+
+- iCloud capability must be enabled in the App Store Connect record for both the macOS and iOS apps.
+- The iCloud container (`iCloud.com.dayglance.app`) is registered once in the Apple Developer portal and shared by both apps.
+- The macOS Electron app's `entitlements.plist` (already used for notarization) gets the two iCloud keys added.
+- `PrivacyInfo.xcprivacy` (required for iOS 17+ App Store) must declare use of `NSPrivacyAccessedAPICategoryFileTimestamp` for the container file access.
 
 ---
 
@@ -255,13 +340,24 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - `NSAppTransportSecurity` → `NSAllowsArbitraryLoads: true` (or whitelist known WebDAV hosts)
 - Verify WebDAV sync end-to-end on iOS
 
-### Phase 7 — Audio recording
+### Phase 7 — iCloud sync (macOS ↔ iOS)
+
+- Register `iCloud.com.dayglance.app` container in Apple Developer portal
+- **iOS**: `CloudSyncBridge.swift` — `nativeGetCloudData()`, `nativeSetCloudData(json)`, `nativeIsCloudSyncAvailable()`; `NSMetadataQuery` watch for remote changes
+- **macOS (Electron)**: `electron/icloud-sync.ts` — file read/write at ubiquity container path; `fs.watch` for remote changes; `icloud:read` / `icloud:write` IPC handlers
+- Add iCloud entitlements to macOS `entitlements.plist` (`icloud-container-identifiers`, `ubiquity-kvstore-identifier`)
+- Wire renderer: on `icloud:data` IPC event, call `mergeSync.merge(local, remote)` and write merged result back
+- `nativeIsCloudSyncAvailable()` degrades gracefully (returns `false`) when iCloud is unavailable
+- Add `NSPrivacyAccessedAPICategoryFileTimestamp` to `PrivacyInfo.xcprivacy`
+- Enable iCloud capability in App Store Connect for both macOS and iOS app records
+
+### Phase 8 — Audio recording
 
 - `AudioBridge.swift`: `AVAudioRecorder` capturing to `.m4a` (AAC, 16kHz, 32kbps)
 - Returns same `data:audio/mp4;base64,...` string as Android
 - `NSMicrophoneUsageDescription` in Info.plist
 
-### Phase 8 — Home screen widgets (WidgetKit)
+### Phase 9 — Home screen widgets (WidgetKit)
 
 - New `DayGlanceWidget` WidgetKit extension target
 - App Group shared container replaces Android's `SharedDataStore`
@@ -272,7 +368,7 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - StandBy large-size variant (iOS 17+)
 - iOS 16+ interactive widget buttons (task complete, habit check-off) as a stretch goal
 
-### Phase 9 — iOS-exclusive features
+### Phase 10 — iOS-exclusive features
 
 - **Siri / App Intents**: "Add task", "Read agenda" intents (`AppIntent` framework)
 - **Live Activities**: Focus session countdown in Dynamic Island / Lock Screen (`ActivityKit`)
@@ -280,7 +376,7 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - **Share Extension**: Receive shared text → create task on next app open
 - **Haptics**: `nativeHaptic(type)` bridge call wired to `UIImpactFeedbackGenerator`
 
-### Phase 10 — Polish + App Store
+### Phase 11 — Polish + App Store
 
 - iPad layout (max-width constraint or two-column React view)
 - iPad Lock Screen widget (medium/large)
@@ -309,6 +405,22 @@ All existing `nativeBridge()` calls already degrade gracefully to `null` when th
 - **Haptics**: new feature, iOS-only initially
 - **Live Activities**: new feature, iOS-only
 - **Health extras** (HRV etc.): read optional fields from existing `nativeGetSleep` response
+- **iCloud sync**: three new bridge calls available on both iOS and macOS (Electron IPC):
+
+```js
+// New bridge calls for iCloud sync:
+// nativeIsCloudSyncAvailable() → boolean
+// nativeGetCloudData()         → JSON string | null
+// nativeSetCloudData(json)     → void
+
+// On iOS these go through CloudSyncBridge.swift.
+// On macOS they go through Electron IPC (icloud:available, icloud:read, icloud:write).
+// Both call into the existing mergeSync.merge() on the JS side.
+export const isCloudSyncAvailable = () =>
+  isNativeIOS()
+    ? nativeBridge('nativeIsCloudSyncAvailable') === true
+    : window.__electronIPC?.icloudAvailable ?? false;
+```
 
 ---
 
@@ -323,3 +435,7 @@ All existing `nativeBridge()` calls already degrade gracefully to `null` when th
 4. **App Store pricing**: Free with the same model as Android (sideload / direct APK) or paid? iOS has no sideload equivalent without AltStore/TrollStore complexity, so App Store is the practical path.
 
 5. **iPad as first-class target**: Is iPad support in scope for the initial release, or iPhone-first?
+
+6. **iCloud sync conflict window**: If both macOS and iOS are offline simultaneously and make different changes, the merge on reconnect resolves per-item by timestamp. Is last-write-wins per item acceptable, or do we need a richer conflict UI (e.g. "both versions" diff) for any data type?
+
+7. **iCloud sync phase timing**: iCloud sync touches both the macOS Electron app and the iOS shell simultaneously. Should Phase 7 be gated behind a working iOS Phase 1 shell, or developed and tested on macOS first (where the container path can be inspected directly in Finder)?

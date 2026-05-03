@@ -1919,6 +1919,7 @@ const DayPlanner = () => {
       const mergeVars = gatherTrmnlData({
         tasks,
         unscheduledTasks,
+        recurringTasks,
         selectedDate: today,
         use24HourClock: use24HourClock,
         habits,

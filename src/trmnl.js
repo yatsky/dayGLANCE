@@ -7,6 +7,8 @@
  * TRMNL docs: https://docs.usetrmnl.com/go/private-plugins/webhooks
  */
 
+import { getOccurrencesInRange } from './utils/recurrenceEngine.js';
+
 // ---------------------------------------------------------------------------
 // Data helpers
 // ---------------------------------------------------------------------------
@@ -55,6 +57,7 @@ const toMinutes = (t) => {
  * @param {Object} opts.habitLogs      - { "YYYY-MM-DD": { habitId: count } }
  * @param {string} opts.weatherSummary - (unused, kept for backward compat)
  * @param {Object} opts.dailyNotes     - { "YYYY-MM-DD": { text } }
+ * @param {Array}  opts.recurringTasks  - Recurring task templates
  * @param {Array}  opts.todayRoutines  - Today's routine chips
  * @param {boolean} opts.routinesEnabled - Whether routines feature is on
  * @returns {Object} merge_variables payload (kept under 2 KB for free-tier)
@@ -62,6 +65,7 @@ const toMinutes = (t) => {
 export function gatherTrmnlData({
   tasks = [],
   unscheduledTasks = [],
+  recurringTasks = [],
   selectedDate,
   use24HourClock = false,
   habits = [],
@@ -76,9 +80,29 @@ export function gatherTrmnlData({
   const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const nowMins = now.getHours() * 60 + now.getMinutes();
 
-  // Today's scheduled tasks, sorted by start time
-  const todayTasks = tasks
-    .filter((t) => t.date === today)
+  // Expand recurring task templates that fall on today
+  const recurringInstances = [];
+  for (const template of recurringTasks) {
+    if (template.isExample) continue;
+    const occs = getOccurrencesInRange(template, today, today);
+    if (occs.length === 0) continue;
+    const exception = template.exceptions?.[today];
+    const completed = (template.completedDates || []).includes(today);
+    recurringInstances.push({
+      id: `recurring-${template.id}-${today}`,
+      title: exception?.title ?? template.title,
+      startTime: exception?.startTime ?? template.startTime,
+      duration: exception?.duration ?? template.duration,
+      color: exception?.color ?? template.color,
+      completed,
+      isAllDay: exception?.isAllDay ?? template.isAllDay ?? false,
+      date: today,
+      isRecurring: true,
+    });
+  }
+
+  // Today's scheduled tasks (regular + recurring), sorted by start time
+  const todayTasks = [...tasks.filter((t) => t.date === today), ...recurringInstances]
     .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
   // Build compact task list (keep payload small)
@@ -119,8 +143,8 @@ export function gatherTrmnlData({
   // Next task
   const nextTask = upcoming[0] || null;
 
-  // Inbox count
-  const inboxCount = unscheduledTasks.filter((t) => !t.completed).length;
+  // Inbox count — standalone tasks only (exclude those tied to a project)
+  const inboxCount = unscheduledTasks.filter((t) => !t.completed && !t.projectId).length;
 
   // Habits summary
   const todayLogs = habitLogs[today] || {};

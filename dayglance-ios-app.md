@@ -217,14 +217,16 @@ All three widgets read from an **App Group shared container** (`UserDefaults(sui
 
 **Note**: iOS 17+ WidgetKit interactive widgets (buttons) make habit check-off or task complete directly from the widget feasible — same capability already on Android — as a follow-on to the initial static implementation.
 
-### iPad-specific layout
+### iPad layout (required at launch)
 
-The existing React UI is portrait-oriented and works well in the ~390pt mobile width. On iPad it will render at full width, which may look odd. Options:
+iPad is a day-one target. The existing React UI scales well and the `max-w-*` Tailwind constraints already handle wider viewports acceptably. Required work:
 
-1. **Minimum effort**: Lock to portrait on iPhone, allow all orientations on iPad but constrain the web content to a max-width (already handled by Tailwind's `max-w-*` classes if set).
-2. **Better**: Detect iPad in Swift, inject a `window.isIPad = true` flag, and optionally use a two-column layout in the React app.
+- `UIRequiresFullScreen = false` in Info.plist — iPad apps must support split view and slide-over or Apple will reject them
+- All orientations enabled on iPad (`UISupportedInterfaceOrientations~ipad`)
+- System keyboard shortcut overlay (iPadOS shows ⌘-key cheatsheet on long-press — no code needed, just ensure the app doesn't suppress it)
+- Swift injects `window.isIPad = true` flag at launch; web layer can use this for any layout adjustments if the default scaling looks off in practice
 
-iPad Lock Screen widgets (iPadOS 17+) have much more horizontal space than iPhone — the medium widget could show a full day agenda column, which would look great.
+iPad Lock Screen widgets (iPadOS 17+) have much more horizontal space than iPhone — the medium widget could show a full day agenda column, added in Phase 12.
 
 ---
 
@@ -298,10 +300,11 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 ### Phase 1 — Xcode project shell + WebView (Foundation)
 
 - Create `dayglance-ios/` Xcode project (Swift, SwiftUI app lifecycle)
-- `ContentView` hosts a `WKWebView` loading `./web/index.html` from the bundle
+- `ContentView` hosts a `WKWebView` loading requests via `WKURLSchemeHandler` (chosen over promise-wrapper approach: keeps all `native.js` call sites synchronous-looking with no changes)
 - `vite.config.ios.js` (clone of android config) outputting to `dayglance-ios/DayGlance/Resources/web/`
 - Build script: `npm run build:ios` → Vite build → copy assets → open Xcode
-- Status bar colour matching + portrait lock on iPhone + safe area insets
+- Status bar colour matching + safe area insets; portrait lock on iPhone, all orientations on iPad
+- iPad split view / multitasking support (`UIRequiresFullScreen = false`); system keyboard shortcut overlay
 - Bridge detection: inject `window.DayGlanceIOS = true` so `native.js` can distinguish iOS from Android
 - App icon, launch screen, bundle ID (`com.dayglance.app`)
 
@@ -357,7 +360,36 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - Returns same `data:audio/mp4;base64,...` string as Android
 - `NSMicrophoneUsageDescription` in Info.plist
 
-### Phase 9 — Home screen widgets (WidgetKit)
+### Phase 9 — Subscriptions (StoreKit 2)
+
+StoreKit 2 integration is required on both platforms and unlocks Universal Purchase — one subscription covers both iOS and macOS automatically via Apple's entitlement infrastructure.
+
+**App Store Connect setup (once, before any code)**
+- Register one auto-renewable subscription group: "dayGLANCE Pro"
+- Two products: `com.dayglance.app.pro.monthly` and `com.dayglance.app.pro.yearly`
+- Introductory offer: first period free or discounted (available to first-time subscribers automatically)
+- Founder offer: batch of **offer codes** generated in App Store Connect and distributed to early adopters — this is the correct mechanism for a date-gated discount since introductory offers are per-user, not date-gated
+- Enable Universal Purchase: link iOS and macOS apps in App Store Connect under the same bundle ID family
+
+**iOS (`StoreKitBridge.swift`)**
+- `nativeGetSubscriptionStatus()` → calls `Transaction.currentEntitlements` via StoreKit 2; returns `{ active: bool, productId: string, expiresAt: string }` JSON
+- `nativePurchase(productId)` → `Product.purchase()`; returns `{ success: bool, error: string? }` JSON
+- `nativeRestorePurchases()` → `AppStore.sync()`
+- `nativeGetProducts()` → fetches both products and their localised pricing
+- Transaction listener started at app launch to catch renewals and cross-device purchases pushed by Apple
+
+**macOS (Electron)**
+- StoreKit APIs are not available in Electron directly — use a lightweight Swift helper process (`dayglance-storekit-helper`) spawned by the Electron main process via IPC, or migrate the macOS app to an Electron + Swift hybrid for this feature only
+- Alternative (simpler): use the same `WKWebView`-based approach as iOS for the paywall screen only (a native `NSWindow` with WKWebView), deferring to StoreKit from there
+- Decision needed before Phase 9 implementation begins; the iOS side is straightforward regardless
+
+**Web layer (`src/subscription.js`)**
+- New module wrapping `nativeGetSubscriptionStatus()` / `nativePurchase()` / `nativeRestorePurchases()`
+- `useSubscription()` hook returns `{ isPro, loading, purchase, restore }`
+- Paywall UI component (shown when a Pro feature is accessed without an active subscription)
+- All gated features degrade gracefully in the web layer when `isPro` is false
+
+### Phase 10 — Home screen widgets (WidgetKit)
 
 - New `DayGlanceWidget` WidgetKit extension target
 - App Group shared container replaces Android's `SharedDataStore`
@@ -368,7 +400,7 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - StandBy large-size variant (iOS 17+)
 - iOS 16+ interactive widget buttons (task complete, habit check-off) as a stretch goal
 
-### Phase 10 — iOS-exclusive features
+### Phase 11 — iOS-exclusive features
 
 - **Siri / App Intents**: "Add task", "Read agenda" intents (`AppIntent` framework)
 - **Live Activities**: Focus session countdown in Dynamic Island / Lock Screen (`ActivityKit`)
@@ -376,13 +408,13 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - **Share Extension**: Receive shared text → create task on next app open
 - **Haptics**: `nativeHaptic(type)` bridge call wired to `UIImpactFeedbackGenerator`
 
-### Phase 11 — Polish + App Store
+### Phase 12 — Polish + App Store
 
-- iPad layout (max-width constraint or two-column React view)
-- iPad Lock Screen widget (medium/large)
-- App Store metadata, screenshots (iPhone 6.7", iPad Pro 12.9")
+- iPad Lock Screen widget (medium/large, iPadOS 17+)
+- App Store metadata, screenshots (iPhone 6.7", iPad 13")
 - Privacy manifest (`PrivacyInfo.xcprivacy`) — required for App Store since iOS 17
-- TestFlight beta
+- **macOS MAS sandbox audit**: test existing Electron app under MAS sandbox entitlements; fix any file-access, network, or API breakage before submitting macOS to the App Store alongside iOS
+- TestFlight beta (iOS + macOS — both platforms support TestFlight under MAS)
 
 ---
 
@@ -428,14 +460,18 @@ export const isCloudSyncAvailable = () =>
 
 1. **Obsidian local vaults**: Users with vaults not in iCloud Drive can't use the Obsidian bridge on iOS. Worth a warning in the settings screen, or an alternative (manual import/export of the daily note)?
 
-2. **WKWebView async bridge**: The cleanest approach for maintaining synchronous-looking JS calls is `WKURLSchemeHandler`. Worth evaluating vs. the promise-wrapper approach before Phase 1 commit.
+2. ~~**WKWebView async bridge**~~: **Resolved** — using `WKURLSchemeHandler` for synchronous-looking JS call sites.
 
 3. **TestFlight timing**: Should the iOS beta be gated behind the Android feature set reaching parity (Phases 1–7), or released earlier for testing with a subset of features?
 
-4. **App Store pricing**: Free with the same model as Android (sideload / direct APK) or paid? iOS has no sideload equivalent without AltStore/TrollStore complexity, so App Store is the practical path.
+4. ~~**App Store pricing**~~: **Resolved** — auto-renewable subscription (monthly + yearly). Founder discount via App Store Connect offer codes. Universal Purchase links macOS and iOS under one subscription.
 
-5. **iPad as first-class target**: Is iPad support in scope for the initial release, or iPhone-first?
+5. ~~**iPad as first-class target**~~: **Resolved** — iPad required at launch. Split view / multitasking support added to Phase 1.
 
 6. **iCloud sync conflict window**: If both macOS and iOS are offline simultaneously and make different changes, the merge on reconnect resolves per-item by timestamp. Is last-write-wins per item acceptable, or do we need a richer conflict UI (e.g. "both versions" diff) for any data type?
 
 7. **iCloud sync phase timing**: iCloud sync touches both the macOS Electron app and the iOS shell simultaneously. Should Phase 7 be gated behind a working iOS Phase 1 shell, or developed and tested on macOS first (where the container path can be inspected directly in Finder)?
+
+8. **StoreKit on macOS / Electron**: StoreKit 2 Swift APIs are not directly callable from Electron. Options are (a) a lightweight Swift helper process spawned by Electron, or (b) a native `NSWindow` + WKWebView for the paywall only, delegating to StoreKit from there. Which direction before Phase 9 begins?
+
+9. **macOS MAS sandbox**: The macOS Electron app has not been tested under App Sandbox entitlements. This is a parallel workstream to the iOS build — sandbox breakage in Obsidian file access, WebDAV, or other APIs needs to be found and fixed before the macOS App Store submission. When should this audit begin relative to the iOS phases?

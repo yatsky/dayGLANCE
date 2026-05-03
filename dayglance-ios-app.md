@@ -120,16 +120,17 @@ In `App.jsx`, the focus mode UI should gracefully degrade: hide the "Enable DND"
 
 ### Home screen widget
 
-Android's widget is a scrollable `ListView` backed by `RemoteViewsFactory`. WidgetKit on iOS does not support scrollable lists — widgets are static SwiftUI snapshots.
+Android ships three widget types: **Up Next**, **Goal**, and **Project**. The iOS equivalents mirror these using WidgetKit static SwiftUI snapshots (WidgetKit does not support scrollable lists).
 
-The iOS widget will be a **static summary widget** in two sizes:
+| Widget | Small (2×2) | Medium (2×4) | Large (4×4) |
+|---|---|---|---|
+| **Up Next** | Next task/event + time | Up to 5 upcoming items | Up to 10 upcoming items |
+| **Goal** | Goal name + progress ring | Goal name + progress bar + streak | Goal details + recent history |
+| **Project** | Project name + % complete | Project name + next 3 tasks | Project name + full task list |
 
-- **Small** (2×2): Next task/event + current time
-- **Medium** (2×4): Up to 5 agenda items as a list, no scrolling
+All three widgets read from an **App Group shared container** (`UserDefaults(suiteName: "group.com.dayglance.app")`), the iOS equivalent of Android's `SharedDataStore`. The web layer writes snapshot JSON via a `nativeUpdateWidgetSnapshot(type, json)` bridge call (Up Next, Goal, and Project each get their own snapshot key). A `BGAppRefreshTask` refreshes snapshots every 15–30 minutes, same as `WorkManager` on Android.
 
-The widget reads data from an **App Group shared container** (`UserDefaults(suiteName: "group.com.dayglance.app")`), which is the iOS equivalent of Android's `SharedDataStore`. A `BGAppRefreshTask` (Background Tasks framework) refreshes the snapshot every 15–30 minutes, same as `WorkManager` on Android.
-
-**Note**: iOS 17+ `WidgetKit` added interactive widgets with buttons — habit check-off or task complete directly from the widget is feasible as a follow-on.
+**Note**: iOS 17+ WidgetKit interactive widgets (buttons) make habit check-off or task complete directly from the widget feasible — same capability already on Android — as a follow-on to the initial static implementation.
 
 ### iPad-specific layout
 
@@ -260,15 +261,16 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - Returns same `data:audio/mp4;base64,...` string as Android
 - `NSMicrophoneUsageDescription` in Info.plist
 
-### Phase 8 — Home screen widget (WidgetKit)
+### Phase 8 — Home screen widgets (WidgetKit)
 
 - New `DayGlanceWidget` WidgetKit extension target
 - App Group shared container replaces Android's `SharedDataStore`
-- Swift code to write widget snapshot JSON from web layer via `nativeUpdateWidgetSnapshot(json)` bridge call
-- SwiftUI views for Small and Medium widget sizes
+- Three widget kinds matching Android: **Up Next**, **Goal**, **Project**
+- `nativeUpdateWidgetSnapshot(type, json)` bridge call — one call per widget kind
+- SwiftUI views for Small, Medium, and Large sizes per widget kind
 - `BGAppRefreshTask` for 15-minute background refresh
-- iOS 16+ interactive widget (task complete button) as a stretch goal
 - StandBy large-size variant (iOS 17+)
+- iOS 16+ interactive widget buttons (task complete, habit check-off) as a stretch goal
 
 ### Phase 9 — iOS-exclusive features
 

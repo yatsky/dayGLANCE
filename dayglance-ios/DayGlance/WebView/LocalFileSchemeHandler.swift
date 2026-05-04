@@ -11,7 +11,7 @@ final class LocalFileSchemeHandler: NSObject, WKURLSchemeHandler {
     func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
         guard let requestURL = urlSchemeTask.request.url,
               let resourceURL = Bundle.main.resourceURL else {
-            finish(urlSchemeTask, status: 500)
+            finish(urlSchemeTask)
             return
         }
 

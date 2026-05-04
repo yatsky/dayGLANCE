@@ -17,21 +17,22 @@ final class CalendarBridge {
     static let shared = CalendarBridge()
 
     private let store = EKEventStore()
-    private var authorized = false
 
     // MARK: - Authorization
 
     func requestAuthorization(completion: @escaping () -> Void) {
         if #available(iOS 17.0, *) {
-            store.requestFullAccessToEvents { [weak self] granted, _ in
-                self?.authorized = granted
-                completion()
-            }
+            store.requestFullAccessToEvents { _, _ in completion() }
         } else {
-            store.requestAccess(to: .event) { [weak self] granted, _ in
-                self?.authorized = granted
-                completion()
-            }
+            store.requestAccess(to: .event) { _, _ in completion() }
+        }
+    }
+
+    private var isAuthorized: Bool {
+        if #available(iOS 17.0, *) {
+            return EKEventStore.authorizationStatus(for: .event) == .fullAccess
+        } else {
+            return EKEventStore.authorizationStatus(for: .event) == .authorized
         }
     }
 
@@ -39,7 +40,7 @@ final class CalendarBridge {
     // Returns: [{"id":"...","name":"...","accountName":"...","color":"#rrggbb"}]
 
     func getCalendars() -> String {
-        guard authorized else { return "[]" }
+        guard isAuthorized else { return "[]" }
         let calendars = store.calendars(for: .event)
         let items = calendars.map { cal -> String in
             let id          = jsonEscape(cal.calendarIdentifier)
@@ -56,7 +57,7 @@ final class CalendarBridge {
     // All-day events whose span includes `date` are also included.
 
     func getEvents(date: String) -> String {
-        guard authorized, let day = parseDate(date) else { return "[]" }
+        guard isAuthorized, let day = parseDate(date) else { return "[]" }
 
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: day)
@@ -75,7 +76,7 @@ final class CalendarBridge {
     // Returns: {"success":true,"id":"..."} or {"success":false,"error":"..."}
 
     func createEvent(json eventJSON: String) -> String {
-        guard authorized else { return #"{"success":false,"error":"not authorized"}"# }
+        guard isAuthorized else { return #"{"success":false,"error":"not authorized"}"# }
         guard let dict = parseJSONObject(eventJSON) else {
             return #"{"success":false,"error":"invalid json"}"#
         }
@@ -97,7 +98,7 @@ final class CalendarBridge {
     // MARK: - updateEvent
 
     func updateEvent(json eventJSON: String) -> String {
-        guard authorized else { return #"{"success":false,"error":"not authorized"}"# }
+        guard isAuthorized else { return #"{"success":false,"error":"not authorized"}"# }
         guard let dict = parseJSONObject(eventJSON),
               let eventId = dict["id"] as? String else {
             return #"{"success":false,"error":"invalid json or missing id"}"#
@@ -122,7 +123,7 @@ final class CalendarBridge {
     // MARK: - deleteEvent
 
     func deleteEvent(eventId: String) -> String {
-        guard authorized else { return #"{"success":false}"# }
+        guard isAuthorized else { return #"{"success":false}"# }
         guard let event = store.event(withIdentifier: eventId) else {
             return #"{"success":false}"#
         }

@@ -29,6 +29,16 @@ struct WebView: UIViewRepresentable {
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
 
+        // Reload the page after permission dialogs close so the web app can
+        // re-fetch health and calendar data with fresh authorization.
+        NotificationCenter.default.addObserver(
+            forName: .dayGlanceReloadWebView,
+            object: nil,
+            queue: .main
+        ) { [weak webView] _ in
+            webView?.reload()
+        }
+
         // Three-slash URL: scheme=dg, empty host, path starts at /
         // Relative refs in index.html (./assets/…) resolve to dg:///assets/…
         webView.load(URLRequest(url: URL(string: "dg:///index.html")!))

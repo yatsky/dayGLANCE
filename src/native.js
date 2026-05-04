@@ -18,7 +18,19 @@
  * Returns true when running inside the DayGlance Android WebView.
  */
 export const isNativeAndroid = () =>
-  typeof window !== 'undefined' && !!window.DayGlanceNative;
+  typeof window !== 'undefined' && !!window.DayGlanceNative && !window.DayGlanceIOS;
+
+/**
+ * Returns true when running inside the DayGlance iOS WKWebView shell.
+ * Swift injects window.DayGlanceIOS = true at document start.
+ */
+export const isNativeIOS = () =>
+  typeof window !== 'undefined' && !!window.DayGlanceIOS;
+
+/**
+ * Returns true when running inside any native shell (Android or iOS).
+ */
+export const isNativeApp = () => isNativeAndroid() || isNativeIOS();
 
 /**
  * Returns the native bridge object (Health, Calendar, Notifications), or null when running as a PWA.
@@ -41,7 +53,7 @@ export const isNativeAndroid = () =>
  *     showNotification(title: string, body: string): void
  */
 export const nativeBridge = () =>
-  isNativeAndroid() ? window.DayGlanceNative : null;
+  (isNativeAndroid() || isNativeIOS()) ? window.DayGlanceNative : null;
 
 /**
  * Returns the Obsidian vault bridge object (Phase 4), or null when running as a PWA.

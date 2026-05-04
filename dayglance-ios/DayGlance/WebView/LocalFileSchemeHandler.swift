@@ -1,11 +1,11 @@
 import WebKit
 
-/// Serves the bundled React web app for the `local://` URL scheme.
+/// Serves the bundled React web app for the `dg://` URL scheme.
 ///
 /// The Vite build outputs to DayGlance/Resources/web/ which Xcode adds to the
 /// app bundle as a folder reference. Files are resolved relative to that folder:
-///   local://web/index.html  →  <Bundle>/web/index.html
-///   local://web/assets/main.js  →  <Bundle>/web/assets/main.js
+///   dg:///index.html        →  <Bundle>/web/index.html
+///   dg:///assets/main.js    →  <Bundle>/web/assets/main.js
 final class LocalFileSchemeHandler: NSObject, WKURLSchemeHandler {
 
     func webView(_ webView: WKWebView, start urlSchemeTask: any WKURLSchemeTask) {
@@ -22,7 +22,7 @@ final class LocalFileSchemeHandler: NSObject, WKURLSchemeHandler {
         let fileURL = resourceURL.appendingPathComponent("web").appendingPathComponent(relativePath)
 
         guard let data = try? Data(contentsOf: fileURL) else {
-            finish(urlSchemeTask, status: 404)
+            finish(urlSchemeTask)
             return
         }
 
@@ -42,12 +42,10 @@ final class LocalFileSchemeHandler: NSObject, WKURLSchemeHandler {
 
     // MARK: - Helpers
 
-    private func finish(_ task: any WKURLSchemeTask, status: Int) {
-        let url = task.request.url ?? URL(string: "about:blank")!
-        let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: nil, headerFields: nil)!
-        task.didReceive(response)
-        task.didReceive(Data())
-        task.didFinish()
+    private func finish(_ task: any WKURLSchemeTask) {
+        // Use didFailWithError for missing files — returning an HTTPURLResponse
+        // for a non-HTTP scheme causes WKWebView to emit WebKitErrorDomain code=102.
+        task.didFailWithError(URLError(.fileDoesNotExist))
     }
 
     private static func mimeType(for ext: String) -> String {

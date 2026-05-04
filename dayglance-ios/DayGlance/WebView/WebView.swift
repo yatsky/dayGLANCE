@@ -6,8 +6,8 @@ struct WebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
 
-        // Serve bundled web assets via local:// scheme
-        config.setURLSchemeHandler(LocalFileSchemeHandler(), forURLScheme: "local")
+        // Serve bundled web assets via dg:// scheme (custom, unambiguous)
+        config.setURLSchemeHandler(LocalFileSchemeHandler(), forURLScheme: "dg")
 
         // Handle all DayGlanceNative / DayGlanceObsidian bridge calls via dgbridge://
         config.setURLSchemeHandler(BridgeSchemeHandler(), forURLScheme: "dgbridge")
@@ -29,7 +29,9 @@ struct WebView: UIViewRepresentable {
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
 
-        webView.load(URLRequest(url: URL(string: "local://web/index.html")!))
+        // Three-slash URL: scheme=dg, empty host, path starts at /
+        // Relative refs in index.html (./assets/…) resolve to dg:///assets/…
+        webView.load(URLRequest(url: URL(string: "dg:///index.html")!))
         return webView
     }
 

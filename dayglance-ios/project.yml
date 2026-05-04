@@ -26,7 +26,6 @@ targets:
     resources:
       - path: DayGlance/Resources/web
         type: folder
-        optional: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.dayglance.app

@@ -23,9 +23,19 @@ targets:
       - path: DayGlance
         excludes:
           - Resources/web/**
-    resources:
-      - path: DayGlance/Resources/web
-        type: folder
+    postBuildScripts:
+      - name: Copy Web Assets
+        script: |
+          set -e
+          SRC="${SRCROOT}/DayGlance/Resources/web"
+          DST="${CODESIGNING_FOLDER_PATH}/web"
+          if [ -d "$SRC" ]; then
+              rm -rf "$DST"
+              cp -R "$SRC" "$DST"
+              echo "Copied web assets to ${DST}"
+          else
+              echo "warning: Web assets not found at ${SRC}. Run: npm run build:ios from the repo root."
+          fi
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.dayglance.app

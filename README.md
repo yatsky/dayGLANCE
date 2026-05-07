@@ -356,8 +356,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the app locally, run tests
 
 ### Where help is most wanted
 
-- **CalDAV write support** — Two-way calendar event sync (task sync is bidirectional; event sync is currently read-only import)
-- **iOS app** — A Capacitor or WKWebView wrapper equivalent to the Android app
 - **Translations / i18n** — The UI is English-only today
 - **Documentation** — Setup guides, video walkthroughs, integration how-tos
 

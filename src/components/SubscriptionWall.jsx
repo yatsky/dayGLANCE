@@ -60,7 +60,7 @@ export default function SubscriptionWall({ onSubscribeMonthly, onSubscribeAnnual
       {/* Founder badge */}
       <div className="mb-5 flex items-center gap-2 rounded-full bg-amber-500/15 border border-amber-500/30 px-4 py-1.5">
         <span className="text-amber-500 text-xs font-semibold tracking-wide uppercase">Founder pricing</span>
-        <span className={`text-xs ${sub}`}>· price will increase at launch</span>
+        <span className={`text-xs ${sub}`}>· thanks for supporting the app!</span>
       </div>
 
       {/* Headline */}

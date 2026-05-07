@@ -110,6 +110,9 @@ dependencies {
     // DocumentFile — Storage Access Framework wrapper for Obsidian vault file I/O
     implementation(libs.androidx.documentfile)
 
+    // Google Play Billing
+    implementation(libs.billing.ktx)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

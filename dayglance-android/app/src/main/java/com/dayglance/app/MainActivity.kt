@@ -33,6 +33,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.health.connect.client.PermissionController
 import androidx.webkit.WebViewAssetLoader
+import com.dayglance.app.billing.BillingManager
+import com.dayglance.app.billing.SubscriptionBridge
 import com.dayglance.app.bridge.NativeBridge
 import com.dayglance.app.bridge.ObsidianBridge
 import com.dayglance.app.data.HealthRepository
@@ -59,6 +61,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var obsidianBridge: ObsidianBridge
     private lateinit var healthRepository: HealthRepository
     private lateinit var dataStore: com.dayglance.app.data.SharedDataStore
+    private lateinit var billingManager: BillingManager
+    private lateinit var subscriptionBridge: SubscriptionBridge
 
     // Splash screen: held until both conditions are true:
     //   1. WebView has finished its first page load (webViewReady)
@@ -116,6 +120,9 @@ class MainActivity : AppCompatActivity() {
             ACTION_ADD_INBOX_TASK -> store.pendingAddInboxTask = true
             Intent.ACTION_SEND    -> storeShareIntent(intent, store)
         }
+
+        billingManager = BillingManager(this, dataStore)
+        subscriptionBridge = SubscriptionBridge(billingManager, dataStore)
 
         webView = binding.webView
         healthRepository = HealthRepository(this)
@@ -264,6 +271,8 @@ class MainActivity : AppCompatActivity() {
         webView.addJavascriptInterface(nativeBridge, "DayGlanceNative")
         // Expose Obsidian vault methods on the same interface name (separate object)
         webView.addJavascriptInterface(obsidianBridge, "DayGlanceObsidian")
+        // Expose subscription/billing methods — window.DayGlanceBilling
+        webView.addJavascriptInterface(subscriptionBridge, "DayGlanceBilling")
     }
 
     private fun requestRuntimePermissions() {
@@ -294,6 +303,18 @@ class MainActivity : AppCompatActivity() {
         if (permissions.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, permissions.toTypedArray(), RC_PERMISSIONS)
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        billingManager.activity = this
+        billingManager.connect()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        billingManager.activity = null
+        billingManager.disconnect()
     }
 
     override fun onResume() {

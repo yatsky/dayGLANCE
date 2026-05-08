@@ -20,8 +20,8 @@ android {
         applicationId = "com.dayglance.app"
         minSdk = 26  // Android 8.0 — required for Health Connect
         targetSdk = 35
-        versionCode = 56
-        versionName = "2.9"
+        versionCode = 60
+        versionName = "3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -74,6 +74,19 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("boolean", "BILLING_ENABLED", "true")
+        }
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("boolean", "BILLING_ENABLED", "false")
+        }
     }
 }
 
@@ -109,6 +122,9 @@ dependencies {
 
     // DocumentFile — Storage Access Framework wrapper for Obsidian vault file I/O
     implementation(libs.androidx.documentfile)
+
+    // Google Play Billing
+    implementation(libs.billing.ktx)
 
     // Testing
     testImplementation(libs.junit)

@@ -33,6 +33,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.health.connect.client.PermissionController
 import androidx.webkit.WebViewAssetLoader
+import com.dayglance.app.BuildConfig
+import com.dayglance.app.billing.BillingManager
+import com.dayglance.app.billing.SubscriptionBridge
 import com.dayglance.app.bridge.NativeBridge
 import com.dayglance.app.bridge.ObsidianBridge
 import com.dayglance.app.data.HealthRepository
@@ -59,14 +62,26 @@ class MainActivity : AppCompatActivity() {
     private lateinit var obsidianBridge: ObsidianBridge
     private lateinit var healthRepository: HealthRepository
     private lateinit var dataStore: com.dayglance.app.data.SharedDataStore
+    private lateinit var billingManager: BillingManager
+    private lateinit var subscriptionBridge: SubscriptionBridge
 
-    // Splash screen: held until both conditions are true:
+    // Stored so onResume() can re-enable it after the app returns from background.
+    // The callback sets isEnabled = false when the WebView has no back history, which
+    // lets the system handle that specific press. Without re-enabling it, the callback
+    // stays dark and back button does nothing on all subsequent resumes (Android 13+).
+    private lateinit var backCallback: OnBackPressedCallback
+
+    // Splash screen: held until all three conditions are true:
     //   1. WebView has finished its first page load (webViewReady)
     //   2. JS has signalled the app is interactive — i.e. the initial Obsidian
     //      sync (which blocks the JS thread) has completed (appReady).
     //      A fallback timer sets appReady after 10 s in case JS never calls back.
+    //   3. Billing client has completed its first queryPurchases() so the
+    //      subscription cache is current before the WebView reads it (billingReady).
+    //      A 3 s fallback ensures billing never extends the splash beyond the WebView.
     @Volatile private var webViewReady = false
     @Volatile private var appReady = false
+    @Volatile private var billingReady = false
 
     // Shown at most once per session so we don't nag the user repeatedly
     private var exactAlarmPromptShown = false
@@ -95,7 +110,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        splashScreen.setKeepOnScreenCondition { !webViewReady || !appReady }
+        splashScreen.setKeepOnScreenCondition { !webViewReady || !appReady || !billingReady }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -115,6 +130,20 @@ class MainActivity : AppCompatActivity() {
             ACTION_ADD_TASK       -> store.pendingAddTask = true
             ACTION_ADD_INBOX_TASK -> store.pendingAddInboxTask = true
             Intent.ACTION_SEND    -> storeShareIntent(intent, store)
+        }
+
+        billingManager = BillingManager(this, dataStore)
+        subscriptionBridge = SubscriptionBridge(billingManager, dataStore)
+
+        // Debug and github flavor builds skip billing entirely.
+        if (BuildConfig.DEBUG || !BuildConfig.BILLING_ENABLED) {
+            billingReady = true
+        } else if (dataStore.subscriptionActive) {
+            // Fast path: cache already confirms active — no need to wait for Play.
+            billingReady = true
+        } else {
+            billingManager.onPurchasesQueried = { billingReady = true }
+            Handler(Looper.getMainLooper()).postDelayed({ billingReady = true }, 3_000)
         }
 
         webView = binding.webView
@@ -145,7 +174,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+        backCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (webView.canGoBack()) {
                     webView.goBack()
@@ -154,7 +183,8 @@ class MainActivity : AppCompatActivity() {
                     onBackPressedDispatcher.onBackPressed()
                 }
             }
-        })
+        }
+        onBackPressedDispatcher.addCallback(this, backCallback)
 
         configureWebView()
         requestRuntimePermissions()
@@ -264,6 +294,8 @@ class MainActivity : AppCompatActivity() {
         webView.addJavascriptInterface(nativeBridge, "DayGlanceNative")
         // Expose Obsidian vault methods on the same interface name (separate object)
         webView.addJavascriptInterface(obsidianBridge, "DayGlanceObsidian")
+        // Expose subscription/billing methods — window.DayGlanceBilling
+        webView.addJavascriptInterface(subscriptionBridge, "DayGlanceBilling")
     }
 
     private fun requestRuntimePermissions() {
@@ -296,8 +328,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        if (BuildConfig.BILLING_ENABLED && !BuildConfig.DEBUG) {
+            billingManager.activity = this
+            billingManager.connect()
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (BuildConfig.BILLING_ENABLED && !BuildConfig.DEBUG) {
+            billingManager.activity = null
+            billingManager.disconnect()
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        // Re-enable so back button works after returning from background or SettingsActivity.
+        // The callback disables itself when the WebView has no back history; without this
+        // reset it stays disabled for the rest of the session (Android 13+ behaviour).
+        backCallback.isEnabled = true
         applyStatusBarAppearance()
         maybePromptExactAlarmPermission()
     }

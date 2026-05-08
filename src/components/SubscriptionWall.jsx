@@ -54,7 +54,6 @@ export default function SubscriptionWall({ onSubscribeAnnual, onSubscribeLifetim
           className={`h-10 ${dark ? '' : 'invert'}`}
           onError={e => { e.target.style.display = 'none'; }}
         />
-        <span className={`text-2xl font-bold tracking-tight ${text}`}>dayGLANCE</span>
       </div>
 
       {/* Founder badge */}
@@ -65,10 +64,10 @@ export default function SubscriptionWall({ onSubscribeAnnual, onSubscribeLifetim
 
       {/* Headline */}
       <h1 className={`text-xl font-semibold text-center mb-2 ${text}`}>
-        Your free trial has ended
+        Unlock dayGLANCE Pro
       </h1>
       <p className={`text-sm text-center mb-7 max-w-xs ${sub}`}>
-        Subscribe to keep using dayGLANCE. Your data is safe and waiting.
+        Choose a plan to keep using dayGLANCE. Your data is safe and waiting.
       </p>
 
       {/* Plan cards */}

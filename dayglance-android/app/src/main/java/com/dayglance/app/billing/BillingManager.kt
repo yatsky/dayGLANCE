@@ -41,6 +41,9 @@ class BillingManager(
 
     var activity: Activity? = null
 
+    /** Called once after the first queryPurchases() completes. Used to signal the splash screen. */
+    var onPurchasesQueried: (() -> Unit)? = null
+
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val purchasesUpdatedListener = PurchasesUpdatedListener { result, purchases ->
@@ -157,6 +160,8 @@ class BillingManager(
                 dataStore.subscriptionProductId = null
                 dataStore.subscriptionToken = null
             }
+            onPurchasesQueried?.invoke()
+            onPurchasesQueried = null
         }
     }
 

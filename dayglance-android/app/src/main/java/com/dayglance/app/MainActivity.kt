@@ -33,6 +33,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.health.connect.client.PermissionController
 import androidx.webkit.WebViewAssetLoader
+import com.dayglance.app.BuildConfig
 import com.dayglance.app.billing.BillingManager
 import com.dayglance.app.billing.SubscriptionBridge
 import com.dayglance.app.bridge.NativeBridge
@@ -134,8 +135,11 @@ class MainActivity : AppCompatActivity() {
         billingManager = BillingManager(this, dataStore)
         subscriptionBridge = SubscriptionBridge(billingManager, dataStore)
 
-        // Fast path: if the cache already confirms an active subscription, don't wait.
-        if (dataStore.subscriptionActive) {
+        // Debug and github flavor builds skip billing entirely.
+        if (BuildConfig.DEBUG || !BuildConfig.BILLING_ENABLED) {
+            billingReady = true
+        } else if (dataStore.subscriptionActive) {
+            // Fast path: cache already confirms active — no need to wait for Play.
             billingReady = true
         } else {
             billingManager.onPurchasesQueried = { billingReady = true }
@@ -326,14 +330,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        billingManager.activity = this
-        billingManager.connect()
+        if (BuildConfig.BILLING_ENABLED && !BuildConfig.DEBUG) {
+            billingManager.activity = this
+            billingManager.connect()
+        }
     }
 
     override fun onStop() {
         super.onStop()
-        billingManager.activity = null
-        billingManager.disconnect()
+        if (BuildConfig.BILLING_ENABLED && !BuildConfig.DEBUG) {
+            billingManager.activity = null
+            billingManager.disconnect()
+        }
     }
 
     override fun onResume() {

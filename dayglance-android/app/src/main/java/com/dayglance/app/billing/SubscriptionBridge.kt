@@ -1,6 +1,7 @@
 package com.dayglance.app.billing
 
 import android.webkit.JavascriptInterface
+import com.dayglance.app.BuildConfig
 import com.dayglance.app.data.SharedDataStore
 
 /**
@@ -29,7 +30,7 @@ class SubscriptionBridge(
      */
     @JavascriptInterface
     fun getStatus(): String {
-        val active = dataStore.subscriptionActive
+        val active = BuildConfig.DEBUG || !BuildConfig.BILLING_ENABLED || dataStore.subscriptionActive
         val productId = (dataStore.subscriptionProductId ?: "")
             .replace("\\", "\\\\").replace("\"", "\\\"")
         return """{"active":$active,"productId":"$productId"}"""

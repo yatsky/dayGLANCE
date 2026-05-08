@@ -74,6 +74,19 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("boolean", "BILLING_ENABLED", "true")
+        }
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("boolean", "BILLING_ENABLED", "false")
+        }
     }
 }
 

@@ -11,7 +11,7 @@ import { Loader } from 'lucide-react';
  * The "Founder pricing" badge is intentional during launch. Remove it (or change
  * the copy) when you raise prices.
  */
-export default function SubscriptionWall({ onSubscribeMonthly, onSubscribeAnnual, onRestore, isLoading, prices }) {
+export default function SubscriptionWall({ onSubscribeAnnual, onSubscribeLifetime, onRestore, isLoading, prices }) {
   const dark = (() => {
     try { return JSON.parse(localStorage.getItem('day-planner-darkmode') || 'false'); }
     catch { return false; }
@@ -21,8 +21,8 @@ export default function SubscriptionWall({ onSubscribeMonthly, onSubscribeAnnual
 
   const handleSubscribe = (productId, label) => {
     setPending(label);
-    if (label === 'monthly') onSubscribeMonthly?.();
-    if (label === 'annual')  onSubscribeAnnual?.();
+    if (label === 'annual')   onSubscribeAnnual?.();
+    if (label === 'lifetime') onSubscribeLifetime?.();
   };
 
   const handleRestore = () => {
@@ -75,31 +75,12 @@ export default function SubscriptionWall({ onSubscribeMonthly, onSubscribeAnnual
       <div className="w-full max-w-xs space-y-3 mb-5">
 
         <button
-          onClick={() => handleSubscribe('dayglance_pro_monthly', 'monthly')}
-          disabled={!!pending}
-          className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'monthly' ? 'opacity-60' : ''}`}
-        >
-          <div className="flex items-baseline justify-between">
-            <span className={`font-semibold text-sm ${text}`}>Monthly</span>
-            {prices?.monthly
-              ? <span className={`text-sm font-medium ${text}`}>{prices.monthly}<span className={`text-xs ${sub}`}>/mo</span></span>
-              : <span className={`text-xs ${sub}`}>See price in Play</span>
-            }
-          </div>
-          <div className={`text-xs mt-0.5 ${sub}`}>Billed monthly · cancel any time</div>
-          {pending === 'monthly' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
-        </button>
-
-        <button
           onClick={() => handleSubscribe('dayglance_pro_annual', 'annual')}
           disabled={!!pending}
           className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'annual' ? 'opacity-60' : ''}`}
         >
           <div className="flex items-baseline justify-between">
-            <div className="flex items-center gap-2">
-              <span className={`font-semibold text-sm ${text}`}>Annual</span>
-              <span className="text-xs bg-indigo-600 text-white rounded-full px-2 py-0.5 leading-none">Best value</span>
-            </div>
+            <span className={`font-semibold text-sm ${text}`}>Annual</span>
             {prices?.annual
               ? <span className={`text-sm font-medium ${text}`}>{prices.annual}<span className={`text-xs ${sub}`}>/yr</span></span>
               : <span className={`text-xs ${sub}`}>See price in Play</span>
@@ -109,10 +90,29 @@ export default function SubscriptionWall({ onSubscribeMonthly, onSubscribeAnnual
           {pending === 'annual' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
         </button>
 
+        <button
+          onClick={() => handleSubscribe('dayglance_pro_lifetime', 'lifetime')}
+          disabled={!!pending}
+          className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'lifetime' ? 'opacity-60' : ''}`}
+        >
+          <div className="flex items-baseline justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`font-semibold text-sm ${text}`}>Lifetime</span>
+              <span className="text-xs bg-indigo-600 text-white rounded-full px-2 py-0.5 leading-none">Best value</span>
+            </div>
+            {prices?.lifetime
+              ? <span className={`text-sm font-medium ${text}`}>{prices.lifetime}</span>
+              : <span className={`text-xs ${sub}`}>See price in Play</span>
+            }
+          </div>
+          <div className={`text-xs mt-0.5 ${sub}`}>One-time purchase · yours forever</div>
+          {pending === 'lifetime' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
+        </button>
+
       </div>
 
       <p className={`text-xs text-center mb-6 max-w-xs ${sub}`}>
-        14-day free trial included. Payment via Google Play. Cancel any time.
+        Annual plan includes a 14-day free trial. Payment via Google Play.
       </p>
 
       <button

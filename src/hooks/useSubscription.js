@@ -9,14 +9,14 @@ function readStatus() {
 }
 
 function readPrices() {
-  if (!BILLING) return { monthly: null, annual: null };
+  if (!BILLING) return { annual: null, lifetime: null };
   try {
     const p = JSON.parse(BILLING.getProductPrices());
     return {
-      monthly: p.monthly || null,
-      annual:  p.annual  || null,
+      annual:   p.annual   || null,
+      lifetime: p.lifetime || null,
     };
-  } catch { return { monthly: null, annual: null }; }
+  } catch { return { annual: null, lifetime: null }; }
 }
 
 /**
@@ -72,10 +72,10 @@ export function useSubscription() {
   }, [refresh]);
 
   /**
-   * Opens the Google Play subscription / free-trial sheet.
-   * productId: 'dayglance_pro_monthly' | 'dayglance_pro_annual'
+   * Opens the Google Play purchase sheet.
+   * productId: 'dayglance_pro_annual' | 'dayglance_pro_lifetime'
    */
-  const subscribe = useCallback((productId = 'dayglance_pro_monthly') => {
+  const subscribe = useCallback((productId = 'dayglance_pro_annual') => {
     if (!BILLING) return;
     BILLING.purchase?.(productId);
 

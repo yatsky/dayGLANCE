@@ -123,27 +123,30 @@ class BillingManager(
     fun queryPurchases() {
         if (!billingClient.isReady) return
         scope.launch {
-            var activePurchase: Purchase? = null
-
-            billingClient.queryPurchasesAsync(
+            // Use suspend queryPurchasesAsync (billing-ktx) so INAPP query only
+            // runs after SUBS query has actually completed — avoids a race condition
+            // where the callback-based version would always fire both queries in
+            // parallel and let whichever finished last win.
+            val subsResult = billingClient.queryPurchasesAsync(
                 QueryPurchasesParams.newBuilder()
                     .setProductType(BillingClient.ProductType.SUBS)
                     .build()
-            ) { _, purchases ->
-                activePurchase = purchases.firstOrNull { it.purchaseState == Purchase.PurchaseState.PURCHASED }
-            }
+            )
+            val activeSub = if (subsResult.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                subsResult.purchasesList.firstOrNull { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+            } else null
 
-            if (activePurchase == null) {
-                billingClient.queryPurchasesAsync(
+            val active = activeSub ?: run {
+                val inappResult = billingClient.queryPurchasesAsync(
                     QueryPurchasesParams.newBuilder()
                         .setProductType(BillingClient.ProductType.INAPP)
                         .build()
-                ) { _, purchases ->
-                    activePurchase = purchases.firstOrNull { it.purchaseState == Purchase.PurchaseState.PURCHASED }
-                }
+                )
+                if (inappResult.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    inappResult.purchasesList.firstOrNull { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+                } else null
             }
 
-            val active = activePurchase
             if (active != null) {
                 if (!active.isAcknowledged) acknowledgePurchase(active)
                 dataStore.subscriptionActive = true

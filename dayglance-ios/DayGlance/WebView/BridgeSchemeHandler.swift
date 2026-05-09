@@ -74,7 +74,52 @@ final class BridgeSchemeHandler: NSObject, WKURLSchemeHandler {
             guard let eventId = args.first as? String else { return #"{"success":false}"# }
             return CalendarBridge.shared.deleteEvent(eventId: eventId)
 
-        // Phase 4+: NotificationBridge, etc.
+        // Phase 4 — Notifications
+        case "scheduleReminder":
+            guard args.count >= 4,
+                  let id      = args[0] as? String,
+                  let title   = args[1] as? String,
+                  let body    = args[2] as? String,
+                  let ms      = (args[3] as? NSNumber)?.doubleValue else { return "null" }
+            NotificationBridge.shared.scheduleReminder(id: id, title: title, body: body, triggerAtMillis: ms)
+            return "null"
+
+        case "cancelReminder":
+            guard let id = args.first as? String else { return "null" }
+            NotificationBridge.shared.cancelReminder(id: id)
+            return "null"
+
+        case "showNotification":
+            guard args.count >= 2,
+                  let title = args[0] as? String,
+                  let body  = args[1] as? String else { return "null" }
+            NotificationBridge.shared.showNotification(title: title, body: body)
+            return "null"
+
+        case "showTaskNotification":
+            guard args.count >= 6,
+                  let reminderId      = args[0] as? String,
+                  let taskId          = args[1] as? String,
+                  let title           = args[2] as? String,
+                  let body            = args[3] as? String,
+                  let type            = args[4] as? String else { return "null" }
+            let isCalendarEvent = (args[5] as? Bool) ?? false
+            NotificationBridge.shared.showTaskNotification(
+                reminderId: reminderId, taskId: taskId,
+                title: title, body: body,
+                type: type, isCalendarEvent: isCalendarEvent
+            )
+            return "null"
+
+        case "syncReminders":
+            guard let json = args.first as? String else { return "null" }
+            NotificationBridge.shared.syncReminders(json: json)
+            return "null"
+
+        case "getPendingAction":
+            return NotificationBridge.shared.getPendingAction()
+
+        // Phase 5+
         default:
             return "null"
         }

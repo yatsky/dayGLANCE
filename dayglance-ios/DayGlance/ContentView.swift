@@ -17,6 +17,10 @@ struct ContentView: View {
                     CalendarBridge.shared.requestAuthorization { continuation.resume() }
                 }
 
+                await withCheckedContinuation { continuation in
+                    NotificationBridge.shared.requestAuthorization { continuation.resume() }
+                }
+
                 if calendarWasUndetermined {
                     NotificationCenter.default.post(name: .dayGlanceReloadWebView, object: nil)
                 }

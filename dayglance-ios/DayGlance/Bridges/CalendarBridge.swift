@@ -36,6 +36,32 @@ final class CalendarBridge {
         }
     }
 
+    // MARK: - getAuthStatus (debug helper)
+    // Returns the raw EKAuthorizationStatus string so JS can diagnose permission issues.
+
+    func getAuthStatus() -> String {
+        let status: String
+        if #available(iOS 17.0, *) {
+            switch EKEventStore.authorizationStatus(for: .event) {
+            case .notDetermined: status = "notDetermined"
+            case .restricted:    status = "restricted"
+            case .denied:        status = "denied"
+            case .fullAccess:    status = "fullAccess"
+            case .writeOnly:     status = "writeOnly"
+            @unknown default:    status = "unknown"
+            }
+        } else {
+            switch EKEventStore.authorizationStatus(for: .event) {
+            case .notDetermined: status = "notDetermined"
+            case .restricted:    status = "restricted"
+            case .denied:        status = "denied"
+            case .authorized:    status = "authorized"
+            @unknown default:    status = "unknown"
+            }
+        }
+        return #"{"status":"\#(status)"}"#
+    }
+
     // MARK: - getCalendars
     // Returns: [{"id":"...","name":"...","accountName":"...","color":"#rrggbb"}]
 

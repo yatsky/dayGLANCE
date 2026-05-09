@@ -57,6 +57,8 @@ final class BridgeSchemeHandler: NSObject, WKURLSchemeHandler {
             return HealthBridge.shared.getSleep(date: date)
 
         // Phase 3 — EventKit
+        case "getCalendarAuthStatus":
+            return CalendarBridge.shared.getAuthStatus()
         case "getCalendars":
             return CalendarBridge.shared.getCalendars()
         case "getEvents":

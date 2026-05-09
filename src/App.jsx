@@ -5515,11 +5515,11 @@ const DayPlanner = () => {
     lastWeeklyReviewFiredRef,
   });
 
-  // Native Android: pick up pending actions (e.g. Mark Complete) from notification buttons.
-  // The native side stores the action in SharedPreferences; we read it here via getPendingAction()
+  // Native app: pick up pending actions (e.g. Mark Complete) from notification buttons.
+  // The native side stores the action in UserDefaults/SharedPreferences; we read it via getPendingAction()
   // whenever the app comes back to the foreground (visibilitychange) or on first mount.
   useEffect(() => {
-    if (!isNativeAndroid()) return;
+    if (!isNativeApp()) return;
     const checkPending = () => {
       const pending = nativeGetPendingAction();
       if (!pending) return;

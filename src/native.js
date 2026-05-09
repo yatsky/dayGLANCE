@@ -160,6 +160,17 @@ export const nativePickVault = () => {
 };
 
 /**
+ * Persists daily-notes folder, date pattern, and new-notes folder to native storage
+ * (UserDefaults on iOS) so getDailyNote/writeDailyNote use the correct paths.
+ * No-op on Android where these are set via SettingsActivity.
+ */
+export const nativeSetVaultSettings = (folder, pattern, newNotesFolder) => {
+  const bridge = obsidianBridge();
+  if (!bridge?.setVaultSettings) return;
+  bridge.setVaultSettings(folder ?? '', pattern ?? 'yyyy-MM-dd', newNotesFolder ?? 'dayGLANCE');
+};
+
+/**
  * Clears the stored vault URI, resetting the integration to unconfigured state.
  * The SAF permission is not revoked on Android.
  */

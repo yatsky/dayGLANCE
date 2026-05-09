@@ -137,6 +137,13 @@ final class BridgeSchemeHandler: NSObject, WKURLSchemeHandler {
         case "clearVault":
             ObsidianBridge.shared.clearVault()
             return "null"
+        case "setVaultSettings":
+            guard args.count >= 3,
+                  let folder    = args[0] as? String,
+                  let pattern   = args[1] as? String,
+                  let newFolder = args[2] as? String else { return "null" }
+            ObsidianBridge.shared.setVaultSettings(folder: folder, pattern: pattern, newNotesFolder: newFolder)
+            return "null"
         case "getDailyNote":
             guard let date = args.first as? String else { return "" }
             return ObsidianBridge.shared.getDailyNote(date: date)

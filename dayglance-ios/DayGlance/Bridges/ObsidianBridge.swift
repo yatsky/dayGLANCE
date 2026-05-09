@@ -97,6 +97,14 @@ final class ObsidianBridge: NSObject {
         noteIndexBuilt = false
     }
 
+    /// Persists folder/pattern/newNotesFolder from the web settings UI to UserDefaults
+    /// so getDailyNote/writeDailyNote use the correct path without needing a native SettingsActivity.
+    func setVaultSettings(folder: String, pattern: String, newNotesFolder: String) {
+        UserDefaults.standard.set(folder, forKey: folderKey)
+        UserDefaults.standard.set(pattern, forKey: patternKey)
+        UserDefaults.standard.set(newNotesFolder, forKey: newNotesFolderKey)
+    }
+
     // MARK: - getDailyNote / writeDailyNote
 
     func getDailyNote(date: String) -> String {

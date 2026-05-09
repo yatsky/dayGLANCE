@@ -24,6 +24,9 @@ final class HttpBridge {
         var req = URLRequest(url: targetURL)
         req.httpMethod = method
         req.timeoutInterval = 20
+        // Never return a cached response — cloud sync must always see the
+        // current file on the server, not a URLSession-cached copy.
+        req.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
 
         // Apply caller-supplied headers
         if let data = headersJson.data(using: .utf8),

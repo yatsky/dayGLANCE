@@ -4784,6 +4784,11 @@ const DayPlanner = () => {
       const { data: mergedData, localChanged, remoteChanged } = mergeSyncData(localData, remote.data, syncRetentionDays);
       console.log('[sync] merge result — localChanged:', localChanged, 'remoteChanged:', remoteChanged,
         'local tasks:', localData.tasks?.length, 'remote tasks:', remote.data?.tasks?.length);
+      if (remoteChanged && localData.tasks?.length !== remote.data?.tasks?.length) {
+        const remoteIds = new Set((remote.data?.tasks || []).map(t => String(t.id)));
+        const localOnly = (localData.tasks || []).filter(t => !remoteIds.has(String(t.id)));
+        if (localOnly.length) console.log('[sync] local-only tasks (not in remote):', JSON.stringify(localOnly.map(t => ({ id: t.id, title: t.title, imported: t.imported, isTaskCalendar: t.isTaskCalendar, importSource: t.importSource, _native: t._native }))));
+      }
 
       if (localChanged) {
         applyRemoteData(mergedData);

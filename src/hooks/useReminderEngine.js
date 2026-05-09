@@ -152,8 +152,8 @@ export default function useReminderEngine({
       if (hgFires.length > 0) {
         playUISound('reminder');
         if (window.electronAPI?.isElectron) window.electronAPI.setTrayIndicator(true);
-        // Android: AlarmManager already fires showTaskNotification (with Snooze) — don't duplicate.
-        if (!isNativeAndroid() && reminderSettings.browserNotifications && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        // Native apps: bridge already fires showTaskNotification (with Snooze) — don't duplicate.
+        if (!isNativeApp() && reminderSettings.browserNotifications && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           if (window.electronAPI?.isElectron) {
             for (const { title, body } of hgFires) {
               try { new Notification(title, { body }); } catch {}

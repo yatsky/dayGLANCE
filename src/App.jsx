@@ -200,8 +200,9 @@ const DayPlanner = () => {
     // an artefact of the edge-to-edge layout (not a real keyboard), and applying
     // a translateY here creates a persistent gap below the content on every tab.
     // The tab bar is fixed bottom-0 and is already in the right place — skip the
-    // listener entirely on Android native.
-    if (!isMobile || !window.visualViewport || isNativeAndroid()) return;
+    // listener entirely on native apps (Android edge-to-edge / iOS WKWebView both
+    // produce unreliable visualViewport resize signals for the keyboard).
+    if (!isMobile || !window.visualViewport || isNativeApp()) return;
     let timer = null;
     const updateTabBar = () => {
       if (!tabBarRef.current || suppressTabBarRef.current) return;
@@ -393,8 +394,8 @@ const DayPlanner = () => {
   const [calendarFilter, setCalendarFilter] = useState(() => {
     try { return JSON.parse(localStorage.getItem('day-planner-calendar-filter') || '[]'); } catch { return []; }
   });
-  // On Android, calendar events come from the native bridge — only task calendar URL matters for sync
-  const calSyncConfigured = isNativeAndroid() ? !!taskCalendarUrl : !!(syncUrl || taskCalendarUrl);
+  // On native apps, calendar events come from the native bridge — only task calendar URL matters for sync
+  const calSyncConfigured = isNativeApp() ? !!taskCalendarUrl : !!(syncUrl || taskCalendarUrl);
   const [calendarUrlAuth, setCalendarUrlAuth] = useState(() => {
     const saved = localStorage.getItem('day-planner-calendar-url-auth');
     return saved ? JSON.parse(saved) : { username: '', password: '' };
@@ -539,7 +540,7 @@ const DayPlanner = () => {
 
   // Settings & Reminders modals
   const [showSettings, setShowSettings] = useState(false);
-  const [collapsedSettings, setCollapsedSettings] = useState({ cloudSync: true, calSync: !isNativeAndroid(), ai: true, obsidian: !isNativeApp(), trmnl: true });
+  const [collapsedSettings, setCollapsedSettings] = useState({ cloudSync: true, calSync: !isNativeApp(), ai: true, obsidian: !isNativeApp(), trmnl: true });
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDismissedVersion, setUpdateDismissedVersion] = useState(() => localStorage.getItem('dayglance-update-dismissed') || null);
   const toggleSettingsSection = (key) => setCollapsedSettings(prev => ({ ...prev, [key]: !prev[key] }));
@@ -1223,10 +1224,10 @@ const DayPlanner = () => {
   }, []); // Run once on app start
 
   // Auto-sync calendars every 15 minutes when URLs are configured.
-  // On Android, only the task calendar matters — calendar events come from the native bridge.
+  // On native apps, only the task calendar matters — calendar events come from the native bridge.
   useEffect(() => {
     if (isTrayMode) return;
-    const hasSyncTarget = isNativeAndroid() ? !!taskCalendarUrl : !!(syncUrl || taskCalendarUrl);
+    const hasSyncTarget = isNativeApp() ? !!taskCalendarUrl : !!(syncUrl || taskCalendarUrl);
     if (!hasSyncTarget) return;
 
     const syncTimer = setInterval(() => {
@@ -3989,9 +3990,9 @@ const DayPlanner = () => {
 
   // Returns { success: boolean, count?: number, error?: string }
   const syncWithCalendar = async () => {
-    // On Android, calendar events come from the native CalendarBridge (device accounts).
+    // On native apps, calendar events come from the native bridge (EventKit/CalendarBridge).
     // CalDAV iCal sync would duplicate those events, so skip it entirely.
-    if (isNativeAndroid()) return { success: false, error: 'no-url' };
+    if (isNativeApp()) return { success: false, error: 'no-url' };
     if (!syncUrl) {
       return { success: false, error: 'no-url' };
     }
@@ -4390,7 +4391,7 @@ const DayPlanner = () => {
 
   // Combined sync function that shows a single notification
   const syncAll = async ({ silent = false } = {}) => {
-    const hasSyncTarget = isNativeAndroid() ? !!taskCalendarUrl : !!(syncUrl || taskCalendarUrl);
+    const hasSyncTarget = isNativeApp() ? !!taskCalendarUrl : !!(syncUrl || taskCalendarUrl);
     if (!hasSyncTarget) {
       if (!silent) setSyncNotification({ type: 'info', message: 'Please enter a task calendar URL in sync settings' });
       return;
@@ -4580,10 +4581,10 @@ const DayPlanner = () => {
     // tasks appear newer than actual remote changes during merge.
     const normalizeTasks = (tasks) => tasks.map(t => ({ ...t, notes: t.notes ?? '', subtasks: t.subtasks ?? [] }));
 
-    // On Android, drop imported calendar events that arrived via cloud sync — the native
-    // CalendarBridge already provides those events and syncing them in causes duplicates.
+    // On native apps, drop imported calendar events that arrived via cloud sync — the native
+    // bridge already provides those events and syncing them in causes duplicates.
     // Calendar tasks (isTaskCalendar:true) and file imports are kept as normal.
-    const filterTasks = isNativeAndroid()
+    const filterTasks = isNativeApp()
       ? tasks => tasks.filter(t => !(t.imported && !t.isTaskCalendar && t.importSource !== 'file'))
       : tasks => tasks;
 
@@ -4662,10 +4663,10 @@ const DayPlanner = () => {
     if (data.deletedGoalIds) localStorage.setItem('day-planner-deleted-goal-ids', JSON.stringify(data.deletedGoalIds));
     if (data.deletedProjectIds) localStorage.setItem('day-planner-deleted-project-ids', JSON.stringify(data.deletedProjectIds));
     if (data.obsidianConfig) {
-      // On Android, vault path and pattern are managed by native settings — only apply
+      // On native apps, vault path and pattern are managed via native storage — only apply
       // the app-level fields so a desktop value doesn't break the native integration.
       // The startup useEffect always re-seeds path/pattern from native config anyway.
-      if (isNativeAndroid()) {
+      if (isNativeApp()) {
         setObsidianConfig(prev => prev ? {
           ...prev,
           taskHeading: data.obsidianConfig.taskHeading ?? prev.taskHeading,

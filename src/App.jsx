@@ -1190,7 +1190,6 @@ const DayPlanner = () => {
     // Native iOS fires a custom event to bypass the document.hidden timing gap
     // that occurs when scenePhase fires before WKWebView updates visibility state.
     const handleNativeForeground = () => {
-      console.log('[sync] dayglanceForeground fired, backoff:', cloudSyncBackoffUntilRef.current - Date.now(), 'ms remaining');
       setCurrentTime(new Date());
       if (Date.now() >= cloudSyncBackoffUntilRef.current) {
         cloudSyncDownloadRef.current?.();
@@ -4749,11 +4748,11 @@ const DayPlanner = () => {
   };
 
   const cloudSyncDownload = async () => {
-    if (!cloudSyncConfig?.enabled) { console.log('[sync] download skipped: not enabled'); return; }
+    if (!cloudSyncConfig?.enabled) return;
     const provider = cloudSyncProviders[cloudSyncConfig.provider];
-    if (!provider) { console.log('[sync] download skipped: no provider'); return; }
+    if (!provider) return;
 
-    if (cloudSyncInProgressRef.current) { console.log('[sync] download skipped: in progress'); return; }
+    if (cloudSyncInProgressRef.current) return;
     cloudSyncInProgressRef.current = true;
     const syncStart = Date.now();
     setCloudSyncStatus('downloading');
@@ -4782,67 +4781,6 @@ const DayPlanner = () => {
       // Build local snapshot and merge with remote at the task level
       const localData = buildSyncPayload().data;
       const { data: mergedData, localChanged, remoteChanged } = mergeSyncData(localData, remote.data, syncRetentionDays);
-      console.log('[sync] merge result — localChanged:', localChanged, 'remoteChanged:', remoteChanged,
-        'local tasks:', localData.tasks?.length, 'remote tasks:', remote.data?.tasks?.length);
-      if (remoteChanged && localData.tasks?.length !== remote.data?.tasks?.length) {
-        const remoteIds = new Set((remote.data?.tasks || []).map(t => String(t.id)));
-        const localOnly = (localData.tasks || []).filter(t => !remoteIds.has(String(t.id)));
-        if (localOnly.length) console.log('[sync] local-only tasks (not in remote):', JSON.stringify(localOnly.map(t => ({ id: t.id, title: t.title, imported: t.imported, isTaskCalendar: t.isTaskCalendar, importSource: t.importSource, _native: t._native }))));
-      }
-      if (remoteChanged || localChanged) {
-        const fields = ['tasks','unscheduledTasks','recycleBin','recurringTasks','completedTaskUids','dailyNotes','habits','habitLogs','routineDefinitions','todayRoutines','gtdFrames','goals','projects'];
-        const diffs = fields.filter(f => {
-          const l = Array.isArray(localData[f]) ? localData[f].length : Object.keys(localData[f] || {}).length;
-          const r = Array.isArray(remote.data[f]) ? remote.data[f].length : Object.keys(remote.data[f] || {}).length;
-          return l !== r;
-        }).map(f => {
-          const l = Array.isArray(localData[f]) ? localData[f].length : Object.keys(localData[f] || {}).length;
-          const r = Array.isArray(remote.data[f]) ? remote.data[f].length : Object.keys(remote.data[f] || {}).length;
-          return `${f}: local=${l} remote=${r}`;
-        });
-        if (diffs.length) console.log('[sync] field size diffs:', diffs.join(', '));
-        else {
-          console.log('[sync] no field size diffs (timestamp-only or tombstone difference)');
-          // Compare merged result vs remote to identify which field is driving remoteChanged
-          const mergedDiffFields = Object.keys(mergedData).filter(f => {
-            return JSON.stringify(mergedData[f]) !== JSON.stringify(remote.data[f]);
-          });
-          if (mergedDiffFields.length) {
-            console.log('[sync] merged≠remote fields:', mergedDiffFields.join(', '));
-            // Per-task diff: show which tasks differ and whether it's timestamp-only or content
-            if (mergedDiffFields.includes('tasks')) {
-              const remoteTaskMap = new Map((remote.data.tasks || []).map(t => [String(t.id), t]));
-              for (const t of (mergedData.tasks || [])) {
-                const rt = remoteTaskMap.get(String(t.id));
-                if (!rt) { console.log('[sync] task in merged not in remote:', t.id, t.title); continue; }
-                if (JSON.stringify(t) === JSON.stringify(rt)) continue;
-                const { lastModified: lm1, ...tRest } = t;
-                const { lastModified: lm2, ...rtRest } = rt;
-                const contentDiffers = JSON.stringify(tRest) !== JSON.stringify(rtRest);
-                console.log('[sync] task diff id=' + t.id + ' "' + t.title + '"',
-                  contentDiffers ? 'CONTENT differs' : 'timestamp-only',
-                  'merged.lm=' + lm1, 'remote.lm=' + lm2);
-              }
-            }
-            // Per-date habitLog diff
-            if (mergedDiffFields.includes('habitLogs')) {
-              const rLogs = remote.data.habitLogs || {};
-              for (const [date, mDay] of Object.entries(mergedData.habitLogs || {})) {
-                const rDay = rLogs[date];
-                if (!rDay) { console.log('[sync] habitLog date in merged not in remote:', date); continue; }
-                if (JSON.stringify(mDay) === JSON.stringify(rDay)) continue;
-                const allHabitIds = new Set([...Object.keys(mDay), ...Object.keys(rDay)]);
-                for (const hid of allHabitIds) {
-                  if ((mDay[hid] ?? 0) !== (rDay[hid] ?? 0)) {
-                    console.log('[sync] habitLog diff date=' + date + ' habit=' + hid,
-                      'merged=' + (mDay[hid] ?? 0), 'remote=' + (rDay[hid] ?? 0));
-                  }
-                }
-              }
-            }
-          } else console.log('[sync] merged === remote on all fields (tombstone size difference)');
-        }
-      }
 
       if (localChanged) {
         applyRemoteData(mergedData);
@@ -8899,7 +8837,7 @@ const DayPlanner = () => {
 
       {/* Sync passphrase prompt — shown on app load when encryption is enabled
           but no cached key was found in device storage (e.g. new device). */}
-      {cloudSyncConfig?.encryptionEnabled && !syncKeyReady && (
+      {cloudSyncConfig?.encryptionEnabled && syncKeyReady === false && (
         <SyncPassphraseModal
           darkMode={darkMode}
           textPrimary={textPrimary}

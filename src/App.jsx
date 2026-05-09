@@ -4801,7 +4801,16 @@ const DayPlanner = () => {
           return `${f}: local=${l} remote=${r}`;
         });
         if (diffs.length) console.log('[sync] field size diffs:', diffs.join(', '));
-        else console.log('[sync] no field size diffs (timestamp-only or tombstone difference)');
+        else {
+          console.log('[sync] no field size diffs (timestamp-only or tombstone difference)');
+          // Show which tasks have newer local timestamps than remote
+          const remoteTaskMap = new Map((remote.data?.tasks || []).map(t => [String(t.id), t]));
+          const newerLocal = (localData.tasks || []).filter(t => {
+            const r = remoteTaskMap.get(String(t.id));
+            return r && new Date(t.lastModified || 0) > new Date(r.lastModified || 0);
+          }).map(t => ({ id: t.id, title: t.title, localTs: t.lastModified, remoteTs: remoteTaskMap.get(String(t.id))?.lastModified }));
+          if (newerLocal.length) console.log('[sync] tasks newer locally than remote:', JSON.stringify(newerLocal));
+        }
       }
 
       if (localChanged) {

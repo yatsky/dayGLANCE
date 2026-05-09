@@ -44,11 +44,11 @@ final class ObsidianBridge: NSObject {
         var stale = false
         guard let url = try? URL(
             resolvingBookmarkData: data,
-            options: .withSecurityScope,
+            options: [],
             relativeTo: nil,
             bookmarkDataIsStale: &stale
         ) else { return nil }
-        if stale, let fresh = try? url.bookmarkData(options: .withSecurityScope) {
+        if stale, let fresh = try? url.bookmarkData(options: []) {
             UserDefaults.standard.set(fresh, forKey: bookmarkKey)
         }
         return url
@@ -343,7 +343,7 @@ extension ObsidianBridge: UIDocumentPickerDelegate {
         guard let url = urls.first else { return }
         guard url.startAccessingSecurityScopedResource() else { return }
         defer { url.stopAccessingSecurityScopedResource() }
-        guard let bookmark = try? url.bookmarkData(options: .withSecurityScope) else { return }
+        guard let bookmark = try? url.bookmarkData(options: []) else { return }
         UserDefaults.standard.set(bookmark, forKey: bookmarkKey)
         noteIndex.removeAll()
         noteIndexBuilt = false

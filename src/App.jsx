@@ -539,7 +539,7 @@ const DayPlanner = () => {
 
   // Settings & Reminders modals
   const [showSettings, setShowSettings] = useState(false);
-  const [collapsedSettings, setCollapsedSettings] = useState({ cloudSync: true, calSync: !isNativeAndroid(), ai: true, obsidian: !isNativeAndroid(), trmnl: true });
+  const [collapsedSettings, setCollapsedSettings] = useState({ cloudSync: true, calSync: !isNativeAndroid(), ai: true, obsidian: !isNativeApp(), trmnl: true });
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDismissedVersion, setUpdateDismissedVersion] = useState(() => localStorage.getItem('dayglance-update-dismissed') || null);
   const toggleSettingsSection = (key) => setCollapsedSettings(prev => ({ ...prev, [key]: !prev[key] }));
@@ -1316,8 +1316,8 @@ const DayPlanner = () => {
   // Obsidian sync: restore vault handle on mount and do initial sync
   useEffect(() => {
     if (isTrayMode || !dataLoaded) return;
-    if (isNativeAndroid()) {
-      // Android: vault is configured natively — detect and auto-enable
+    if (isNativeApp()) {
+      // Native app: vault is configured natively — detect and auto-enable
       try {
         const cfg = nativeGetVaultConfig();
         if (cfg?.configured) {
@@ -1362,7 +1362,7 @@ const DayPlanner = () => {
     if (isTrayMode) return;
     const handleVisibility = () => {
       if (document.visibilityState !== 'visible') return;
-      if (isNativeAndroid()) {
+      if (isNativeApp()) {
         // Re-check in case user just configured the vault in native settings
         try {
           const cfg = nativeGetVaultConfig();

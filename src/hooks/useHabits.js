@@ -156,22 +156,6 @@ const useHabits = ({ playUISound }) => {
   // Ref kept current so the visibilitychange handler always calls the latest version
   const syncHealthConnectHabitsRef = useRef(null);
 
-  // One-time migration: habits created on iOS before platform-specific source tags
-  // existed used source:'healthConnect' (same value as Android). Rename them to
-  // 'healthKit' so the sync below only processes habits that belong to this device.
-  const healthSourceMigratedRef = useRef(false);
-  useEffect(() => {
-    const isIOS = typeof window !== 'undefined' && !!window.DayGlanceIOS;
-    if (!isIOS || healthSourceMigratedRef.current || !habits.length) return;
-    healthSourceMigratedRef.current = true;
-    if (!habits.some(h => h.source === 'healthConnect')) return;
-    const migrated = habits.map(h =>
-      h.source === 'healthConnect' ? { ...h, source: 'healthKit' } : h
-    );
-    localStorage.setItem('day-planner-habits', JSON.stringify(migrated));
-    setHabits(migrated);
-  }, [habits]);
-
   // Pull native health data into habits that belong to this platform.
   // iOS reads from HealthKit (source:'healthKit'); Android reads from
   // HealthConnect (source:'healthConnect'). Habits synced from the other

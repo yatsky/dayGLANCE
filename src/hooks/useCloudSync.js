@@ -13,10 +13,9 @@ const useCloudSync = () => {
   );
   const [cloudSyncConflict, setCloudSyncConflict] = useState(null); // { remoteData, remoteModified }
 
-  // null  = still checking device storage (don't show modal yet)
-  // false = key not found — show passphrase prompt
-  // true  = key ready, sync can proceed
-  const [syncKeyReady, setSyncKeyReady] = useState(null);
+  // true once initSessionKey() resolves (either key found or not)
+  // false means "encryption enabled but no cached key — show passphrase prompt"
+  const [syncKeyReady, setSyncKeyReady] = useState(false);
 
   const cloudSyncDebounceRef       = useRef(null);
   const suppressCloudUploadRef     = useRef(false);

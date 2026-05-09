@@ -8806,7 +8806,7 @@ const DayPlanner = () => {
 
       {/* Sync passphrase prompt — shown on app load when encryption is enabled
           but no cached key was found in device storage (e.g. new device). */}
-      {cloudSyncConfig?.encryptionEnabled && !syncKeyReady && (
+      {cloudSyncConfig?.encryptionEnabled && syncKeyReady === false && (
         <SyncPassphraseModal
           darkMode={darkMode}
           textPrimary={textPrimary}

@@ -97,12 +97,12 @@ final class BridgeSchemeHandler: NSObject, WKURLSchemeHandler {
 
     private func respond(to task: any WKURLSchemeTask, with json: String) {
         let data = json.data(using: .utf8) ?? Data()
-        let response = URLResponse(
+        let response = HTTPURLResponse(
             url: task.request.url ?? URL(string: "about:blank")!,
-            mimeType: "application/json",
-            expectedContentLength: data.count,
-            textEncodingName: "utf-8"
-        )
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: ["Content-Type": "application/json; charset=utf-8"]
+        )!
         task.didReceive(response)
         task.didReceive(data)
         task.didFinish()

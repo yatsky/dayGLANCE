@@ -308,6 +308,8 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - Bridge detection: inject `window.DayGlanceIOS = true` so `native.js` can distinguish iOS from Android
 - App icon, launch screen, bundle ID (`com.dayglance.app`)
 
+**Status: ✅ Complete.** Minor gap: status bar text colour is static (`UIStatusBarStyleDefault`) — does not flip to white in dark mode. Cosmetic; can be addressed in Phase 12 polish.
+
 ### Phase 2 — Health (HealthKit)
 
 - `HealthBridge.swift`: steps via `HKStatisticsQuery`, sleep via `HKSampleQuery`
@@ -315,11 +317,15 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - Same JSON response shape as Android (`{ steps, goal }`, `{ duration, stages, ... }`)
 - Expose bonus fields (HRV, resting HR) as optional keys — web layer ignores unknown keys today, can surface them later
 
+**Status: ✅ Complete.** HRV and resting HR are pre-declared in `readTypes` (future-proofed for when the web layer surfaces them).
+
 ### Phase 3 — Calendar (EventKit)
 
 - `CalendarBridge.swift`: `getCalendars`, `getEvents`, `createEvent`, `updateEvent`, `deleteEvent`
 - `NSCalendarsUsageDescription` + `NSCalendarsWriteOnlyAccessUsageDescription`
 - Identical JSON contract to Android
+
+**Status: ✅ Complete.** `NSCalendarsFullAccessUsageDescription` added (required for iOS 17+ `requestFullAccessToEvents`). `getCalendarAuthStatus` debug bridge method also added. Device Calendars filter UI now shown on iOS (was previously Android-only).
 
 ### Phase 4 — Notifications
 
@@ -329,6 +335,8 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - `UNNotificationServiceExtension` not needed — action handling in `UNUserNotificationCenterDelegate`
 - No boot receiver needed (iOS restores notifications automatically)
 
+**Status: ✅ Complete.** All six bridge methods implemented. Snooze + Mark Complete action categories registered at launch via `AppDelegate`. `UNUserNotificationCenterDelegate` wired for foreground banner presentation and action handling.
+
 ### Phase 5 — File access + Obsidian
 
 - `ObsidianBridge.swift`: `getDailyNote`, `listNotes`, `appendToNote`, `getTasksFromNote`, `writeDailyNote`, `isVaultConfigured`, `getVaultConfig`
@@ -336,6 +344,12 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 - Security-scoped bookmarks in `UserDefaults` (App Group container for widget access too)
 - Settings screen (`SettingsViewController` or SwiftUI sheet) for vault path display + re-pick
 - `NSFileProviderDomainIdentifier` not needed — direct file URL access is sufficient
+
+**Status: ✅ Complete.** Implemented methods exceed the spec: also includes `getAllDailyNotes` (single-round-trip batch read), `getNote`, `writeNote`, `buildNoteIndex`, `openNote` (obsidian:// URI), `clearVault`, and `setVaultSettings`. The last one is a notable addition: Android persists folder/pattern via `SettingsActivity`; iOS has no equivalent, so a `setVaultSettings(folder, pattern, newNotesFolder)` bridge call was added, called from an `App.jsx` effect whenever `obsidianConfig` changes, keeping `UserDefaults` in sync with the web settings UI.
+
+**Deferred to Phase 10**: bookmarks are currently stored in `UserDefaults.standard`; they need migrating to the App Group container (`group.com.dayglance.app`) so the WidgetKit extension can access the vault.
+
+**isNativeAndroid → isNativeApp audit also completed**: 21 guards across 8 files updated so iOS behaves identically to Android everywhere it should (calendar sync configuration, cloud sync dedup, settings UI, reminder notifications, native event editing, etc.). Guards intentionally kept as `isNativeAndroid()`: status bar appearance, `notifyNativeReady` splash callback, `nativeShareFile`, `nativeHttpRequest` ICS fetch, DnD permission checks, tab bar safe-area padding, and the SettingsModal Obsidian section (hidden on iOS — covered by `MobileSettingsPanel`).
 
 ### Phase 6 — HTTP bridge + WebDAV
 
@@ -469,7 +483,7 @@ export const isCloudSyncAvailable = () =>
 
 6. **iCloud sync conflict window**: If both macOS and iOS are offline simultaneously and make different changes, the merge on reconnect resolves per-item by timestamp. Is last-write-wins per item acceptable, or do we need a richer conflict UI (e.g. "both versions" diff) for any data type?
 
-7. **iCloud sync phase timing**: iCloud sync touches both the macOS Electron app and the iOS shell simultaneously. Should Phase 7 be gated behind a working iOS Phase 1 shell, or developed and tested on macOS first (where the container path can be inspected directly in Finder)?
+7. ~~**iCloud sync phase timing**~~: **Resolved** — Phase 6 (HTTP bridge / WebDAV) ships first. Rationale: the iOS half of iCloud sync (`CloudSyncBridge.swift`, `NSMetadataQuery`) doesn't need the HTTP bridge, but the macOS Electron half (`electron/icloud-sync.ts`, entitlements, IPC wiring) is a non-trivial parallel change, and the iCloud container (`iCloud.com.dayglance.app`) must be registered in the Apple Developer portal before any of it is testable. Phase 6 unblocks WebDAV end-to-end testing on device in the meantime. iCloud sync (Phase 7) then follows as a deliberate two-codebase effort once the portal setup is in place. The two sync transports are fully independent and coexist cleanly: iCloud covers Apple-to-Apple zero-config; WebDAV covers cross-platform (Android, Windows, self-hosted).
 
 8. ~~**StoreKit on macOS / Electron**~~: **Resolved** — using RevenueCat across iOS, macOS, and Android. Avoids the MAS sandbox XPC complexity; adds customer dashboard, webhooks, and future Android billing support.
 

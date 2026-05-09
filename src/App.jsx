@@ -4799,8 +4799,14 @@ const DayPlanner = () => {
         if (hasNeverSynced) setTimeout(() => window.location.reload(), 500);
       }
 
-      if (remoteChanged) {
+      if (remoteChanged || localChanged) {
         // Upload merged result so both sides converge.
+        // We upload even when only localChanged (remoteChanged is false) because
+        // applyRemoteData's setState calls trigger useSaveOnChange, which clears
+        // the suppress refs, and a subsequent native-calendar re-sync then fires
+        // the debounce upload — producing a spurious second sync event. Uploading
+        // from here keeps cloudSyncInProgressRef locked through the upload so the
+        // debounce cannot fire.
         // Pass the merged data directly as a pre-built payload — reading from
         // React state via buildSyncPayload() would return stale pre-merge data
         // because applyRemoteData's setState calls haven't been processed yet.

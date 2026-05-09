@@ -28,6 +28,9 @@ struct ContentView: View {
             }
             .onChange(of: scenePhase) { phase in
                 guard phase == .active else { return }
+                // Always notify the web layer that the app came to foreground so
+                // cloud sync can pull any changes made while the app was backgrounded.
+                NotificationCenter.default.post(name: .dayGlanceForeground, object: nil)
                 let current = EKEventStore.authorizationStatus(for: .event)
                 if current != lastCalendarStatus {
                     lastCalendarStatus = current
@@ -39,4 +42,5 @@ struct ContentView: View {
 
 extension Notification.Name {
     static let dayGlanceReloadWebView = Notification.Name("dayGlanceReloadWebView")
+    static let dayGlanceForeground    = Notification.Name("dayGlanceForeground")
 }

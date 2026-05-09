@@ -41,6 +41,19 @@ struct WebView: UIViewRepresentable {
             webView?.reload()
         }
 
+        // Fire visibilitychange in JS whenever the app comes to foreground so
+        // the cloud sync download handler runs even if WKWebView didn't emit it.
+        NotificationCenter.default.addObserver(
+            forName: .dayGlanceForeground,
+            object: nil,
+            queue: .main
+        ) { [weak webView] _ in
+            webView?.evaluateJavaScript(
+                "document.dispatchEvent(new Event('visibilitychange'))",
+                completionHandler: nil
+            )
+        }
+
         // Three-slash URL: scheme=dg, empty host, path starts at /
         // Relative refs in index.html (./assets/…) resolve to dg:///assets/…
         webView.load(URLRequest(url: URL(string: "dg:///index.html")!))

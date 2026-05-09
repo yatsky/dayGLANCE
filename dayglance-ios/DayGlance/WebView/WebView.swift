@@ -29,6 +29,8 @@ struct WebView: UIViewRepresentable {
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
 
+        webView.isInspectable = true
+
         // Reload the page after permission dialogs close so the web app can
         // re-fetch health and calendar data with fresh authorization.
         NotificationCenter.default.addObserver(

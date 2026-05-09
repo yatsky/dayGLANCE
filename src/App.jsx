@@ -1190,6 +1190,7 @@ const DayPlanner = () => {
     // Native iOS fires a custom event to bypass the document.hidden timing gap
     // that occurs when scenePhase fires before WKWebView updates visibility state.
     const handleNativeForeground = () => {
+      console.log('[sync] dayglanceForeground fired, backoff:', cloudSyncBackoffUntilRef.current - Date.now(), 'ms remaining');
       setCurrentTime(new Date());
       if (Date.now() >= cloudSyncBackoffUntilRef.current) {
         cloudSyncDownloadRef.current?.();
@@ -4742,11 +4743,11 @@ const DayPlanner = () => {
   };
 
   const cloudSyncDownload = async () => {
-    if (!cloudSyncConfig?.enabled) return;
+    if (!cloudSyncConfig?.enabled) { console.log('[sync] download skipped: not enabled'); return; }
     const provider = cloudSyncProviders[cloudSyncConfig.provider];
-    if (!provider) return;
+    if (!provider) { console.log('[sync] download skipped: no provider'); return; }
 
-    if (cloudSyncInProgressRef.current) return;
+    if (cloudSyncInProgressRef.current) { console.log('[sync] download skipped: in progress'); return; }
     cloudSyncInProgressRef.current = true;
     const syncStart = Date.now();
     setCloudSyncStatus('downloading');
@@ -4775,6 +4776,8 @@ const DayPlanner = () => {
       // Build local snapshot and merge with remote at the task level
       const localData = buildSyncPayload().data;
       const { data: mergedData, localChanged, remoteChanged } = mergeSyncData(localData, remote.data, syncRetentionDays);
+      console.log('[sync] merge result — localChanged:', localChanged, 'remoteChanged:', remoteChanged,
+        'local tasks:', localData.tasks?.length, 'remote tasks:', remote.data?.tasks?.length);
 
       if (localChanged) {
         applyRemoteData(mergedData);

@@ -126,8 +126,59 @@ final class BridgeSchemeHandler: NSObject, WKURLSchemeHandler {
     }
 
     private func dispatchObsidian(method: String, args: [Any]) -> String {
-        // Phase 5+: ObsidianBridge
-        return "null"
+        switch method {
+        case "pickVault":
+            ObsidianBridge.shared.pickVault()
+            return "null"
+        case "isVaultConfigured":
+            return ObsidianBridge.shared.isVaultConfigured()
+        case "getVaultConfig":
+            return ObsidianBridge.shared.getVaultConfig()
+        case "clearVault":
+            ObsidianBridge.shared.clearVault()
+            return "null"
+        case "getDailyNote":
+            guard let date = args.first as? String else { return "" }
+            return ObsidianBridge.shared.getDailyNote(date: date)
+        case "writeDailyNote":
+            guard args.count >= 2,
+                  let date    = args[0] as? String,
+                  let content = args[1] as? String else { return "false" }
+            return ObsidianBridge.shared.writeDailyNote(date: date, content: content)
+        case "listNotes":
+            guard let folder = args.first as? String else { return "[]" }
+            return ObsidianBridge.shared.listNotes(folder: folder)
+        case "getAllDailyNotes":
+            guard args.count >= 2,
+                  let folder = args[0] as? String,
+                  let cutoff = args[1] as? String else { return "[]" }
+            return ObsidianBridge.shared.getAllDailyNotes(folder: folder, cutoff: cutoff)
+        case "appendToNote":
+            guard args.count >= 2,
+                  let path    = args[0] as? String,
+                  let content = args[1] as? String else { return "false" }
+            return ObsidianBridge.shared.appendToNote(path: path, content: content)
+        case "getNote":
+            guard let path = args.first as? String else { return "" }
+            return ObsidianBridge.shared.getNote(path: path)
+        case "writeNote":
+            guard args.count >= 2,
+                  let path    = args[0] as? String,
+                  let content = args[1] as? String else { return "false" }
+            return ObsidianBridge.shared.writeNote(path: path, content: content)
+        case "getTasksFromNote":
+            guard let path = args.first as? String else { return "[]" }
+            return ObsidianBridge.shared.getTasksFromNote(path: path)
+        case "buildNoteIndex":
+            ObsidianBridge.shared.buildNoteIndex()
+            return "null"
+        case "openNote":
+            guard let name = args.first as? String else { return "null" }
+            ObsidianBridge.shared.openNote(noteName: name)
+            return "null"
+        default:
+            return "null"
+        }
     }
 
     // MARK: - Helpers

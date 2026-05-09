@@ -4072,8 +4072,8 @@ const DayPlanner = () => {
         taskAuthHeaders['Authorization'] = 'Basic ' + toBase64(taskCalendarAuth.username + ':' + taskCalendarAuth.appPassword);
       }
       let effectiveTaskUrl = taskCalendarUrl;
-      if (isNativeAndroid()) {
-        // On Android: fetch directly — no CORS restrictions, no proxy server available
+      if (isNativeApp()) {
+        // On native apps: fetch directly — no CORS restrictions, no proxy server available
         const result = nativeHttpRequest('GET', taskCalendarUrl, taskAuthHeaders, '');
         if (!result || !result.ok) throw new Error('Failed to fetch task calendar');
         icsContent = result.body;

@@ -119,7 +119,18 @@ final class BridgeSchemeHandler: NSObject, WKURLSchemeHandler {
         case "getPendingAction":
             return NotificationBridge.shared.getPendingAction()
 
-        // Phase 5+
+        // Phase 6 — HTTP bridge
+        case "httpRequest":
+            guard args.count >= 4,
+                  let method  = args[0] as? String,
+                  let url     = args[1] as? String,
+                  let headers = args[2] as? String,
+                  let body    = args[3] as? String else {
+                return #"{"status":0,"ok":false,"body":"","error":"missing args"}"#
+            }
+            return HttpBridge.shared.request(method: method, url: url, headersJson: headers, body: body)
+
+        // Phase 7+
         default:
             return "null"
         }

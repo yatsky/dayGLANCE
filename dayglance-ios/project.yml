@@ -70,3 +70,5 @@ targets:
         NSCalendarsUsageDescription: "dayGLANCE reads your calendars to show upcoming events on the home screen."
         NSCalendarsFullAccessUsageDescription: "dayGLANCE reads your calendars to show upcoming events on the home screen and can create calendar events from your tasks."
         NSCalendarsWriteOnlyAccessUsageDescription: "dayGLANCE can create calendar events from your tasks."
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true

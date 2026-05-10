@@ -1306,8 +1306,11 @@ const DayPlanner = () => {
         return;
       }
 
+      // iCloud file exists but is still downloading from the cloud — skip this
+      // cycle and let the 60-second poll retry once it's available locally.
       let remote;
       try { remote = JSON.parse(str); } catch { return; }
+      if (remote?.downloading) return;
       if (!remote?.data) return;
 
       const localData = buildSyncPayload().data;

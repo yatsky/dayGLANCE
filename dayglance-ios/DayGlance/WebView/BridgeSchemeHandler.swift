@@ -130,7 +130,17 @@ final class BridgeSchemeHandler: NSObject, WKURLSchemeHandler {
             }
             return HttpBridge.shared.request(method: method, url: url, headersJson: headers, body: body)
 
-        // Phase 7+
+        // Phase 7 — iCloud Sync
+        case "readICloudSync":
+            return ICloudBridge.shared.readSync()
+        case "writeICloudSync":
+            guard let json = args.first as? String else {
+                return #"{"ok":false,"error":"missing args"}"#
+            }
+            return ICloudBridge.shared.writeSync(json)
+        case "iCloudAvailable":
+            return ICloudBridge.shared.isAvailable()
+
         default:
             return "null"
         }

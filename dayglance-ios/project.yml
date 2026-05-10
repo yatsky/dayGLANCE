@@ -29,6 +29,8 @@ targets:
         com.apple.developer.healthkit: true
         com.apple.developer.icloud-container-identifiers:
           - iCloud.com.dayglance
+        com.apple.developer.icloud-services:
+          - CloudDocuments
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.dayglance
     postBuildScripts:
       - name: Copy Web Assets

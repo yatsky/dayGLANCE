@@ -369,14 +369,6 @@ Please open an issue before starting large changes so we can discuss approach. F
 
 ---
 
-## Documentation
-
-<p align="center">
-  <a href="https://docs.dayglance.app">docs</a> &nbsp;·&nbsp;
-</p>
-
----
-
 ## Support
 
 If dayGLANCE has been useful to you, consider supporting development:

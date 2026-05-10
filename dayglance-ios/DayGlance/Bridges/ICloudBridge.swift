@@ -28,11 +28,12 @@ final class ICloudBridge {
         // Trigger download if the file exists in cloud but hasn't been fetched locally yet.
         try? FileManager.default.startDownloadingUbiquitousItem(at: fileURL)
 
-        // If it's still a cloud-only placeholder, return null — next poll will get it.
+        // If it's still a cloud-only placeholder, signal "downloading" so the caller
+        // doesn't mistake it for "no remote file" and accidentally seed with empty data.
         if let values = try? fileURL.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]),
            let status = values.ubiquitousItemDownloadingStatus,
            status == .notDownloaded {
-            return "null"
+            return #"{"downloading":true}"#
         }
 
         guard let data = try? Data(contentsOf: fileURL),

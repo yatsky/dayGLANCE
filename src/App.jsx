@@ -8,7 +8,7 @@ import { voiceParseSystemPrompt, voiceParseUserPrompt, taskSuggestSystemPrompt, 
 import { gatherTrmnlData, pushToTrmnl, TRMNL_MARKUP_FULL, TRMNL_MARKUP_HALF_HORIZONTAL, TRMNL_MARKUP_HALF_VERTICAL, TRMNL_MARKUP_QUADRANT } from './trmnl.js';
 import { checkForUpdate } from './versionCheck.js';
 import { getStorageUsage, formatBytes } from './utils/storage.js';
-import { cloudSyncProviders } from './utils/cloudSyncProviders.js';
+import { cloudSyncProviders, webdavFetch } from './utils/cloudSyncProviders.js';
 import { autoBackupDB, autoBackupProviders, AUTO_BACKUP_RETENTION, AUTO_BACKUP_INTERVALS } from './utils/autoBackup.js';
 import { URL_REGEX, isOnlyUrl, renderFormattedText, hasNotesOrSubtasks, isLinkOnlyTask, getLinkUrl, hasOnlySubtasks, renderTitle, highlightMatch, renderTitleWithoutTags, extractShareTitle } from './utils/textFormatting.jsx';
 import { dateToString, localDateStr, extractTags, extractWikilinks, stripWikilinks, getRecurrenceLabel, formatDate, formatDateRange, formatShortDate, formatDeadlineDate } from './utils/taskUtils.js';
@@ -122,7 +122,7 @@ import { useSubscription } from './hooks/useSubscription.js';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).
-const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+const toBase64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
 
 
 
@@ -4192,6 +4192,13 @@ const DayPlanner = () => {
     return fetch(`/api/calendar-proxy/?url=${url}`, { headers: proxyHeaders });
   };
 
+  // Strip userinfo (credentials) from a URL before logging so they don't appear
+  // in DevTools or crash-reporter payloads even when embedded in the URL.
+  const redactUrl = (url) => {
+    try { const u = new URL(url); u.username = ''; u.password = ''; return u.toString(); }
+    catch { return url; }
+  };
+
   // Returns { success: boolean, count?: number, error?: string }
   const syncWithCalendar = async () => {
     // On native apps, calendar events come from the native bridge (EventKit/CalendarBridge).
@@ -4217,7 +4224,7 @@ const DayPlanner = () => {
         console.log('[calendar-sync] Response is not ICS. Content-Type:', response.headers.get('content-type'), '— First 300 chars:', icsContent.slice(0, 300));
         if (!syncUrl.includes('export')) {
           const exportUrl = syncUrl.includes('?') ? `${syncUrl}&export` : `${syncUrl}?export`;
-          console.log('[calendar-sync] Retrying with ?export:', exportUrl);
+          console.log('[calendar-sync] Retrying with ?export:', redactUrl(exportUrl));
           try {
             const exportResponse = await icsProxyFetch(exportUrl, calAuthValue);
             if (exportResponse.ok) {
@@ -4226,7 +4233,7 @@ const DayPlanner = () => {
                 icsContent = exportContent;
                 effectiveUrl = exportUrl;
               } else {
-                console.log('[calendar-sync] ?export retry also returned non-ICS. Content-Type:', exportResponse.headers.get('content-type'), '— First 300 chars:', exportContent.slice(0, 300));
+                console.log('[calendar-sync] ?export retry also returned non-ICS. Content-Type:', exportResponse.headers.get('content-type'));
               }
             }
           } catch { /* fall through to not-ical error below */ }
@@ -4293,7 +4300,7 @@ const DayPlanner = () => {
           // Auto-retry with ?export for CalDAV collection URLs (Baikal, Nextcloud, etc.)
           console.log('[task-calendar-sync] Response is not ICS. Content-Type:', response.headers.get('content-type'), '— First 300 chars:', icsContent.slice(0, 300));
           const exportUrl = taskCalendarUrl.includes('?') ? `${taskCalendarUrl}&export` : `${taskCalendarUrl}?export`;
-          console.log('[task-calendar-sync] Retrying with ?export:', exportUrl);
+          console.log('[task-calendar-sync] Retrying with ?export:', redactUrl(exportUrl));
           try {
             const exportResponse = await icsProxyFetch(exportUrl, taskAuthValue);
             if (exportResponse.ok) {
@@ -4361,13 +4368,10 @@ const DayPlanner = () => {
     };
 
     try {
-      const getRes = await fetch(`/api/webdav-proxy/?url=${encodeURIComponent(resourceUrl)}`, {
-        method: 'GET',
-        headers: authHeaders
-      });
+      const getRes = await webdavFetch('GET', resourceUrl, authHeaders);
 
       if (!getRes.ok) {
-        console.error('CalDAV GET failed:', getRes.status, resourceUrl);
+        console.error('CalDAV GET failed:', getRes.status, redactUrl(resourceUrl));
         setSyncNotification({ type: 'error', title: 'CalDAV Sync', message: `Failed to fetch task from server (HTTP ${getRes.status}). Check CalDAV Base URL.` });
         return;
       }
@@ -4606,16 +4610,12 @@ const DayPlanner = () => {
       }
 
       // PUT the updated resource back
-      const putHeaders = { ...authHeaders, 'Content-Type': 'text/calendar; charset=utf-8' };
-      if (icsEtag) putHeaders['If-Match'] = icsEtag;
-      const putRes = await fetch(`/api/webdav-proxy/?url=${encodeURIComponent(resourceUrl)}`, {
-        method: 'PUT',
-        headers: putHeaders,
-        body: icsContent
-      });
+      const putExtraHeaders = { 'Content-Type': 'text/calendar; charset=utf-8' };
+      if (icsEtag) putExtraHeaders['If-Match'] = icsEtag;
+      const putRes = await webdavFetch('PUT', resourceUrl, authHeaders, icsContent, putExtraHeaders);
 
       if (!putRes.ok) {
-        console.error('CalDAV PUT failed:', putRes.status, resourceUrl);
+        console.error('CalDAV PUT failed:', putRes.status, redactUrl(resourceUrl));
         setSyncNotification({ type: 'error', title: 'CalDAV Sync', message: `Failed to update task on server (HTTP ${putRes.status})` });
       }
     } catch (err) {
@@ -4810,12 +4810,21 @@ const DayPlanner = () => {
         setCloudSyncStatus('idle');
         return;
       }
-      cloudSyncErrorCountRef.current += 1;
-      const backoffMs = Math.min(30 * Math.pow(2, cloudSyncErrorCountRef.current - 1), 15 * 60) * 1000;
-      cloudSyncBackoffUntilRef.current = Date.now() + backoffMs;
-      const errMsg = err.message === 'FORBIDDEN'
-        ? 'Sync blocked (403) — your server may be blocking Vercel\'s IP addresses.'
-        : err.message;
+      const is401 = err.message?.includes('401');
+      if (is401) {
+        // Auth failure: back off for 1 hour so we don't hammer the server.
+        cloudSyncBackoffUntilRef.current = Date.now() + 60 * 60 * 1000;
+      } else {
+        cloudSyncErrorCountRef.current += 1;
+        const MAX_UPLOAD_BACKOFF_S = 15 * 60; // 15 minutes
+        const backoffMs = Math.min(30 * Math.pow(2, cloudSyncErrorCountRef.current - 1), MAX_UPLOAD_BACKOFF_S) * 1000;
+        cloudSyncBackoffUntilRef.current = Date.now() + backoffMs;
+      }
+      const errMsg = is401
+        ? 'Authentication failed (401) — check your username and password in sync settings.'
+        : err.message === 'FORBIDDEN'
+          ? 'Sync blocked (403) — your server may be blocking Vercel\'s IP addresses.'
+          : err.message;
       setCloudSyncError(errMsg);
       setCloudSyncStatus('error');
       setTimeout(() => setCloudSyncStatus((s) => s === 'error' ? 'idle' : s), 5000);
@@ -4865,10 +4874,10 @@ const DayPlanner = () => {
     if (normalizedTasks) localStorage.setItem('day-planner-tasks', JSON.stringify(normalizedTasks));
     if (normalizedUnsched) localStorage.setItem('day-planner-unscheduled', JSON.stringify(normalizedUnsched));
     if (data.recycleBin) localStorage.setItem('day-planner-recycle-bin', JSON.stringify(data.recycleBin));
-    // Calendar URLs: only overwrite if remote provides a non-empty value
-    // (prevents a device without URLs from wiping one that has them configured).
-    if (data.syncUrl) localStorage.setItem('day-planner-sync-url', data.syncUrl);
-    if (data.taskCalendarUrl) localStorage.setItem('day-planner-task-calendar-url', data.taskCalendarUrl);
+    // Calendar URLs: apply whenever remote explicitly includes them (even empty string,
+    // which propagates an intentional URL clear). Only skip when the key is absent.
+    if (data.syncUrl !== undefined) localStorage.setItem('day-planner-sync-url', data.syncUrl);
+    if (data.taskCalendarUrl !== undefined) localStorage.setItem('day-planner-task-calendar-url', data.taskCalendarUrl);
     // taskCalendarAuth is not applied from sync — credentials are device-local only.
     if (data.completedTaskUids) localStorage.setItem('day-planner-task-completed-uids', JSON.stringify(data.completedTaskUids));
     if (data.recurringTasks) localStorage.setItem('day-planner-recurring-tasks', JSON.stringify(data.recurringTasks));
@@ -4881,7 +4890,8 @@ const DayPlanner = () => {
       localStorage.setItem('day-planner-routines-date', data.routinesDate);
       if (data.routineCompletions) localStorage.setItem('day-planner-routine-completions', JSON.stringify(data.routineCompletions));
     }
-    // selectedTags and minimizedSections are per-device UI preferences — not synced to state
+    // selectedTags is a per-device UI preference and is not applied to state here.
+    // minimizedSections is synced to localStorage so the same section layout follows the user across devices.
     if (data.minimizedSections) localStorage.setItem('minimizedSections', JSON.stringify(data.minimizedSections));
     if (data.use24HourClock !== undefined) localStorage.setItem('day-planner-use-24h-clock', JSON.stringify(data.use24HourClock));
     if (data.weatherZip !== undefined) localStorage.setItem('day-planner-weather-zip', data.weatherZip);
@@ -4990,8 +5000,8 @@ const DayPlanner = () => {
       localStorage.setItem('day-planner-unscheduled-order-ts', data.unscheduledOrderTimestamp);
     }
     if (data.recycleBin) setRecycleBin(data.recycleBin);
-    if (data.syncUrl) setSyncUrl(data.syncUrl);
-    if (data.taskCalendarUrl) setTaskCalendarUrl(data.taskCalendarUrl);
+    if (data.syncUrl !== undefined) setSyncUrl(data.syncUrl);
+    if (data.taskCalendarUrl !== undefined) setTaskCalendarUrl(data.taskCalendarUrl);
     if (data.completedTaskUids) setCompletedTaskUids(new Set(data.completedTaskUids));
     if (data.recurringTasks) setRecurringTasks(data.recurringTasks);
     if (data.routineDefinitions) setRoutineDefinitions(data.routineDefinitions);
@@ -5112,19 +5122,25 @@ const DayPlanner = () => {
         }
         return;
       }
-      // 423 Locked = another client is writing right now.
-      // Use a short fixed retry rather than escalating backoff — the lock clears quickly.
-      if (err.message?.includes('423')) {
+      const is401 = err.message?.includes('401');
+      if (is401) {
+        // Auth failure: back off for 1 hour so we don't hammer the server.
+        cloudSyncDownloadBackoffUntilRef.current = Date.now() + 60 * 60 * 1000;
+      } else if (err.message?.includes('423')) {
+        // 423 Locked = another client is writing right now.
+        // Use a short fixed retry rather than escalating backoff — the lock clears quickly.
         cloudSyncDownloadBackoffUntilRef.current = Date.now() + 30_000;
       } else {
         cloudSyncDownloadErrorCountRef.current += 1;
-        // Exponential backoff: 30s, 60s, 2m, 4m … capped at 5 min
-        const backoffMs = Math.min(30 * Math.pow(2, cloudSyncDownloadErrorCountRef.current - 1), 5 * 60) * 1000;
+        const MAX_DOWNLOAD_BACKOFF_S = 5 * 60; // 5 minutes
+        const backoffMs = Math.min(30 * Math.pow(2, cloudSyncDownloadErrorCountRef.current - 1), MAX_DOWNLOAD_BACKOFF_S) * 1000;
         cloudSyncDownloadBackoffUntilRef.current = Date.now() + backoffMs;
       }
-      const errMsg = err.message === 'FORBIDDEN'
-        ? 'Sync blocked (403) — your server may be blocking requests.'
-        : err.message;
+      const errMsg = is401
+        ? 'Authentication failed (401) — check your username and password in sync settings.'
+        : err.message === 'FORBIDDEN'
+          ? 'Sync blocked (403) — your server may be blocking requests.'
+          : err.message;
       setCloudSyncError(errMsg);
       setCloudSyncStatus('error');
       setTimeout(() => setCloudSyncStatus((s) => s === 'error' ? 'idle' : s), 5000);

@@ -260,9 +260,13 @@ function validateProxyUrl(urlString: string): void {
 
 // iCloud sync file — shared with the iOS app via the ubiquitous container.
 // The path matches NSFileManager url(forUbiquityContainerIdentifier:) on macOS.
+// ICLOUD_CONTAINER_ID must match the iOS app's entitlement
+// (com.apple.developer.icloud-container-identifiers: iCloud.com.dayglance).
+// Update both here and in the iOS entitlement file if the bundle ID changes.
+const ICLOUD_CONTAINER_ID = 'iCloud~com~dayglance';
 const ICLOUD_SYNC_PATH = path.join(
   app.getPath('home'),
-  'Library/Mobile Documents/iCloud~com~dayglance/Documents/dayglance-sync.json'
+  `Library/Mobile Documents/${ICLOUD_CONTAINER_ID}/Documents/dayglance-sync.json`
 );
 
 ipcMain.handle('icloud:read', () => {
@@ -284,9 +288,11 @@ ipcMain.handle('icloud:read', () => {
 
 // Track our own writes so the fs.watch callback can ignore them.
 let lastMacOSWriteTime = 0;
-// 5s suppression: iCloud daemon can take longer than 3s to propagate a write
-// back through fs.watch, causing self-echo sync cycles.
-const ICLOUD_WRITE_SUPPRESSION_MS = 5000;
+// 2s suppression: enough to absorb iCloud daemon's self-echo round-trip
+// without blocking legitimate remote writes. The 1s fs.watch debounce sits
+// inside this window, so the effective minimum gap between a local write and
+// a recognized remote write is 2s.
+const ICLOUD_WRITE_SUPPRESSION_MS = 2000;
 
 ipcMain.handle('icloud:write', (_event, json: string) => {
   if (process.platform !== 'darwin') return false;

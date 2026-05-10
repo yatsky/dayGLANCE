@@ -273,14 +273,46 @@ ipcMain.handle('icloud:read', () => {
   } catch { return null; }
 });
 
+// Track our own writes so the fs.watch callback can ignore them.
+let lastMacOSWriteTime = 0;
+const ICLOUD_WRITE_SUPPRESSION_MS = 3000;
+
 ipcMain.handle('icloud:write', (_event, json: string) => {
   if (process.platform !== 'darwin') return false;
   try {
     fs.mkdirSync(path.dirname(ICLOUD_SYNC_PATH), { recursive: true });
     fs.writeFileSync(ICLOUD_SYNC_PATH, json, { encoding: 'utf-8' });
+    lastMacOSWriteTime = Date.now();
     return true;
   } catch { return false; }
 });
+
+// Watch the iCloud container directory for changes written by the iOS app.
+// Sends 'icloud:changed' to the renderer so it can run a sync cycle immediately
+// instead of waiting for the 60-second poll.
+function startICloudWatch(win: BrowserWindow): void {
+  if (process.platform !== 'darwin') return;
+  const dir = path.dirname(ICLOUD_SYNC_PATH);
+  const file = path.basename(ICLOUD_SYNC_PATH);
+  try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+
+  let debounce: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    fs.watch(dir, (_eventType, filename) => {
+      if (filename !== file) return;
+      if (Date.now() - lastMacOSWriteTime < ICLOUD_WRITE_SUPPRESSION_MS) return;
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        try {
+          if (!fs.existsSync(ICLOUD_SYNC_PATH)) return;
+          const content = fs.readFileSync(ICLOUD_SYNC_PATH, 'utf-8');
+          live(win)?.webContents.send('icloud:changed', content);
+        } catch {}
+      }, 500);
+    });
+  } catch {}
+}
 
 // Proxy outbound HTTP requests from the renderer so they aren't subject to
 // Chromium's CORS restrictions when the app is loaded from file://.
@@ -459,7 +491,7 @@ app.whenReady().then(() => {
 
   const win = createWindow();
   createWsServer(() => live(mainWindow));
-  if (process.platform === 'darwin') createTray();
+  if (process.platform === 'darwin') { createTray(); startICloudWatch(win); }
 
   app.on('activate', () => {
     const mw = live(mainWindow);

@@ -11,6 +11,14 @@ final class ICloudBridge {
     private let containerID   = "iCloud.com.dayglance"
     private let syncFileName  = "dayglance-sync.json"
 
+    // MARK: - Remote-change watching
+
+    private var metadataQuery: NSMetadataQuery?
+
+    // Suppress query callbacks that fire immediately after our own local write.
+    private var lastLocalWriteDate: Date?
+    private let writeSuppressionInterval: TimeInterval = 3.0
+
     // MARK: - Public API
 
     /// Returns the sync file JSON, "null" if unavailable/not yet downloaded,
@@ -56,6 +64,7 @@ final class ICloudBridge {
             guard let data = json.data(using: .utf8) else {
                 return #"{"ok":false,"error":"encoding error"}"#
             }
+            lastLocalWriteDate = Date()
             try data.write(to: fileURL, options: .atomic)
             return #"{"ok":true}"#
         } catch {
@@ -64,8 +73,44 @@ final class ICloudBridge {
     }
 
     /// Returns {"available":true} if iCloud is signed in and the container is accessible.
+    /// Also kicks off NSMetadataQuery watching the first time availability is confirmed.
     func isAvailable() -> String {
-        containerURL() != nil ? #"{"available":true}"# : #"{"available":false}"#
+        guard containerURL() != nil else { return #"{"available":false}"# }
+        DispatchQueue.main.async { self.startWatching() }
+        return #"{"available":true}"#
+    }
+
+    // MARK: - NSMetadataQuery watch
+
+    /// Starts an NSMetadataQuery that watches the iCloud sync file for remote changes
+    /// (e.g. the macOS app wrote while the iOS app was open). Must run on main thread.
+    private func startWatching() {
+        guard metadataQuery == nil else { return }
+
+        let q = NSMetadataQuery()
+        q.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope]
+        q.predicate = NSPredicate(format: "%K == %@", NSMetadataItemFSNameKey, syncFileName)
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleQueryUpdate),
+            name: .NSMetadataQueryDidUpdate,
+            object: q
+        )
+
+        q.start()
+        metadataQuery = q
+    }
+
+    @objc private func handleQueryUpdate() {
+        // Skip if the change was caused by our own recent write.
+        if let lastWrite = lastLocalWriteDate,
+           Date().timeIntervalSince(lastWrite) < writeSuppressionInterval {
+            return
+        }
+        // Fire the same notification that scenePhase foreground transitions use,
+        // so the JS sync cycle runs immediately without waiting for the 60-second poll.
+        NotificationCenter.default.post(name: .dayGlanceForeground, object: nil)
     }
 
     // MARK: - Helpers

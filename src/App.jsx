@@ -1357,6 +1357,13 @@ const DayPlanner = () => {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
+  // On Electron/macOS, sync immediately when the main process detects the iCloud
+  // file was changed by the iOS app (fs.watch → icloud:changed IPC event).
+  useEffect(() => {
+    if (!isElectronMac()) return;
+    return window.electronAPI.onICloudChanged?.(() => iCloudSyncRef.current?.());
+  }, []);
+
   // Cloud sync: download on app load or when sync is first enabled.
   // If encryption is enabled, wait until the session key is ready (either
   // restored from IndexedDB or provided by the passphrase modal).

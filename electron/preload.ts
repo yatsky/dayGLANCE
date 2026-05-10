@@ -92,6 +92,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // macOS only; returns null/false on other platforms.
   readICloud: (): Promise<string | null> => ipcRenderer.invoke('icloud:read'),
   writeICloud: (json: string): Promise<boolean> => ipcRenderer.invoke('icloud:write', json),
+  onICloudChanged: (callback: (json: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, json: string) => callback(json);
+    ipcRenderer.on('icloud:changed', handler);
+    return () => ipcRenderer.removeListener('icloud:changed', handler);
+  },
 
   // Tray popup listens for the signal to focus the quick-add input.
   onFocusQuickAdd: (callback: () => void) => {

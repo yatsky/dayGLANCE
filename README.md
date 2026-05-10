@@ -371,7 +371,7 @@ Please open an issue before starting large changes so we can discuss approach. F
 
 ## Support
 
-If dayGLANCE has been useful to you, consider supporting development:
+If dayGLANCE has been useful to you, consider supporting its development:
 
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub_Sponsors-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/krelltunez)
 [![Ko-fi](https://img.shields.io/badge/Ko--fi-F16061?logo=kofi&logoColor=white)](https://ko-fi.com/krelltunez)

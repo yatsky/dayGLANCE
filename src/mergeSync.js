@@ -22,6 +22,24 @@ const newerTs = (a, b) => {
   return new Date(a).getTime() >= new Date(b).getTime() ? a : b;
 };
 
+// Structural deep equality — key-order independent.
+// Used instead of JSON.stringify comparisons to avoid spurious dirty flags
+// when two objects have identical content but different key insertion order.
+const deepEqual = (a, b) => {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== typeof b) return false;
+  if (typeof a !== 'object') return a === b;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    if (a.length !== b.length) return false;
+    return a.every((v, i) => deepEqual(v, b[i]));
+  }
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every(k => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]));
+};
+
 /**
  * Merges two task arrays by ID, preserving local ordering and appending
  * remote-only tasks at the end.
@@ -273,7 +291,7 @@ export const mergeHabits = (localHabits, remoteHabits, localDeletedIds = {}, rem
         remoteChanged = true;
       } else {
         // Equal — check for field-level differences (e.g. archived on one side)
-        if (JSON.stringify(localHabit) !== JSON.stringify(remoteHabit)) {
+        if (!deepEqual(localHabit, remoteHabit)) {
           merged.push(localHabit); // keep local
           remoteChanged = true;
         } else {
@@ -311,13 +329,23 @@ export const mergeHabits = (localHabits, remoteHabits, localDeletedIds = {}, rem
  *
  * @param {Object} localLogs  - { "YYYY-MM-DD": { habitId: count } }
  * @param {Object} remoteLogs - { "YYYY-MM-DD": { habitId: count } }
- * @returns {{ merged: Object, localChanged: boolean, remoteChanged: boolean }}
+ * @param {Object} [localTs]  - { "YYYY-MM-DD:habitId": ISO } timestamps for local entries
+ * @param {Object} [remoteTs] - { "YYYY-MM-DD:habitId": ISO } timestamps for remote entries
+ * @returns {{ merged: Object, mergedTimestamps: Object, localChanged: boolean, remoteChanged: boolean }}
  */
-export const mergeHabitLogs = (localLogs, remoteLogs) => {
+export const mergeHabitLogs = (localLogs, remoteLogs, localTs = {}, remoteTs = {}) => {
   const allDates = new Set([...Object.keys(localLogs), ...Object.keys(remoteLogs)]);
   const merged = {};
+  const mergedTimestamps = { ...localTs };
   let localChanged = false;
   let remoteChanged = false;
+
+  // Merge remote timestamps in (keep the newer of each key).
+  for (const [k, v] of Object.entries(remoteTs)) {
+    if (!mergedTimestamps[k] || new Date(v) > new Date(mergedTimestamps[k])) {
+      mergedTimestamps[k] = v;
+    }
+  }
 
   for (const dateKey of allDates) {
     const local = localLogs[dateKey];
@@ -330,23 +358,37 @@ export const mergeHabitLogs = (localLogs, remoteLogs) => {
       merged[dateKey] = remote;
       localChanged = true;
     } else {
-      // Both have it — merge per habit, taking the max count
+      // Both have it — per-habit merge using timestamps when available, Math.max for legacy.
       const allHabitIds = new Set([...Object.keys(local), ...Object.keys(remote)]);
       const dayMerged = {};
       for (const habitId of allHabitIds) {
-        const localCount = local[habitId] || 0;
-        const remoteCount = remote[habitId] || 0;
-        dayMerged[habitId] = Math.max(localCount, remoteCount);
-        if (remoteCount > localCount) localChanged = true;
-        if (localCount > remoteCount) remoteChanged = true;
-        if (!local[habitId] && remote[habitId]) localChanged = true;
-        if (local[habitId] && !remote[habitId]) remoteChanged = true;
+        const localCount = local[habitId] !== undefined ? local[habitId] : 0;
+        const remoteCount = remote[habitId] !== undefined ? remote[habitId] : 0;
+        const tsKey = `${dateKey}:${habitId}`;
+        const lTime = localTs[tsKey] ? new Date(localTs[tsKey]).getTime() : 0;
+        const rTime = remoteTs[tsKey] ? new Date(remoteTs[tsKey]).getTime() : 0;
+
+        let winner;
+        if (lTime > 0 || rTime > 0) {
+          // Timestamp-based: last-writer-wins (handles decrements).
+          winner = lTime >= rTime ? localCount : remoteCount;
+          if (lTime > rTime && localCount !== remoteCount) remoteChanged = true;
+          if (rTime > lTime && localCount !== remoteCount) localChanged = true;
+        } else {
+          // Legacy (no timestamps): take the max to be safe.
+          winner = Math.max(localCount, remoteCount);
+          if (remoteCount > localCount) localChanged = true;
+          if (localCount > remoteCount) remoteChanged = true;
+        }
+        dayMerged[habitId] = winner;
+        if (local[habitId] === undefined && remote[habitId] !== undefined) localChanged = true;
+        if (remote[habitId] === undefined && local[habitId] !== undefined) remoteChanged = true;
       }
       merged[dateKey] = dayMerged;
     }
   }
 
-  return { merged, localChanged, remoteChanged };
+  return { merged, mergedTimestamps, localChanged, remoteChanged };
 };
 
 /**
@@ -454,7 +496,12 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
   const localDeletedHabitIds = localData.deletedHabitIds || {};
   const remoteDeletedHabitIds = remoteData.deletedHabitIds || {};
   const habitsMerge = mergeHabits(localData.habits || [], remoteData.habits || [], localDeletedHabitIds, remoteDeletedHabitIds);
-  const habitLogsMerge = mergeHabitLogs(localData.habitLogs || {}, remoteData.habitLogs || {});
+  const habitLogsMerge = mergeHabitLogs(
+    localData.habitLogs || {},
+    remoteData.habitLogs || {},
+    localData.habitLogTimestamps || {},
+    remoteData.habitLogTimestamps || {}
+  );
 
   // Detect routine completion changes: did the merge add completions that one side was missing?
   const localCompletionsFiltered = Object.fromEntries(Object.entries(localCompletions).filter(([, d]) => d === mergedRoutinesDate));
@@ -582,7 +629,7 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
       continue;
     }
     const remoteFrame = remoteFrameMap.get(id);
-    if (remoteFrame && JSON.stringify(localFrame) !== JSON.stringify(remoteFrame)) {
+    if (remoteFrame && !deepEqual(localFrame, remoteFrame)) {
       const localTime = new Date(localFrame.lastModified || 0);
       const remoteTime = new Date(remoteFrame.lastModified || 0);
       if (remoteTime > localTime) {
@@ -656,7 +703,7 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
       continue;
     }
     const remoteGoal = remoteGoalMap.get(id);
-    if (remoteGoal && JSON.stringify(localGoal) !== JSON.stringify(remoteGoal)) {
+    if (remoteGoal && !deepEqual(localGoal, remoteGoal)) {
       const localTime = new Date(localGoal.updatedAt || 0);
       const remoteTime = new Date(remoteGoal.updatedAt || 0);
       if (remoteTime > localTime) {
@@ -694,7 +741,7 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
       continue;
     }
     const remoteProject = remoteProjectMap.get(id);
-    if (remoteProject && JSON.stringify(localProject) !== JSON.stringify(remoteProject)) {
+    if (remoteProject && !deepEqual(localProject, remoteProject)) {
       const localTime = new Date(localProject.updatedAt || 0);
       const remoteTime = new Date(remoteProject.updatedAt || 0);
       if (remoteTime > localTime) {
@@ -779,6 +826,7 @@ export const mergeSyncData = (localData, remoteData, retentionDays = 90) => {
       habits: habitsMerge.merged,
       deletedHabitIds: prunedDeletedHabitIds,
       habitLogs: habitLogsMerge.merged,
+      habitLogTimestamps: habitLogsMerge.mergedTimestamps,
       habitsEnabled: mergedHabitsEnabled,
       habitsEnabledUpdatedAt: mergedHabitsEnabledUpdatedAt,
       routinesEnabled: mergedRoutinesEnabled,

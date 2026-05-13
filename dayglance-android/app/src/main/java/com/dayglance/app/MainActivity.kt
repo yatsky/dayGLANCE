@@ -350,8 +350,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onPause() {
+        super.onPause()
+        webView.onPause()
+    }
+
     override fun onResume() {
         super.onResume()
+        webView.onResume()
         // Re-enable so back button works after returning from background or SettingsActivity.
         // The callback disables itself when the WebView has no back history; without this
         // reset it stays disabled for the rest of the session (Android 13+ behaviour).

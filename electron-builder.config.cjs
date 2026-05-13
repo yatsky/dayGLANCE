@@ -9,7 +9,6 @@
 //   APPLE_ID                         your Apple ID email
 //   APPLE_APP_SPECIFIC_PASSWORD      app-specific password generated at appleid.apple.com
 //   APPLE_TEAM_ID                    10-char Team ID from developer.apple.com/account
-//   MAC_PROVISIONING_PROFILE         path to .provisionprofile (required for iCloud entitlements)
 
 const hasCert = Boolean(process.env.CSC_LINK);
 
@@ -30,8 +29,6 @@ module.exports = {
     identity: hasCert ? undefined : null,
     hardenedRuntime: hasCert,
     notarize: false, // handled by afterSign hook (scripts/notarize.cjs)
-    // Required for iCloud entitlements on Developer ID builds
-    provisioningProfile: process.env.MAC_PROVISIONING_PROFILE || undefined,
     category: 'public.app-category.productivity',
     entitlements: 'electron/entitlements.mac.plist',
     entitlementsInherit: 'electron/entitlements.mac.plist',

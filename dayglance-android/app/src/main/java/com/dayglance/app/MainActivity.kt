@@ -350,11 +350,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        webView.onPause()
-    }
-
     override fun onResume() {
         super.onResume()
         webView.onResume()

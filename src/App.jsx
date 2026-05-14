@@ -1194,7 +1194,10 @@ const DayPlanner = () => {
         // Reset download backoff when user returns to the app so retries happen promptly.
         cloudSyncDownloadBackoffUntilRef.current = 0;
         cloudSyncDownloadRef.current?.();
-        syncHealthConnectHabitsRef.current?.();
+        // Defer the blocking Health Connect bridge calls (up to 7 × N synchronous
+        // @JavascriptInterface calls) to after the next paint so the JS thread isn't
+        // blocked mid-render, which shows as a brief blank screen on app resume.
+        requestAnimationFrame(() => setTimeout(() => syncHealthConnectHabitsRef.current?.(), 0));
       }
     };
     // Native iOS fires a custom event to bypass the document.hidden timing gap
@@ -1205,7 +1208,7 @@ const DayPlanner = () => {
       // iCloud runs first (fast local file I/O), then WebDAV (network)
       iCloudSyncRef.current?.();
       cloudSyncDownloadRef.current?.();
-      syncHealthConnectHabitsRef.current?.();
+      requestAnimationFrame(() => setTimeout(() => syncHealthConnectHabitsRef.current?.(), 0));
     };
     document.addEventListener('visibilitychange', handleVisibility);
     document.addEventListener('dayglanceForeground', handleNativeForeground);

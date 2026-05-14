@@ -1586,11 +1586,17 @@ const DayPlanner = () => {
               setObsidianConfig({ enabled: true, dailyNotesPath: cfg.folder || '', newNotesFolder: cfg.newNotesFolder || 'dayGLANCE', dailyNotePattern: cfg.pattern || 'yyyy-MM-dd' });
             }
             performObsidianSync();
-            // Refresh candidates in case new notes were added while in native settings
-            try {
-              const notes = nativeListNotes('');
-              if (notes) setWikilinkCandidates(notes.map(p => p.split('/').pop().replace(/\.md$/i, '')).sort((a, b) => a.localeCompare(b)));
-            } catch {}
+            // Only refresh wikilink candidates when the vault config changed (newly
+            // configured or folder moved). Skipping on normal app resumes avoids a
+            // synchronous directory scan that blocks the JS thread every time the
+            // user returns to the app.
+            const vaultChanged = !obsidianConfig?.enabled || (cfg.folder || '') !== (obsidianConfig?.dailyNotesPath || '');
+            if (vaultChanged) {
+              try {
+                const notes = nativeListNotes('');
+                if (notes) setWikilinkCandidates(notes.map(p => p.split('/').pop().replace(/\.md$/i, '')).sort((a, b) => a.localeCompare(b)));
+              } catch {}
+            }
           }
         } catch {}
         return;

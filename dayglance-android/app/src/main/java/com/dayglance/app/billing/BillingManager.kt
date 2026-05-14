@@ -2,6 +2,7 @@ package com.dayglance.app.billing
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
@@ -34,6 +35,7 @@ class BillingManager(
 ) {
 
     companion object {
+        private const val TAG = "DayGlanceBilling"
         // These IDs must match what you create in the Play Console exactly.
         const val PRODUCT_ANNUAL   = "dayglance_pro_annual"
         const val PRODUCT_LIFETIME = "dayglance_pro_lifetime"
@@ -50,6 +52,8 @@ class BillingManager(
     private val scope = CoroutineScope(Dispatchers.IO)
 
     private val purchasesUpdatedListener = PurchasesUpdatedListener { result, purchases ->
+        // DIAG: log every billing result so we can see exactly what Play returns
+        Log.d(TAG, "purchasesUpdatedListener: code=${result.responseCode} msg='${result.debugMessage}' purchases=${purchases?.size ?: "null"}")
         if (result.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
             for (purchase in purchases) handlePurchase(purchase)
         }
@@ -163,11 +167,19 @@ class BillingManager(
      * [activity] set; the billing flow is dispatched to the main thread.
      */
     fun launchPurchaseFlow(productId: String) {
-        val act = activity ?: return
-        if (!billingClient.isReady) return
+        val act = activity ?: run {
+            Log.w(TAG, "launchPurchaseFlow($productId): activity is null, aborting")
+            return
+        }
+        if (!billingClient.isReady) {
+            Log.w(TAG, "launchPurchaseFlow($productId): billingClient not ready, aborting")
+            return
+        }
 
         val productType = if (productId in INAPP_PRODUCTS) BillingClient.ProductType.INAPP
                           else BillingClient.ProductType.SUBS
+
+        Log.d(TAG, "launchPurchaseFlow($productId): starting — type=$productType ts=${System.currentTimeMillis()}")
 
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(listOf(
@@ -180,15 +192,33 @@ class BillingManager(
 
         scope.launch {
             billingClient.queryProductDetailsAsync(params) { result, detailsList ->
-                if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryProductDetailsAsync
-                val details = detailsList.firstOrNull() ?: return@queryProductDetailsAsync
+                Log.d(TAG, "launchPurchaseFlow($productId): queryProductDetailsAsync code=${result.responseCode} msg='${result.debugMessage}' count=${detailsList.size} ts=${System.currentTimeMillis()}")
+
+                if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                    Log.w(TAG, "launchPurchaseFlow($productId): query failed, silent exit A (code=${result.responseCode})")
+                    return@queryProductDetailsAsync
+                }
+                val details = detailsList.firstOrNull() ?: run {
+                    Log.w(TAG, "launchPurchaseFlow($productId): empty detailsList, silent exit B")
+                    return@queryProductDetailsAsync
+                }
+
+                // DIAG: dump full ProductDetails for this product
+                Log.d(TAG, "  ProductDetails: id=${details.productId} type=${details.productType} title='${details.title}'")
+                details.subscriptionOfferDetails?.forEachIndexed { i, offer ->
+                    Log.d(TAG, "  offerDetails[$i]: basePlanId='${offer.basePlanId}' offerId='${offer.offerId}' offerToken='${offer.offerToken.take(20)}...' tags=${offer.offerTags}")
+                } ?: Log.w(TAG, "  subscriptionOfferDetails=null (INAPP or missing)")
 
                 val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
                     .setProductDetails(details)
                     .apply {
                         if (productType == BillingClient.ProductType.SUBS) {
                             val offerToken = details.subscriptionOfferDetails?.firstOrNull()?.offerToken
-                                ?: return@queryProductDetailsAsync
+                                ?: run {
+                                    Log.w(TAG, "launchPurchaseFlow($productId): no offerToken, silent exit C")
+                                    return@queryProductDetailsAsync
+                                }
+                            Log.d(TAG, "  using offerToken from index 0: '${offerToken.take(20)}...'")
                             setOfferToken(offerToken)
                         }
                     }
@@ -199,7 +229,8 @@ class BillingManager(
                     .build()
 
                 act.runOnUiThread {
-                    billingClient.launchBillingFlow(act, flowParams)
+                    val launchResult = billingClient.launchBillingFlow(act, flowParams)
+                    Log.d(TAG, "launchPurchaseFlow($productId): launchBillingFlow returned code=${launchResult.responseCode} msg='${launchResult.debugMessage}' ts=${System.currentTimeMillis()}")
                 }
             }
         }

@@ -288,7 +288,7 @@ const MobileSettingsPanel = () => {
     {/* Stats */}
     {/* Sub-menu buttons */}
     <div className="space-y-2">
-      <h3 onClick={() => setDevTapCount(c => c + 1)} className={`text-xs font-semibold uppercase tracking-wide ${textSecondary} px-1`}>More</h3>
+      <h3 className={`text-xs font-semibold uppercase tracking-wide ${textSecondary} px-1`}>More</h3>
       <button
         onClick={() => setMobileSettingsView('app')}
         className={`w-full ${cardBg} border ${borderClass} rounded-xl p-4 flex items-center gap-3`}
@@ -331,7 +331,7 @@ const MobileSettingsPanel = () => {
         </button>
       )}
       {isAndroidApp && isPro && (
-        <p className={`text-xs ${textSecondary} text-center pt-1`}>
+        <p onClick={() => setDevTapCount(c => c + 1)} className={`text-xs ${textSecondary} text-center pt-1`}>
           {subProductId === 'dayglance_pro_lifetime' ? 'dayGLANCE Pro · Lifetime' : 'dayGLANCE Pro · Annual'}
         </p>
       )}

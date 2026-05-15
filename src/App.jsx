@@ -7630,6 +7630,7 @@ const DayPlanner = () => {
     showHelpModal, setShowHelpModal,
 
     // ── Billing ───────────────────────────────────────────────────────────────
+    isPro, isAndroidApp, productId: subProductId,
     consumeTestPurchase, canConsumeTestPurchase,
 
     // ── Autocomplete suggestions ──────────────────────────────────────────────

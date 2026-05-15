@@ -124,12 +124,14 @@ class SubscriptionBridge(
             }
             return
         }
+        // Capture productId before consumePurchase clears it from the data store.
+        val productId = dataStore.subscriptionProductId ?: ""
         billingManager.consumePurchase(token) { success ->
             val json = JSONObject().apply {
                 put("status", if (success) "consumed" else "consume_failed")
                 put("code", 0)
                 put("message", if (success) "test_consume" else "consume_error")
-                put("productId", BillingManager.PRODUCT_LIFETIME)
+                put("productId", productId)
             }
             webView?.post {
                 webView.evaluateJavascript(

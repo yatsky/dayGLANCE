@@ -294,21 +294,22 @@ class BillingManager(
 
     fun consumePurchase(token: String, onComplete: (success: Boolean) -> Unit) {
         // Always clear the local cache so the subscription wall reappears immediately.
-        // For INAPP (lifetime) products also call consumeAsync so Play allows re-purchase.
-        // Subscriptions can't be consumed via the billing API — clearing the cache is enough
-        // to re-test the purchase UI (Play will re-activate on the next subscribe call).
         dataStore.subscriptionActive = false
-        val productId = dataStore.subscriptionProductId
         dataStore.subscriptionProductId = null
         dataStore.subscriptionToken = null
 
-        if (productId in INAPP_PRODUCTS && billingClient.isReady) {
-            val params = ConsumeParams.newBuilder().setPurchaseToken(token).build()
-            scope.launch {
-                billingClient.consumeAsync(params) { _, _ -> onComplete(true) }
-            }
-        } else {
+        if (!billingClient.isReady) {
             onComplete(true)
+            return
+        }
+        // Call consumeAsync regardless of product type. For INAPP (lifetime) this is
+        // required to allow re-purchase. For test subscription tokens purchased by a
+        // license tester, consumeAsync also succeeds and lets Play allow a new
+        // subscription — PR #803 skipped this for SUBS but that broke re-testing.
+        // The result code is ignored; local cache is always cleared above.
+        val params = ConsumeParams.newBuilder().setPurchaseToken(token).build()
+        scope.launch {
+            billingClient.consumeAsync(params) { _, _ -> onComplete(true) }
         }
     }
 }

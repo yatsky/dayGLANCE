@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Activity, Archive, BarChart3, Bell, BookOpen, BrainCircuit,
   CalendarDays, CheckCircle, CheckSquare, ChevronDown, ChevronUp,
@@ -108,6 +108,7 @@ const MobileSettingsPanel = () => {
   // Commit staged routines on unmount (e.g. user switches tabs while in routines view)
   const mobileSettingsViewRef = useRef(mobileSettingsView);
   const handleRoutinesDoneRef = useRef(handleRoutinesDone);
+  const [devTapCount, setDevTapCount] = useState(0);
   useEffect(() => { mobileSettingsViewRef.current = mobileSettingsView; }, [mobileSettingsView]);
   useEffect(() => { handleRoutinesDoneRef.current = handleRoutinesDone; });
   useEffect(() => {
@@ -286,7 +287,7 @@ const MobileSettingsPanel = () => {
     {/* Stats */}
     {/* Sub-menu buttons */}
     <div className="space-y-2">
-      <h3 className={`text-xs font-semibold uppercase tracking-wide ${textSecondary} px-1`}>More</h3>
+      <h3 onClick={() => setDevTapCount(c => c + 1)} className={`text-xs font-semibold uppercase tracking-wide ${textSecondary} px-1`}>More</h3>
       <button
         onClick={() => setMobileSettingsView('app')}
         className={`w-full ${cardBg} border ${borderClass} rounded-xl p-4 flex items-center gap-3`}
@@ -319,7 +320,7 @@ const MobileSettingsPanel = () => {
         <span className={`font-medium ${textPrimary} flex-1 text-left`}>Help & Feedback</span>
         <ChevronRight size={18} className={textSecondary} />
       </button>
-      {canConsumeTestPurchase && (
+      {canConsumeTestPurchase && devTapCount >= 7 && (
         <button
           onClick={consumeTestPurchase}
           className={`w-full ${cardBg} border ${borderClass} rounded-xl p-3 flex items-center gap-3 opacity-50`}

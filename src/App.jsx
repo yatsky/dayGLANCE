@@ -1434,7 +1434,10 @@ const DayPlanner = () => {
       if (isEncryptedEnvelope(remote)) {
         try { remote = await decryptData(remote); }
         catch (decErr) {
-          if (decErr?.code === 'PASSPHRASE_REQUIRED') setSyncKeyReady(false);
+          // Any decryption failure — wrong key, key not loaded, or corrupted data —
+          // should prompt for the passphrase rather than silently abandoning the cycle.
+          console.error('[iCloudSync] decryption failed:', decErr?.code, decErr?.message ?? decErr);
+          setSyncKeyReady(false);
           return;
         }
       }

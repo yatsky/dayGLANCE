@@ -1376,10 +1376,10 @@ const DayPlanner = () => {
       return;
     }
 
-    // If encryption is configured but the key isn't ready yet (passphrase not entered),
-    // skip — we must not read an encrypted file we can't decrypt, or write plaintext.
-    const encEnabled = cloudSyncConfig?.encryptionEnabled && hasEncryptionReady();
-    if (cloudSyncConfig?.encryptionEnabled && !hasEncryptionReady()) return;
+    // iCloud Drive is already encrypted by Apple at rest and in transit — app-level
+    // encryption is WebDAV-only. iCloud sync always reads and writes plaintext.
+    // If the file happens to be an encrypted envelope (written by an older build),
+    // we attempt to decrypt it once and write it back as plaintext below.
 
     // iOS: check iCloud availability once and cache.
     if (onIOS) {
@@ -1412,8 +1412,7 @@ const DayPlanner = () => {
         const payload = buildSyncPayload();
         const payloadTaskCount = (payload.data?.tasks?.length || 0) + (payload.data?.unscheduledTasks?.length || 0);
         if (localTaskCount + localInboxCount > 0 && payloadTaskCount === 0) return;
-        const toWrite = encEnabled ? await encryptData(payload) : payload;
-        await iCloudWriteSync(onIOS, JSON.stringify(toWrite));
+        await iCloudWriteSync(onIOS, JSON.stringify(payload));
         return;
       }
 
@@ -1430,11 +1429,19 @@ const DayPlanner = () => {
         return;
       }
 
-      // Decrypt if the file is an encrypted envelope.
+      // If the file is an encrypted envelope (written by an older build that
+      // incorrectly applied WebDAV encryption to iCloud), attempt to decrypt
+      // it once using the cached key and write it back as plaintext. If
+      // decryption fails, treat it as a first-sync and overwrite with local data.
       if (isEncryptedEnvelope(remote)) {
         try { remote = await decryptData(remote); }
         catch (decErr) {
-          if (decErr?.code === 'PASSPHRASE_REQUIRED') setSyncKeyReady(false);
+          console.warn('[iCloudSync] encrypted iCloud file could not be decrypted — reseeding from local data:', decErr?.message ?? decErr);
+          remote = null;
+        }
+        if (!remote?.data) {
+          const payload = buildSyncPayload();
+          await iCloudWriteSync(onIOS, JSON.stringify(payload));
           return;
         }
       }
@@ -1449,8 +1456,7 @@ const DayPlanner = () => {
       }
       if (remoteChanged || localChanged) {
         const outPayload = { version: 2, lastModified: new Date().toISOString(), data: mergedData };
-        const toWrite = encEnabled ? await encryptData(outPayload) : outPayload;
-        await iCloudWriteSync(onIOS, JSON.stringify(toWrite));
+        await iCloudWriteSync(onIOS, JSON.stringify(outPayload));
       }
     } finally {
       cloudSyncInProgressRef.current = false;

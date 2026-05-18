@@ -278,7 +278,11 @@ async function _aiTranscribe(audioBlob, config) {
     case 'openai':
     case 'custom': {
       const base = provider === 'custom' ? (config.baseUrl || '') : 'https://api.openai.com/v1';
-      const ext = audioBlob.type?.includes('mp4') ? 'mp4' : 'webm';
+      // m4a is AAC-in-MP4 (what iOS records); Whisper accepts it explicitly.
+      // audio/mp4 blobs from the native bridge are m4a, not generic mp4 video.
+      const ext = audioBlob.type?.includes('m4a') ? 'm4a'
+                : audioBlob.type?.includes('mp4') ? 'm4a'
+                : 'webm';
       const formData = new FormData();
       formData.append('file', audioBlob, `recording.${ext}`);
       formData.append('model', 'whisper-1');

@@ -400,7 +400,7 @@ export const nativeStopRecording = () => {
   const bytes = atob(base64);
   const arr = new Uint8Array(bytes.length);
   for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-  return new Blob([arr], { type: 'audio/mp4' });
+  return new Blob([arr], { type: 'audio/m4a' });
 };
 
 // ── Focus mode ────────────────────────────────────────────────────────────────

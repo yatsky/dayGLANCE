@@ -304,11 +304,13 @@ ipcMain.handle('icloud:write', (_event, json: string) => {
   try {
     const dir = path.dirname(ICLOUD_SYNC_PATH);
     fs.mkdirSync(dir, { recursive: true });
-    // Atomic write: write to a temp file then rename so the iCloud daemon never
-    // picks up a partially-written file.
-    const tmp = ICLOUD_SYNC_PATH + '.tmp';
-    fs.writeFileSync(tmp, json, { encoding: 'utf-8' });
-    fs.renameSync(tmp, ICLOUD_SYNC_PATH);
+    // Write in-place rather than using a temp-file + rename.
+    // rename(2) replaces the destination inode, stripping the iCloud extended
+    // attributes that bird attached when it last downloaded the file. Without
+    // those xattrs bird does not recognise the file as needing re-upload.
+    // Writing to the existing fd preserves the inode (and all xattrs) so bird
+    // sees a normal modification event and queues the upload.
+    fs.writeFileSync(ICLOUD_SYNC_PATH, json, { encoding: 'utf-8' });
     lastMacOSWriteTime = Date.now();
     return true;
   } catch { return false; }

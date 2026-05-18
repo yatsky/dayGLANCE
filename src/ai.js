@@ -28,6 +28,14 @@ const PROVIDER_MODELS = {
     { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
     { id: 'gpt-4.1', label: 'GPT-4.1' },
   ],
+  openrouter: [
+    { id: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', recommended: true },
+    { id: 'openai/gpt-4o', label: 'GPT-4o' },
+    { id: 'anthropic/claude-haiku-4-5', label: 'Claude Haiku 4.5' },
+    { id: 'anthropic/claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
+    { id: 'google/gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+    { id: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B' },
+  ],
   anthropic: [
     { id: 'claude-haiku-4-5-20250514', label: 'Claude Haiku 4.5', recommended: true },
     { id: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5' },
@@ -48,6 +56,7 @@ const PROVIDER_MODELS = {
 
 const PROVIDER_LABELS = {
   openai: 'OpenAI',
+  openrouter: 'OpenRouter',
   anthropic: 'Anthropic',
   gemini: 'Google Gemini',
   ollama: 'Ollama (Local)',
@@ -82,6 +91,8 @@ function getBaseUrl(config) {
       return `https://generativelanguage.googleapis.com/v1beta/models/${config.model}`;
     case 'ollama':
       return config.baseUrl || 'http://localhost:11434';
+    case 'openrouter':
+      return 'https://openrouter.ai/api/v1';
     case 'custom':
       return config.baseUrl || '';
     default:
@@ -124,14 +135,17 @@ async function _aiComplete(systemPrompt, userMessage, config) {
 
   switch (provider) {
     case 'openai':
+    case 'openrouter':
     case 'custom': {
-      const base = provider === 'custom' ? (config.baseUrl || '') : 'https://api.openai.com/v1';
+      const base = provider === 'custom' ? (config.baseUrl || '') : getBaseUrl(config);
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      };
+      if (provider === 'openrouter') headers['HTTP-Referer'] = 'https://dayglance.app';
       const res = await fetch(`${base}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify({
           model,
           messages: [
@@ -143,11 +157,11 @@ async function _aiComplete(systemPrompt, userMessage, config) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error?.message || `OpenAI API error: ${res.status}`);
+        throw new Error(err.error?.message || `${PROVIDER_LABELS[provider] || provider} API error: ${res.status}`);
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
-      if (content == null) throw new Error('Unexpected response format from OpenAI API');
+      if (content == null) throw new Error(`Unexpected response format from ${PROVIDER_LABELS[provider] || provider} API`);
       return content;
     }
 
@@ -242,6 +256,7 @@ export async function aiJSON(systemPrompt, userMessage, config) {
 }
 
 // Check if a provider supports audio transcription
+// openrouter does not expose a Whisper endpoint; anthropic/ollama have no transcription API.
 export function supportsTranscription(config) {
   return ['openai', 'custom', 'gemini'].includes(config?.provider);
 }

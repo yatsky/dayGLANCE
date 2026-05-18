@@ -944,7 +944,7 @@ const SettingsModal = () => {
                               />
                               {aiConfig.provider === 'custom' && (
                                 <p className={`text-xs ${textSecondary} mt-1`}>
-                                  Common providers: OpenRouter → <code className="font-mono">https://openrouter.ai/api/v1</code> · Groq → <code className="font-mono">https://api.groq.com/openai/v1</code> · Together AI → <code className="font-mono">https://api.together.xyz/v1</code> · LM Studio → <code className="font-mono">http://localhost:1234/v1</code>
+                                  Common providers: Groq → <code className="font-mono">https://api.groq.com/openai/v1</code> · Together AI → <code className="font-mono">https://api.together.xyz/v1</code> · LM Studio → <code className="font-mono">http://localhost:1234/v1</code>
                                 </p>
                               )}
                             </div>

@@ -1348,11 +1348,21 @@ const DayPlanner = () => {
   // Uses the same cloudSyncInProgressRef lock to serialise with WebDAV.
   const iCloudSyncRef = useRef(null);
   const iCloudAvailableRef = useRef(null); // null=unchecked, true/false=result
+  const iCloudLastWriteAtRef = useRef(0);
 
   const isElectronMac = () =>
     !!(window.electronAPI?.isElectron && window.electronAPI?.platform === 'darwin');
 
+  // Bird's full round-trip (local write → CloudKit upload → server-truth sync-down)
+  // takes ~5-10 s on a healthy link. Writing faster than that piles new conflict
+  // versions onto the CloudKit document zone, because each upload races bird's
+  // pending sync-down ACK. Skip writes inside this window — the 15 s poll
+  // re-runs the merge and writes any genuinely-deferred changes on the next tick.
+  const ICLOUD_WRITE_THROTTLE_MS = 5000;
+
   const iCloudWriteSync = async (onIOS, payloadStr) => {
+    if (Date.now() - iCloudLastWriteAtRef.current < ICLOUD_WRITE_THROTTLE_MS) return;
+    iCloudLastWriteAtRef.current = Date.now();
     if (onIOS) {
       try {
         const r = JSON.parse(window.DayGlanceNative.writeICloudSync(payloadStr));

@@ -10,8 +10,8 @@ import crypto from 'node:crypto';
 const RC_API_KEY       = 'REVENUECAT_MACOS_API_KEY';
 const RC_BASE          = 'https://api.revenuecat.com/v1';
 const ENTITLEMENT_ID   = 'pro';
-const PRODUCT_MONTHLY  = 'com.dayglance.app.pro.monthly';
 const PRODUCT_YEARLY   = 'com.dayglance.app.pro.yearly';
+const PRODUCT_LIFETIME = 'com.dayglance.app.pro.lifetime';
 
 // ── Anonymous app user ID ─────────────────────────────────────────────────────
 // Stable per-device UUID persisted to userData. No account needed — matches
@@ -93,11 +93,11 @@ export function registerSubscriptionHandlers(window: BrowserWindow): void {
 
   // Fetch prices once from StoreKit on startup and cache them.
   if (process.platform === 'darwin' && inAppPurchase.canMakePayments()) {
-    inAppPurchase.getProducts([PRODUCT_MONTHLY, PRODUCT_YEARLY]).then((products) => {
+    inAppPurchase.getProducts([PRODUCT_YEARLY, PRODUCT_LIFETIME]).then((products) => {
       const prices: Record<string, string> = {};
       for (const p of products) {
-        if (p.productIdentifier === PRODUCT_MONTHLY) prices.monthly = p.formattedPrice;
-        if (p.productIdentifier === PRODUCT_YEARLY)  prices.yearly  = p.formattedPrice;
+        if (p.productIdentifier === PRODUCT_YEARLY)   prices.yearly   = p.formattedPrice;
+        if (p.productIdentifier === PRODUCT_LIFETIME) prices.lifetime = p.formattedPrice;
       }
       live()?.webContents.send('subscription:prices-ready', prices);
     }).catch(() => {});

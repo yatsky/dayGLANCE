@@ -45,25 +45,26 @@ function readStatus() {
 }
 
 function readPricesAndroid() {
-  if (!BILLING) return { annual: null, lifetime: null };
+  if (!BILLING) return { yearly: null, lifetime: null };
   try {
     const p = JSON.parse(BILLING.getProductPrices());
-    return { annual: p.annual || null, lifetime: p.lifetime || null };
-  } catch { return { annual: null, lifetime: null }; }
+    // Android bridge returns { annual, lifetime } — remap annual→yearly for a unified shape.
+    return { yearly: p.annual || null, lifetime: p.lifetime || null };
+  } catch { return { yearly: null, lifetime: null }; }
 }
 
 function readPricesIOS() {
-  if (!IOS) return { monthly: null, yearly: null };
+  if (!IOS) return { yearly: null, lifetime: null };
   try {
     const p = JSON.parse(window.DayGlanceNative.getProductPrices());
-    return { monthly: p.monthly || null, yearly: p.yearly || null };
-  } catch { return { monthly: null, yearly: null }; }
+    return { yearly: p.yearly || null, lifetime: p.lifetime || null };
+  } catch { return { yearly: null, lifetime: null }; }
 }
 
 function readPrices() {
   if (BILLING)  return readPricesAndroid();
   if (IOS)      return readPricesIOS();
-  if (ELECTRON) return { monthly: null, yearly: null }; // pushed async via subscription:prices-ready
+  if (ELECTRON) return { yearly: null, lifetime: null }; // pushed async via subscription:prices-ready
   return {};
 }
 
@@ -148,7 +149,7 @@ export function useSubscription() {
   useEffect(() => {
     if (!ELECTRON) return;
     const unsub = window.electronAPI.onSubscriptionPricesReady((p) => {
-      setPrices({ monthly: p.monthly ?? null, yearly: p.yearly ?? null });
+      setPrices({ yearly: p.yearly ?? null, lifetime: p.lifetime ?? null });
     });
     return unsub;
   }, []);

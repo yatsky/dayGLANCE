@@ -2,21 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Loader } from 'lucide-react';
 
 /**
- * Full-screen paywall shown on Android and iOS when the user has no active subscription.
+ * Full-screen paywall shown on Android, iOS, and macOS when the user has no active subscription.
  *
- * Android: annual (dayglance_pro_annual) + lifetime (dayglance_pro_lifetime)
- *          Prices fetched live from Google Play.
+ * All platforms show the same two options:
+ *   - Annual subscription  (auto-renewable)
+ *   - Lifetime purchase    (one-time, non-consumable)
  *
- * iOS: monthly (com.dayglance.app.pro.monthly) + yearly (com.dayglance.app.pro.yearly)
- *      Prices fetched live from the App Store via RevenueCat.
+ * Product IDs differ per platform but are fully handled in useSubscription / the callbacks
+ * passed in from App.jsx — this component only renders prices and labels.
  *
- * The "Founder pricing" badge is intentional during launch. Remove it when prices go up.
+ * `isIOSApp` (true for iOS and macOS) changes only the payment attribution line at the bottom.
+ *
+ * Founder pricing: both products launch at the founder price. No promo codes or intro offers.
+ * The badge copy can be removed when the price is raised in App Store Connect / Play Console.
  */
 export default function SubscriptionWall({
-  isIOSApp,   // true for iOS and macOS Electron (same App Store products / Universal Purchase)
-  onSubscribeMonthly,
+  isIOSApp,
   onSubscribeYearly,
-  onSubscribeAnnual,
   onSubscribeLifetime,
   onRestore,
   isLoading,
@@ -106,92 +108,47 @@ export default function SubscriptionWall({
       {/* Plan cards */}
       <div className="w-full max-w-xs space-y-3 mb-5">
 
-        {isIOSApp ? (
-          <>
-            {/* iOS — yearly */}
-            <button
-              onClick={() => handleSubscribe('yearly', onSubscribeYearly)}
-              disabled={!!pending}
-              className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'yearly' ? 'opacity-60' : ''}`}
-            >
-              <div className="flex items-baseline justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`font-semibold text-sm ${text}`}>Annual</span>
-                  <span className="text-xs bg-indigo-600 text-white rounded-full px-2 py-0.5 leading-none">Best value</span>
-                </div>
-                {prices?.yearly
-                  ? <span className={`text-sm font-medium ${text}`}>{prices.yearly}<span className={`text-xs ${sub}`}>/yr</span></span>
-                  : <span className={`text-xs ${sub}`}>See price in App Store</span>
-                }
-              </div>
-              <div className={`text-xs mt-0.5 ${sub}`}>Billed yearly · cancel any time</div>
-              {pending === 'yearly' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
-            </button>
+        {/* Lifetime — best value, shown first */}
+        <button
+          onClick={() => handleSubscribe('lifetime', onSubscribeLifetime)}
+          disabled={!!pending}
+          className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'lifetime' ? 'opacity-60' : ''}`}
+        >
+          <div className="flex items-baseline justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`font-semibold text-sm ${text}`}>Lifetime</span>
+              <span className="text-xs bg-indigo-600 text-white rounded-full px-2 py-0.5 leading-none">Best value</span>
+            </div>
+            {prices?.lifetime
+              ? <span className={`text-sm font-medium ${text}`}>{prices.lifetime}</span>
+              : <span className={`text-xs ${sub}`}>Loading…</span>
+            }
+          </div>
+          <div className={`text-xs mt-0.5 ${sub}`}>One-time purchase · yours forever</div>
+          {pending === 'lifetime' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
+        </button>
 
-            {/* iOS — monthly */}
-            <button
-              onClick={() => handleSubscribe('monthly', onSubscribeMonthly)}
-              disabled={!!pending}
-              className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'monthly' ? 'opacity-60' : ''}`}
-            >
-              <div className="flex items-baseline justify-between">
-                <span className={`font-semibold text-sm ${text}`}>Monthly</span>
-                {prices?.monthly
-                  ? <span className={`text-sm font-medium ${text}`}>{prices.monthly}<span className={`text-xs ${sub}`}>/mo</span></span>
-                  : <span className={`text-xs ${sub}`}>See price in App Store</span>
-                }
-              </div>
-              <div className={`text-xs mt-0.5 ${sub}`}>Billed monthly · cancel any time</div>
-              {pending === 'monthly' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
-            </button>
-          </>
-        ) : (
-          <>
-            {/* Android — annual */}
-            <button
-              onClick={() => handleSubscribe('annual', onSubscribeAnnual)}
-              disabled={!!pending}
-              className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'annual' ? 'opacity-60' : ''}`}
-            >
-              <div className="flex items-baseline justify-between">
-                <span className={`font-semibold text-sm ${text}`}>Annual</span>
-                {prices?.annual
-                  ? <span className={`text-sm font-medium ${text}`}>{prices.annual}<span className={`text-xs ${sub}`}>/yr</span></span>
-                  : <span className={`text-xs ${sub}`}>See price in Play</span>
-                }
-              </div>
-              <div className={`text-xs mt-0.5 ${sub}`}>Billed yearly · cancel any time</div>
-              {pending === 'annual' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
-            </button>
-
-            {/* Android — lifetime */}
-            <button
-              onClick={() => handleSubscribe('lifetime', onSubscribeLifetime)}
-              disabled={!!pending}
-              className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'lifetime' ? 'opacity-60' : ''}`}
-            >
-              <div className="flex items-baseline justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`font-semibold text-sm ${text}`}>Lifetime</span>
-                  <span className="text-xs bg-indigo-600 text-white rounded-full px-2 py-0.5 leading-none">Best value</span>
-                </div>
-                {prices?.lifetime
-                  ? <span className={`text-sm font-medium ${text}`}>{prices.lifetime}</span>
-                  : <span className={`text-xs ${sub}`}>See price in Play</span>
-                }
-              </div>
-              <div className={`text-xs mt-0.5 ${sub}`}>One-time purchase · yours forever</div>
-              {pending === 'lifetime' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
-            </button>
-          </>
-        )}
+        {/* Annual subscription */}
+        <button
+          onClick={() => handleSubscribe('yearly', onSubscribeYearly)}
+          disabled={!!pending}
+          className={`w-full rounded-xl border px-4 py-4 text-left transition-colors ${card} ${pending === 'yearly' ? 'opacity-60' : ''}`}
+        >
+          <div className="flex items-baseline justify-between">
+            <span className={`font-semibold text-sm ${text}`}>Annual</span>
+            {prices?.yearly
+              ? <span className={`text-sm font-medium ${text}`}>{prices.yearly}<span className={`text-xs ${sub}`}>/yr</span></span>
+              : <span className={`text-xs ${sub}`}>Loading…</span>
+            }
+          </div>
+          <div className={`text-xs mt-0.5 ${sub}`}>Billed yearly · cancel any time</div>
+          {pending === 'yearly' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
+        </button>
 
       </div>
 
       <p className={`text-xs text-center mb-6 max-w-xs ${sub}`}>
-        {isIOSApp
-          ? 'Annual plan includes a free trial. Payment via App Store.'
-          : 'Annual plan includes a 14-day free trial. Payment via Google Play.'}
+        {isIOSApp ? 'Payment via App Store.' : 'Payment via Google Play.'}
       </p>
 
       <button

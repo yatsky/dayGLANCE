@@ -101,8 +101,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('subscription:event', handler);
     return () => ipcRenderer.removeListener('subscription:event', handler);
   },
-  onSubscriptionPricesReady: (callback: (prices: { monthly: string | null; yearly: string | null }) => void) => {
-    const handler = (_: Electron.IpcRendererEvent, prices: { monthly: string | null; yearly: string | null }) => callback(prices);
+  onSubscriptionPricesReady: (callback: (prices: { yearly: string | null; lifetime: string | null }) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, prices: { yearly: string | null; lifetime: string | null }) => callback(prices);
     ipcRenderer.on('subscription:prices-ready', handler);
     return () => ipcRenderer.removeListener('subscription:prices-ready', handler);
   },

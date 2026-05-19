@@ -36,13 +36,13 @@ final class SubscriptionBridge {
         return "{\"active\":\(active),\"productId\":\(productJson)}"
     }
 
-    /// Returns `{"monthly":string|null,"yearly":string|null}` from cached StoreKit prices.
+    /// Returns `{"yearly":string|null,"lifetime":string|null}` from cached StoreKit prices.
     func getProductPrices() -> String {
-        let monthly = UserDefaults.standard.string(forKey: "rc_price_monthly")
-        let yearly  = UserDefaults.standard.string(forKey: "rc_price_yearly")
-        let m = monthly.map { "\"\(esc($0))\"" } ?? "null"
-        let y = yearly.map  { "\"\(esc($0))\"" } ?? "null"
-        return "{\"monthly\":\(m),\"yearly\":\(y)}"
+        let yearly   = UserDefaults.standard.string(forKey: "rc_price_yearly")
+        let lifetime = UserDefaults.standard.string(forKey: "rc_price_lifetime")
+        let y = yearly.map   { "\"\(esc($0))\"" } ?? "null"
+        let l = lifetime.map { "\"\(esc($0))\"" } ?? "null"
+        return "{\"yearly\":\(y),\"lifetime\":\(l)}"
     }
 
     // MARK: - Async bridge calls (return null immediately, fire __billingEvent when done)
@@ -103,10 +103,10 @@ final class SubscriptionBridge {
             for pkg in packages {
                 let id    = pkg.storeProduct.productIdentifier
                 let price = pkg.storeProduct.localizedPriceString
-                if id.contains("monthly") {
-                    UserDefaults.standard.set(price, forKey: "rc_price_monthly")
-                } else if id.contains("yearly") || id.contains("annual") {
+                if id.contains("yearly") || id.contains("annual") {
                     UserDefaults.standard.set(price, forKey: "rc_price_yearly")
+                } else if id.contains("lifetime") {
+                    UserDefaults.standard.set(price, forKey: "rc_price_lifetime")
                 }
             }
         }

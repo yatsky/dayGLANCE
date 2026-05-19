@@ -1,6 +1,5 @@
 import { ipcMain, inAppPurchase, net, app, BrowserWindow } from 'electron';
 import fs from 'node:fs';
-import path from 'node:path';
 import crypto from 'node:crypto';
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -14,18 +13,15 @@ const PRODUCT_YEARLY   = 'com.dayglance.app.pro.yearly';
 const PRODUCT_LIFETIME = 'com.dayglance.app.pro.lifetime';
 
 // ── Anonymous app user ID ─────────────────────────────────────────────────────
-// Stable per-device UUID persisted to userData. No account needed — matches
-// the "no accounts, privacy-first" principle.
+// Derived from a hash of the userData path — stable per user+app installation,
+// no file I/O required. Identity is validated against the MAS receipt rather than
+// persisted separately, so RevenueCat derives the Apple ID from the receipt itself.
 
-function getAppUserId(): string {
-  const p = path.join(app.getPath('userData'), 'rc-app-user-id.txt');
-  try {
-    const id = fs.readFileSync(p, 'utf-8').trim();
-    if (id) return id;
-  } catch {}
-  const id = `mac_${crypto.randomUUID()}`;
-  try { fs.writeFileSync(p, id, 'utf-8'); } catch {}
-  return id;
+function getStableAnonymousId(): string {
+  return crypto.createHash('sha256')
+    .update(app.getPath('userData'))
+    .digest('hex')
+    .slice(0, 32);
 }
 
 // ── Module state ──────────────────────────────────────────────────────────────
@@ -56,13 +52,23 @@ async function rcFetch(method: string, endpoint: string, body?: object): Promise
   return res.json();
 }
 
+// Validates the MAS receipt with RevenueCat (POST /receipts) and returns entitlement
+// status. Using POST /receipts rather than GET /subscribers means RevenueCat derives
+// the customer identity from the Apple ID embedded in the receipt — no separate
+// persisted user ID is needed, and cross-device restore just works via Apple ID.
 async function fetchEntitlementStatus(): Promise<{ active: boolean; productId: string | null }> {
   try {
-    const userId = getAppUserId();
-    const data = await rcFetch('GET', `/subscribers/${encodeURIComponent(userId)}`) as any;
+    const receiptPath = inAppPurchase.getReceiptURL();
+    if (!receiptPath || !fs.existsSync(receiptPath)) return { active: false, productId: null };
+    const fetchToken = fs.readFileSync(receiptPath).toString('base64');
+    const data = await rcFetch('POST', '/receipts', {
+      app_user_id: getStableAnonymousId(),
+      fetch_token: fetchToken,
+      platform: 'macos',
+    }) as any;
     const ent = data?.subscriber?.entitlements?.[ENTITLEMENT_ID];
     if (!ent) return { active: false, productId: null };
-    // Subscriptions have expires_date; lifetime purchases do not.
+    // Subscriptions have expires_date; lifetime non-consumables do not.
     if (ent.expires_date) {
       const active = new Date(ent.expires_date) > new Date();
       return { active, productId: active ? (ent.product_identifier ?? null) : null };
@@ -71,19 +77,6 @@ async function fetchEntitlementStatus(): Promise<{ active: boolean; productId: s
   } catch {
     return { active: false, productId: null };
   }
-}
-
-async function postReceiptToRC(): Promise<void> {
-  try {
-    const receiptPath = inAppPurchase.getReceiptURL();
-    if (!receiptPath || !fs.existsSync(receiptPath)) return;
-    const fetchToken = fs.readFileSync(receiptPath).toString('base64');
-    await rcFetch('POST', '/receipts', {
-      app_user_id: getAppUserId(),
-      fetch_token: fetchToken,
-      platform: 'macos',
-    });
-  } catch {}
 }
 
 // ── IPC handlers ──────────────────────────────────────────────────────────────
@@ -110,7 +103,7 @@ export function registerSubscriptionHandlers(window: BrowserWindow): void {
   inAppPurchase.on('transactions-updated', (async (_event: any, transactions: Electron.Transaction[]) => {
     for (const t of transactions) {
       if (t.transactionState === 'purchased' || t.transactionState === 'restored') {
-        await postReceiptToRC();
+        await fetchEntitlementStatus(); // validates receipt with RC; result delivered via subscription:status
         fireBillingEvent({
           status: 'success',
           code: 0,
@@ -172,7 +165,6 @@ export function registerSubscriptionHandlers(window: BrowserWindow): void {
       // Give StoreKit time to deliver restored transactions via 'transactions-updated',
       // then post receipt and fire the terminal event.
       setTimeout(async () => {
-        await postReceiptToRC();
         const s = await fetchEntitlementStatus();
         fireBillingEvent({
           status: 'cancelled', // mirrors Android restore pattern: spinner clears, no "new purchase" UI

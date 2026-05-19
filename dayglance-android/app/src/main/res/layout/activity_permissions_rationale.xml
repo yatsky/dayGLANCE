@@ -12,15 +12,6 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Health Connect Permissions"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary"
-            android:layout_marginBottom="12dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:text="dayGLANCE uses Health Connect to display your daily progress as habit rings on the main day view."
             android:textSize="15sp"
             android:textColor="?android:attr/textColorPrimary"

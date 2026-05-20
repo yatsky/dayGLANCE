@@ -19,6 +19,12 @@ final class SubscriptionBridge {
     // MARK: - RevenueCat configuration
 
     func configure(apiKey: String) {
+        // Debug builds (Xcode Debug scheme) are always treated as Pro — no paywall
+        // during local development. Absent from Release/Archive builds by design:
+        // SWIFT_ACTIVE_COMPILATION_CONDITIONS does not include DEBUG in Release config.
+        #if DEBUG
+        return
+        #endif
         Purchases.logLevel = .warn
         Purchases.configure(withAPIKey: apiKey)
         refreshStatusInBackground()
@@ -30,6 +36,9 @@ final class SubscriptionBridge {
 
     /// Returns `{"active":bool,"productId":string|null}` from RevenueCat's cached info.
     func getStatus() -> String {
+        #if DEBUG
+        return "{\"active\":true,\"productId\":null}"
+        #endif
         let info = Purchases.shared.cachedCustomerInfo
         let active = info?.entitlements[entitlementId]?.isActive == true
         let productId = info?.entitlements[entitlementId]?.productIdentifier

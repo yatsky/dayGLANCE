@@ -414,6 +414,14 @@ How it works:
 - RevenueCat dashboard provides customer lookup, manual entitlement grants, and webhook events (subscription started, cancelled, churned) for support and analytics.
 - Free tier covers up to $2,500 MRR; 1% fee above that.
 
+**Distribution model and free-build behavior**
+
+dayGLANCE's subscription model is structurally tied to distribution channel, not to a debug toggle:
+
+- **macOS — GitHub / Developer ID builds are free forever.** The paywall is gated on the presence of an MAS receipt at `[AppBundle]/Contents/_MASReceipt/receipt`, placed by StoreKit only when the app is installed from the Mac App Store. Developer ID builds distributed via GitHub (DMG/zip) have no such receipt. `isMASBuild()` in `electron/subscription.ts` checks this at runtime: no receipt → `subscription:status` returns `{ active: true }` immediately, no RevenueCat call made. This is the correct architectural expression of "GitHub builds free forever" — not a debug flag, not an env var, just the absence of a receipt that can only exist in a MAS-distributed binary.
+
+- **iOS — all distribution is App Store only.** There is no Developer ID equivalent for iOS, so every real user goes through the paywall as designed. For local Xcode development, `SubscriptionBridge.swift` wraps `configure()` and `getStatus()` in `#if DEBUG` guards: debug builds are always Pro and RevenueCat is never initialised. `DEBUG` is defined automatically by Xcode in the Debug scheme build configuration and is absent from Release/Archive — it is not set in `SWIFT_ACTIVE_COMPILATION_CONDITIONS` or `OTHER_SWIFT_FLAGS` for Release, so the guard is completely inert in App Store submissions.
+
 **Cross-platform subscription scope (deliberate decision)**
 
 Subscriptions are **per-platform**. A user who subscribes on Android does not automatically get Pro on iOS/macOS, and vice versa. This is a deliberate choice, not a limitation to be solved later. Rationale:

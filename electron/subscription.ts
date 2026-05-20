@@ -24,6 +24,24 @@ function getStableAnonymousId(): string {
     .slice(0, 32);
 }
 
+// ── Distribution channel detection ───────────────────────────────────────────
+// The MAS receipt lives at [AppBundle]/Contents/_MASReceipt/receipt — inside
+// the bundle itself, placed by StoreKit at install time. It cannot survive a
+// switch to another distribution method: installing a Developer ID DMG replaces
+// the entire bundle, stripping the receipt directory. Its presence is therefore
+// a reliable structural signal that this specific binary came from the App Store.
+//
+// Developer ID (GitHub) builds have no receipt and are free by design.
+// No env var or debug flag is needed — the signal is structural and permanent.
+
+function isMASBuild(): boolean {
+  if (process.platform !== 'darwin') return false;
+  try {
+    const receiptPath = inAppPurchase.getReceiptURL();
+    return !!(receiptPath && fs.existsSync(receiptPath));
+  } catch { return false; }
+}
+
 // ── Module state ──────────────────────────────────────────────────────────────
 
 let mainWin: BrowserWindow | null = null;
@@ -124,8 +142,10 @@ export function registerSubscriptionHandlers(window: BrowserWindow): void {
     }
   }) as unknown as () => void);
 
-  // Fetch current entitlement status from RevenueCat (async — cached on renderer side).
+  // Fetch current entitlement status. Non-MAS builds (Developer ID / GitHub
+  // distribution) have no App Store receipt and are free by design — skip RC.
   ipcMain.handle('subscription:status', async () => {
+    if (!isMASBuild()) return { active: true, productId: null };
     return fetchEntitlementStatus();
   });
 

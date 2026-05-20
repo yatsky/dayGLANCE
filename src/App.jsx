@@ -3152,6 +3152,7 @@ const DayPlanner = () => {
   useEffect(() => {
     if (!isNativeApp()) return;
 
+
     const dates = [];
     for (let offset = -2; offset <= 2; offset++) {
       const d = new Date(selectedDate);
@@ -3168,6 +3169,7 @@ const DayPlanner = () => {
     const allEvents = results.flatMap((result, i) =>
       Array.isArray(result) ? result.map(e => ({ ...e, _queryDate: dates[i] })) : []
     );
+
 
     // Discover calendars that appear in events but weren't returned by getCalendars()
     // (e.g. task-only calendars that some providers omit from the calendars list).
@@ -3192,6 +3194,7 @@ const DayPlanner = () => {
 
     const filterSet = calendarFilter.length > 0 ? new Set(calendarFilter) : null;
 
+
     // Deduplicate by task id: CalendarContract can return the same all-day event
     // in adjacent day windows (especially in UTC+ timezones). Keep first occurrence.
     const seen = new Set();
@@ -3203,6 +3206,7 @@ const DayPlanner = () => {
         seen.add(t.id);
         return true;
       });
+
 
     // Apply any stored time overrides (from dragging all-day events to the timeline)
     // so the scheduled position survives date navigation and native calendar re-fetches.

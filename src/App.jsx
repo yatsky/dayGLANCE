@@ -177,17 +177,6 @@ const TimePicker = ({ value, onChange, use24HourClock, borderClass, darkMode }) 
 
 const isTrayMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('tray');
 
-// Diagnostic buffer — initialised the instant this JS module loads so every
-// write is captured even before the Web Inspector connects.
-// Query full history after attaching: window.__dayGlanceDiag.join('\n')
-const _diagAppStart = typeof window !== 'undefined' ? Date.now() : 0;
-if (typeof window !== 'undefined') window.__dayGlanceDiag = [];
-function _diagPush(msg) {
-  const line = `+${Date.now() - _diagAppStart}ms ${msg}`;
-  if (typeof window !== 'undefined') window.__dayGlanceDiag.push(line);
-  console.log('[DayDiag]', line);
-}
-
 const DayPlanner = () => {
   const { isPro, isLoading: subLoading, isAndroidApp, isIOSApp, isElectronApp, productId: subProductId, subscribe, restore, prices: subPrices, trialEligible, billingEvent, clearBillingEvent, billingErrorMessage, consumeTestPurchase, canConsumeTestPurchase } = useSubscription();
   const _visibleDays = useVisibleDays();
@@ -302,29 +291,7 @@ const DayPlanner = () => {
     today.setHours(12, 0, 0, 0);
     return today;
   });
-  const [tasks, _setTasksRaw] = useState([]);
-  // DIAG: proxy every setTasks call on iOS so we can trace the cold-launch write sequence.
-  // Remove once the overwrite bug is identified.
-  const setTasks = useCallback((updaterOrValue) => {
-    if (isNativeIOS()) {
-      const raw = new Error().stack || '';
-      const caller = raw.split('\n').slice(1).find(l => l.includes('.jsx') || l.includes('.js')) || raw.split('\n')[1] || '?';
-      if (typeof updaterOrValue === 'function') {
-        _setTasksRaw(prev => {
-          const next = updaterOrValue(prev);
-          const nativeCount = next.filter(t => t._native).length;
-          _diagPush(`setTasks func | prev=${prev.length} → next=${next.length} native=${nativeCount} | ${caller.trim()}`);
-          return next;
-        });
-      } else {
-        const nativeCount = updaterOrValue.filter(t => t._native).length;
-        _diagPush(`setTasks replace | count=${updaterOrValue.length} native=${nativeCount} | ${caller.trim()}`);
-        _setTasksRaw(updaterOrValue);
-      }
-    } else {
-      _setTasksRaw(updaterOrValue);
-    }
-  }, []);
+  const [tasks, setTasks] = useState([]);
   const [unscheduledTasks, setUnscheduledTasks] = useState([]);
   const [unscheduledOrderTimestamp, setUnscheduledOrderTimestamp] = useState(null);
   // Call this instead of setUnscheduledTasks when the user explicitly reorders tasks
@@ -3185,8 +3152,6 @@ const DayPlanner = () => {
   useEffect(() => {
     if (!isNativeApp()) return;
 
-    // DIAG: log filter state at effect entry
-    _diagPush(`CalDiag effect fired | calendarFilter=${JSON.stringify(calendarFilter)} availableCalendars=${availableCalendars.length}`);
 
     const dates = [];
     for (let offset = -2; offset <= 2; offset++) {
@@ -3205,8 +3170,6 @@ const DayPlanner = () => {
       Array.isArray(result) ? result.map(e => ({ ...e, _queryDate: dates[i] })) : []
     );
 
-    // DIAG: log total raw events from bridge
-    _diagPush(`CalDiag pre-filter total=${allEvents.length} per-day=${dates.map((d, i) => `${d}:${Array.isArray(results[i]) ? results[i].length : 0}`).join(' ')}`);
 
     // Discover calendars that appear in events but weren't returned by getCalendars()
     // (e.g. task-only calendars that some providers omit from the calendars list).
@@ -3231,8 +3194,6 @@ const DayPlanner = () => {
 
     const filterSet = calendarFilter.length > 0 ? new Set(calendarFilter) : null;
 
-    // DIAG: log the filterSet being applied
-    _diagPush(`CalDiag filterSet=${filterSet ? JSON.stringify([...filterSet]) : 'null(show-all)'}`);
 
     // Deduplicate by task id: CalendarContract can return the same all-day event
     // in adjacent day windows (especially in UTC+ timezones). Keep first occurrence.
@@ -3246,8 +3207,6 @@ const DayPlanner = () => {
         return true;
       });
 
-    // DIAG: log post-filter count
-    _diagPush(`CalDiag post-filter+dedup=${fetched.length}`);
 
     // Apply any stored time overrides (from dragging all-day events to the timeline)
     // so the scheduled position survives date navigation and native calendar re-fetches.
@@ -5632,14 +5591,6 @@ const DayPlanner = () => {
   // Getting Started checklist — show until dismissed or all items complete
   const showGettingStarted = dataLoaded && !gettingStartedDismissed && !allGettingStartedComplete;
 
-  // DIAG: announce buffer when component mounts so attaching Inspector at any time
-  // shows this line, reminding you to replay via window.__dayGlanceDiag.join('\n')
-  useEffect(() => {
-    if (isNativeIOS()) {
-      _diagPush(`component mounted — replay full log: window.__dayGlanceDiag.join('\\n')`);
-    }
-  }, []);
-
   useAppInit({
     loadData, fetchAllDailyContent, setContentRotation,
     dailyContentEnabled,
@@ -8015,12 +7966,6 @@ const DayPlanner = () => {
       </SyncContext.Provider>
       </DayPlannerContext.Provider>
     );
-  }
-
-  // DIAG: log tasks snapshot each render on iOS so we can see the final committed state.
-  if (isNativeIOS()) {
-    const nativeCount = tasks.filter(t => t._native).length;
-    _diagPush(`render tasks=${tasks.length} native=${nativeCount}`);
   }
 
   return (

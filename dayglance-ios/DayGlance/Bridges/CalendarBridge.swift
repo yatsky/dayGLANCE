@@ -66,13 +66,8 @@ final class CalendarBridge {
     // Returns: [{"id":"...","name":"...","accountName":"...","color":"#rrggbb"}]
 
     func getCalendars() -> String {
-        let authStatus = isAuthorized ? "authorized" : "not-authorized"
-        guard isAuthorized else {
-            NSLog("[CalendarBridge] getCalendars: status=%@ → returning []", authStatus)
-            return "[]"
-        }
+        guard isAuthorized else { return "[]" }
         let calendars = store.calendars(for: .event)
-        NSLog("[CalendarBridge] getCalendars: status=%@ count=%d", authStatus, calendars.count)
         let items = calendars.map { cal -> String in
             let id          = jsonEscape(cal.calendarIdentifier)
             let name        = jsonEscape(cal.title)
@@ -88,11 +83,7 @@ final class CalendarBridge {
     // All-day events whose span includes `date` are also included.
 
     func getEvents(date: String) -> String {
-        let authStatus = isAuthorized ? "authorized" : "not-authorized"
-        guard isAuthorized, let day = parseDate(date) else {
-            NSLog("[CalendarBridge] getEvents: status=%@ date=%@ → returning []", authStatus, date)
-            return "[]"
-        }
+        guard isAuthorized, let day = parseDate(date) else { return "[]" }
 
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: day)
@@ -100,7 +91,6 @@ final class CalendarBridge {
 
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         let events = store.events(matching: predicate)
-        NSLog("[CalendarBridge] getEvents: status=%@ date=%@ count=%d", authStatus, date, events.count)
         if events.isEmpty { return "[]" }
 
         let items = events.map { eventToJSON($0) }

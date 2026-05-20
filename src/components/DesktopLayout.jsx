@@ -555,9 +555,6 @@ const DesktopLayout = () => {
                 }`} />
               </button>
             )}
-            <div className={`${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg`} style={{ width: 38, height: 38 }}>
-              <MobileViewToggle />
-            </div>
             <button
               onClick={() => setShowSettings(true)}
               className={`relative p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/5 dark:active:bg-white/10 transition-colors`}

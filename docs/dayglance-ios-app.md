@@ -383,24 +383,44 @@ An iOS Share Extension lets users share text or URLs from any app (Safari, Notes
 
 ### Phase 9 — Subscriptions (StoreKit 2)
 
-StoreKit 2 integration is required on both platforms and unlocks Universal Purchase — one subscription covers both iOS and macOS automatically via Apple's entitlement infrastructure.
+StoreKit 2 integration is required on both platforms and unlocks Universal Purchase — a purchase on iOS is automatically recognised on macOS via Apple's entitlement infrastructure.
 
 **App Store Connect setup (once, before any code)**
 - Register one auto-renewable subscription group: "dayGLANCE Pro"
-- Two products: `com.dayglance.app.pro.monthly` and `com.dayglance.app.pro.yearly`
-- Introductory offer: first period free or discounted (available to first-time subscribers automatically)
-- Founder offer: batch of **offer codes** generated in App Store Connect and distributed to early adopters — this is the correct mechanism for a date-gated discount since introductory offers are per-user, not date-gated
+- Two products:
+  - `com.dayglance.app.pro.yearly` — auto-renewable subscription (14-day free trial included)
+  - `com.dayglance.app.pro.lifetime` — **non-consumable** in-app purchase (not in the subscription group)
+- Founder pricing: launch both products at the founder price, raise prices manually in App Store Connect after the founder window (~3 months, matching the approach used on Android). For the yearly subscription, existing subscribers continue at their original price on renewal — Apple grandfathers the founder rate. For the lifetime non-consumable, founder buyers keep the entitlement permanently regardless of the later price change. No offer codes or introductory offer apparatus needed; the price-change mechanic handles it cleanly on both product types.
 - Enable Universal Purchase: link iOS and macOS apps in App Store Connect under the same bundle ID family
 
-**iOS + macOS via RevenueCat**
-- **RevenueCat** is used as the subscription management layer for iOS and macOS only. Android uses Google Play Billing directly (already implemented) and is intentionally independent — see "Cross-platform subscription scope" below.
-- iOS and macOS both use the RevenueCat SDK (`purchases-ios`, which supports macOS 10.13+); the Electron main process holds the SDK and exposes entitlement status to the renderer via IPC (cleaner than the renderer-side web SDK, which is intended for web checkout flows rather than native app contexts)
-- RevenueCat maps the App Store subscription products to a single "Pro" entitlement — no raw StoreKit calls needed in app code
-- `Purchases.shared.getCustomerInfo()` returns entitlement status; works identically on iOS and macOS
-- Purchases, restores, and renewals all go through `Purchases.shared.purchase(package:)` / `Purchases.shared.restorePurchases()`
-- Transaction listener and renewal handling managed by RevenueCat SDK — no manual `Transaction.currentEntitlements` loop needed
-- RevenueCat dashboard provides customer lookup, manual entitlement grants, and webhook events (subscription started, cancelled, churned) for support and analytics
-- Free tier covers up to $2,500 MRR; 1% fee above that
+**iOS — RevenueCat SDK (`purchases-ios`)**
+- The iOS app uses the `purchases-ios` Swift SPM package for the full RevenueCat SDK experience: entitlement checks, product fetching, purchase/restore flows, and trial eligibility.
+- `SubscriptionBridge.swift` wraps the SDK and exposes it to the web layer via the `WKURLSchemeHandler` synchronous bridge: `getSubscriptionStatus()`, `getProductPrices()`, `purchase(productId:)`, `restorePurchases()`.
+- RevenueCat maps both products to the single "Pro" entitlement — app code only checks `isActive` on the entitlement, never branches on which SKU the user holds.
+- `Purchases.shared.checkTrialOrIntroDiscountEligibility` is used to conditionally show the 14-day trial copy on the yearly card only when the user is eligible.
+
+**macOS (Electron) — REST API + `electron.inAppPurchase`**
+
+The macOS Electron app uses a different but architecturally correct approach: `electron.inAppPurchase` (Electron's built-in StoreKit wrapper) for the purchase/restore UI, and the **RevenueCat REST API** for entitlement validation.
+
+Why `purchases-ios` cannot run in the Electron main process: `purchases-ios` is an Apple XCFramework — a compiled Swift/Objective-C binary targeting Darwin. Electron's main process is Node.js. Loading an Apple framework in Node.js requires a custom N-API native addon with a C++/Objective-C bridge, significant engineering effort, and maintenance across Electron version updates. The REST API + `electron.inAppPurchase` approach delivers identical correctness without that complexity and is the idiomatic choice for Electron hosts.
+
+How it works:
+- `electron/subscription.ts` calls `inAppPurchase.getProducts(...)` at startup for prices, `inAppPurchase.purchaseProduct(...)` for purchases, and `inAppPurchase.restoreCompletedTransactions()` for restores.
+- The `transactions-updated` observer fires on purchase/restore completion. On success, `fetchEntitlementStatus()` posts the MAS receipt to RevenueCat (`POST /v1/receipts`) — this both registers the purchase and returns entitlement status in one call.
+- App User ID is a deterministic SHA-256 hash of the Electron `userData` path (`getStableAnonymousId()`) — stable across launches without needing a persisted file. The real identity signal is the receipt itself: the Apple ID embedded by StoreKit is what RevenueCat keys off for cross-device Universal Purchase, so the App User ID doesn't need to match across devices for restore to work.
+- Results are delivered to the renderer via `subscription:event` IPC, matching the same `window.__billingEvent` callback pattern used by Android and iOS.
+
+- RevenueCat dashboard provides customer lookup, manual entitlement grants, and webhook events (subscription started, cancelled, churned) for support and analytics.
+- Free tier covers up to $2,500 MRR; 1% fee above that.
+
+**Distribution model and free-build behavior**
+
+dayGLANCE's subscription model is structurally tied to distribution channel, not to a debug toggle:
+
+- **macOS — GitHub / Developer ID builds are free forever.** The paywall is gated on the presence of an MAS receipt at `[AppBundle]/Contents/_MASReceipt/receipt`, placed by StoreKit only when the app is installed from the Mac App Store. Developer ID builds distributed via GitHub (DMG/zip) have no such receipt. `isMASBuild()` in `electron/subscription.ts` checks this at runtime: no receipt → `subscription:status` returns `{ active: true }` immediately, no RevenueCat call made. This is the correct architectural expression of "GitHub builds free forever" — not a debug flag, not an env var, just the absence of a receipt that can only exist in a MAS-distributed binary.
+
+- **iOS — all distribution is App Store only.** There is no Developer ID equivalent for iOS, so every real user goes through the paywall as designed. For local Xcode development, `SubscriptionBridge.swift` wraps `configure()` and `getStatus()` in `#if DEBUG` guards: debug builds are always Pro and RevenueCat is never initialised. `DEBUG` is defined automatically by Xcode in the Debug scheme build configuration and is absent from Release/Archive — it is not set in `SWIFT_ACTIVE_COMPILATION_CONDITIONS` or `OTHER_SWIFT_FLAGS` for Release, so the guard is completely inert in App Store submissions.
 
 **Cross-platform subscription scope (deliberate decision)**
 
@@ -427,6 +447,15 @@ Wiring RevenueCat into Electron is the natural moment to also enable App Sandbox
 - Smoke-test: WebDAV sync, Obsidian vault read/write (security-scoped bookmarks under sandbox), iCloud sync, AI features, RevenueCat purchase + restore flow
 - Document any APIs that break under sandbox and either fix or scope-cut before Phase 12 submission
 - This was previously tracked as open question #9; folding it here resolves the "when?" timing question — it happens alongside the RevenueCat work since both touch the same Electron entitlement surface
+
+**Pre-submission verification (in addition to standard sandbox testing)**
+
+Two items easy to miss that should be explicitly verified before App Store submission:
+
+- **Real-hardware Universal Purchase test**: buy on iPhone, install on Mac, tap Restore on Mac and confirm entitlement is recognised. Sandbox passing is necessary but not sufficient — entitlement propagation timing and App Store Connect configuration can differ in production.
+- **`com.apple.security.in-app-payments` entitlement**: must be wired into the macOS hardened runtime config, not just the app entitlements file. MAS sandbox is strict about this.
+
+**Status: ✅ Implementation complete (PR #851).** Both commits landed on `develop`: macOS anonymous ID consolidation (REST-only, SHA-256 of userData path as App User ID, identity derived from MAS receipt) and iOS trial eligibility (RC `checkTrialOrIntroDiscountEligibility` with `UserDefaults` caching, conditional trial copy in `SubscriptionWall.jsx`). Pre-merge: cold-launch iOS to confirm eligibility resolves to `.eligible`/`.ineligible` (not `.unknown`) within the 3-second refresh window — racing the offerings load would require gating the check on offerings being ready. Post-merge: App Store Connect product registration + subscription group + Universal Purchase, RevenueCat dashboard (iOS app, macOS app, "Pro" entitlement, offering, API keys), API key swap, MAS sandbox entitlement audit. None of those are code work — they unblock TestFlight, not the merge.
 
 ### Phase 10 — Home screen widgets (WidgetKit) — v1 launch scope
 
@@ -546,7 +575,7 @@ export const isCloudSyncAvailable = () =>
 
 3. **TestFlight timing**: Should the iOS beta be gated behind the Android feature set reaching parity (Phases 1–7), or released earlier for testing with a subset of features?
 
-4. ~~**App Store pricing**~~: **Resolved** — auto-renewable subscription (monthly + yearly). Founder discount via App Store Connect offer codes. Universal Purchase links macOS and iOS under one subscription.
+4. ~~**App Store pricing**~~: **Resolved** — yearly auto-renewable subscription + lifetime non-consumable. Both launch at founder pricing; no offer codes or intro offers. Universal Purchase links macOS and iOS. See Phase 9 for product IDs and rationale.
 
 5. ~~**iPad as first-class target**~~: **Resolved** — iPad required at launch. Split view / multitasking support added to Phase 1.
 
@@ -554,6 +583,6 @@ export const isCloudSyncAvailable = () =>
 
 7. ~~**iCloud sync phase timing**~~: **Resolved** — Phase 6 (HTTP bridge / WebDAV) ships first. Rationale: the iOS half of iCloud sync (`CloudSyncBridge.swift`, `NSMetadataQuery`) doesn't need the HTTP bridge, but the macOS Electron half (`electron/icloud-sync.ts`, entitlements, IPC wiring) is a non-trivial parallel change, and the iCloud container (`iCloud.com.dayglance.app`) must be registered in the Apple Developer portal before any of it is testable. Phase 6 unblocks WebDAV end-to-end testing on device in the meantime. iCloud sync (Phase 7) then follows as a deliberate two-codebase effort once the portal setup is in place. The two sync transports are fully independent and coexist cleanly: iCloud covers Apple-to-Apple zero-config; WebDAV covers cross-platform (Android, Windows, self-hosted).
 
-8. ~~**StoreKit on macOS / Electron**~~: **Resolved** — using RevenueCat for iOS and macOS only. Avoids the MAS sandbox XPC complexity; adds customer dashboard and webhooks. Android uses Google Play Billing directly (already implemented) and is intentionally independent — subscriptions are per-platform, no cross-platform entitlement recognition, no accounts. See Phase 9 "Cross-platform subscription scope" for rationale.
+8. ~~**StoreKit on macOS / Electron**~~: **Resolved** — iOS uses `purchases-ios` Swift SDK; macOS Electron uses `electron.inAppPurchase` + RevenueCat REST API. `purchases-ios` cannot load in Electron's Node.js main process (Apple XCFramework vs Node.js incompatibility; native addon approach is out of scope). See Phase 9 for the full architecture breakdown. Android uses Google Play Billing directly (already implemented) and is intentionally independent — subscriptions are per-platform, no cross-platform entitlement recognition, no accounts. See Phase 9 "Cross-platform subscription scope" for rationale.
 
 9. ~~**macOS MAS sandbox**~~: **Resolved** — folded into Phase 9 alongside the RevenueCat Electron work, since both touch the same entitlement surface. See Phase 9 "macOS MAS sandbox audit" subsection.

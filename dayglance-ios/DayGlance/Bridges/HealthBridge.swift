@@ -56,7 +56,7 @@ final class HealthBridge {
         }
 
         store.execute(query)
-        semaphore.wait(timeout: .now() + 3)
+        _ = semaphore.wait(timeout: .now() + 3)
         return json
     }
 
@@ -116,7 +116,7 @@ final class HealthBridge {
         }
 
         store.execute(query)
-        semaphore.wait(timeout: .now() + 3)
+        _ = semaphore.wait(timeout: .now() + 3)
         return json
     }
 

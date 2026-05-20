@@ -3152,6 +3152,10 @@ const DayPlanner = () => {
   useEffect(() => {
     if (!isNativeApp()) return;
 
+    // DIAG: log filter state at effect entry
+    console.log('[CalDiag] effect fired — calendarFilter:', JSON.stringify(calendarFilter),
+      '| availableCalendars count:', availableCalendars.length);
+
     const dates = [];
     for (let offset = -2; offset <= 2; offset++) {
       const d = new Date(selectedDate);
@@ -3168,6 +3172,10 @@ const DayPlanner = () => {
     const allEvents = results.flatMap((result, i) =>
       Array.isArray(result) ? result.map(e => ({ ...e, _queryDate: dates[i] })) : []
     );
+
+    // DIAG: log total raw events from bridge
+    console.log('[CalDiag] nativeGetEvents total (pre-filter):', allEvents.length,
+      '| per-day:', dates.map((d, i) => `${d}:${Array.isArray(results[i]) ? results[i].length : 0}`).join(', '));
 
     // Discover calendars that appear in events but weren't returned by getCalendars()
     // (e.g. task-only calendars that some providers omit from the calendars list).
@@ -3192,6 +3200,9 @@ const DayPlanner = () => {
 
     const filterSet = calendarFilter.length > 0 ? new Set(calendarFilter) : null;
 
+    // DIAG: log the filterSet being applied
+    console.log('[CalDiag] filterSet:', filterSet ? JSON.stringify([...filterSet]) : 'null (show all)');
+
     // Deduplicate by task id: CalendarContract can return the same all-day event
     // in adjacent day windows (especially in UTC+ timezones). Keep first occurrence.
     const seen = new Set();
@@ -3203,6 +3214,9 @@ const DayPlanner = () => {
         seen.add(t.id);
         return true;
       });
+
+    // DIAG: log post-filter count
+    console.log('[CalDiag] events after filtering + dedup:', fetched.length);
 
     // Apply any stored time overrides (from dragging all-day events to the timeline)
     // so the scheduled position survives date navigation and native calendar re-fetches.

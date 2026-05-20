@@ -291,7 +291,32 @@ const DayPlanner = () => {
     today.setHours(12, 0, 0, 0);
     return today;
   });
-  const [tasks, setTasks] = useState([]);
+  const [tasks, _setTasksRaw] = useState([]);
+  const _diagStartMs = useRef(Date.now());
+  // DIAG: proxy every setTasks call on iOS so we can trace the cold-launch write sequence.
+  // Remove once the overwrite bug is identified.
+  const setTasks = useCallback((updaterOrValue) => {
+    if (isNativeIOS()) {
+      const ms = Date.now() - _diagStartMs.current;
+      // Grab the first non-framework stack frame as the caller tag.
+      const raw = new Error().stack || '';
+      const caller = raw.split('\n').slice(1).find(l => l.includes('.jsx') || l.includes('.js')) || raw.split('\n')[1] || '?';
+      if (typeof updaterOrValue === 'function') {
+        _setTasksRaw(prev => {
+          const next = updaterOrValue(prev);
+          const nativeCount = next.filter(t => t._native).length;
+          console.log(`[TasksWrite +${ms}ms] func | prev=${prev.length} → next=${next.length} native=${nativeCount} | ${caller.trim()}`);
+          return next;
+        });
+      } else {
+        const nativeCount = updaterOrValue.filter(t => t._native).length;
+        console.log(`[TasksWrite +${ms}ms] replace | count=${updaterOrValue.length} native=${nativeCount} | ${caller.trim()}`);
+        _setTasksRaw(updaterOrValue);
+      }
+    } else {
+      _setTasksRaw(updaterOrValue);
+    }
+  }, []);
   const [unscheduledTasks, setUnscheduledTasks] = useState([]);
   const [unscheduledOrderTimestamp, setUnscheduledOrderTimestamp] = useState(null);
   // Call this instead of setUnscheduledTasks when the user explicitly reorders tasks
@@ -7976,6 +8001,13 @@ const DayPlanner = () => {
       </SyncContext.Provider>
       </DayPlannerContext.Provider>
     );
+  }
+
+  // DIAG: log tasks snapshot each render on iOS so we can see the final committed state.
+  if (isNativeIOS()) {
+    const ms = Date.now() - _diagStartMs.current;
+    const nativeCount = tasks.filter(t => t._native).length;
+    console.log(`[TasksRender +${ms}ms] tasks=${tasks.length} native=${nativeCount}`);
   }
 
   return (

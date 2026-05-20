@@ -13,6 +13,8 @@ import WeekView from './WeekView.jsx';
 import InboxArchivedBar from './InboxArchivedBar.jsx';
 import GlanceSidebar from './GlanceSidebar.jsx';
 import InboxSidebar from './InboxSidebar.jsx';
+import MobileListView from './MobileListView.jsx';
+import MobileViewToggle from './MobileViewToggle.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
@@ -53,6 +55,7 @@ const DesktopLayout = () => {
     hours, firstHour,
     tabletActiveTab, setTabletActiveTab,
     mobileActiveTab, setMobileActiveTab,
+    mobileViewMode,
     mobileWelcomeStep, setMobileWelcomeStep,
     desktopWelcomeStep, setDesktopWelcomeStep,
     showMonthView, setShowMonthView,
@@ -552,6 +555,9 @@ const DesktopLayout = () => {
                 }`} />
               </button>
             )}
+            <div className={`${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg`} style={{ width: 38, height: 38 }}>
+              <MobileViewToggle />
+            </div>
             <button
               onClick={() => setShowSettings(true)}
               className={`relative p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/5 dark:active:bg-white/10 transition-colors`}
@@ -811,10 +817,15 @@ const DesktopLayout = () => {
               <CalendarHeader />
               </div>
 
-              {/* Main calendar grid — switches between multi/day/week views */}
-              {effectiveViewMode === 'multi' && <TimeGrid />}
-              {effectiveViewMode === 'day' && <DayView />}
-              {effectiveViewMode === 'week' && <WeekView />}
+              {/* Main calendar grid — switches between multi/day/week views, or list view on tablet */}
+              {isTablet && mobileViewMode === 'list'
+                ? <MobileListView hideInboxHandle />
+                : <>
+                    {effectiveViewMode === 'multi' && <TimeGrid />}
+                    {effectiveViewMode === 'day' && <DayView />}
+                    {effectiveViewMode === 'week' && <WeekView />}
+                  </>
+              }
             </div>
           </div>
         </div>

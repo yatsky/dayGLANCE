@@ -670,7 +670,7 @@ function AllDayTaskPill({ item, accentHex, textPrimary, toggleComplete }) {
 
 // ─── MobileListView ───────────────────────────────────────────────────────────
 
-const MobileListView = () => {
+const MobileListView = ({ hideInboxHandle = false }) => {
   const {
     selectedDate, currentTime,
     tasks, setTasks, unscheduledTasks, setUnscheduledTasks,
@@ -1734,7 +1734,7 @@ const MobileListView = () => {
       {/* ── Inbox drawer ── */}
       {/* Collapsed handle — portalled into the sticky date header so it sits
           flush with it without any JS measurement */}
-      {!inboxOpen && !inboxPinned && mobileDateHeaderRef?.current && ReactDOM.createPortal(
+      {!hideInboxHandle && !inboxOpen && !inboxPinned && mobileDateHeaderRef?.current && ReactDOM.createPortal(
         <button
           onClick={() => {
             inboxPanelTop.current = mobileDateHeaderRef.current?.getBoundingClientRect().bottom ?? 0;

@@ -6,6 +6,7 @@ import {
   Target, Trash2,
 } from 'lucide-react';
 import ViewCycler from './ViewCycler.jsx';
+import MobileViewToggle from './MobileViewToggle.jsx';
 import DayViewAllDaySection from './DayViewAllDaySection.jsx';
 import AllDayTaskCard from './AllDayTaskCard.jsx';
 import { WEEK_GUTTER_W } from './WeekView.jsx';
@@ -27,6 +28,7 @@ const CalendarHeader = () => {
     visibleDates,
     selectedDate,
     canShowViewCycler, effectiveViewMode,
+    mobileViewMode,
     use24HourClock, dayViewColumns,
     weekViewDates,
     mobileDateHeaderRef, mobileAllDaySectionRef,
@@ -160,7 +162,7 @@ const CalendarHeader = () => {
         className={`flex-shrink-0 border-r ${borderClass} flex items-center justify-center`}
         style={{ width: WEEK_GUTTER_W, minHeight: 'var(--header-row-h)' }}
       >
-        {canShowViewCycler && <ViewCycler />}
+        {isTablet ? <MobileViewToggle /> : (canShowViewCycler && <ViewCycler />)}
       </div>
       {weekViewDates.map((date, idx) => {
         const dateStr = dateToString(date);
@@ -200,7 +202,7 @@ const CalendarHeader = () => {
     <>
     {/* Top-left cell: hosts ViewCycler on large screens */}
     <div className={`w-16 flex-shrink-0 border-r ${borderClass} flex items-center justify-center`} style={{ minHeight: 'var(--header-row-h)' }}>
-      {canShowViewCycler && <ViewCycler />}
+      {isTablet ? <MobileViewToggle /> : (canShowViewCycler && <ViewCycler />)}
     </div>
     {visibleDates.map((date, idx) => {
     const isDateToday = dateToString(date) === dateToString(new Date());
@@ -294,9 +296,9 @@ const CalendarHeader = () => {
         >
           {/* ViewCycler floats in the absolute-left of the first date group so
               column boundaries align: both header and DayView start at x=0. */}
-          {idx === 0 && canShowViewCycler && (
+          {idx === 0 && (isTablet || canShowViewCycler) && (
             <div className={`absolute left-0 top-0 w-16 h-full border-r ${borderClass} ${cardBg}`}>
-              <ViewCycler />
+              {isTablet ? <MobileViewToggle /> : <ViewCycler />}
             </div>
           )}
           {/* Ring overlay rendered after ViewCycler so it paints on top of it —

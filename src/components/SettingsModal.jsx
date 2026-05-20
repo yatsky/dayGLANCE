@@ -36,6 +36,9 @@ const SettingsModal = () => {
     weekViewMode, setWeekViewMode,
     canShowViewCycler,
     glancePage, setGlancePage,
+    mobileViewMode, setMobileViewMode,
+    listEndOfDayTime, setListEndOfDayTime,
+    formatTime,
   } = useDayPlannerCtx();
   const {
     handleFileUpload,
@@ -297,6 +300,65 @@ const SettingsModal = () => {
                     )}
 
                     {canShowViewCycler && <hr className={borderClass} />}
+
+                    {/* Tablet timeline view */}
+                    {isTablet && (
+                      <>
+                        <div className="space-y-3">
+                          <h4 className={`font-medium ${textPrimary} flex items-center gap-2`}>
+                            <LayoutGrid size={16} className={textSecondary} />
+                            Timeline view
+                          </h4>
+                          <p className={`text-xs ${textSecondary}`}>Default view for the Timeline tab</p>
+                          <div className="flex gap-2">
+                            {['grid', 'list'].map(mode => (
+                              <button
+                                key={mode}
+                                onClick={() => setMobileViewMode(mode)}
+                                className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                                  mobileViewMode === mode
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : `${darkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-stone-300'} ${textPrimary}`
+                                }`}
+                              >
+                                {mode === 'grid' ? 'GRID' : 'LIST'}
+                              </button>
+                            ))}
+                          </div>
+                          {mobileViewMode === 'list' && (
+                            <div className="mt-3 space-y-1.5">
+                              <label className={`block text-xs font-medium ${textSecondary}`}>End of day (LIST view)</label>
+                              <p className={`text-xs ${textSecondary} opacity-70`}>Extends the spine to this time so you can drag items there</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {[{ label: 'Off', value: null }, ...Array.from({ length: 13 }, (_, i) => {
+                                  const totalMin = 18 * 60 + i * 30;
+                                  const hh = String(Math.floor(totalMin / 60) % 24).padStart(2, '0');
+                                  const mm = String(totalMin % 60).padStart(2, '0');
+                                  const val = `${hh}:${mm}`;
+                                  return { label: formatTime(val), value: val };
+                                })].map(({ label, value }) => {
+                                  const active = (listEndOfDayTime ?? null) === value;
+                                  return (
+                                    <button
+                                      key={label}
+                                      onClick={() => setListEndOfDayTime(value)}
+                                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                                        active
+                                          ? 'bg-blue-600 text-white border-blue-600'
+                                          : `${darkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-white border-stone-300 text-stone-700'}`
+                                      }`}
+                                    >
+                                      {label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <hr className={borderClass} />
+                      </>
+                    )}
 
                     {/* Localization Section */}
                     <div className="space-y-3">

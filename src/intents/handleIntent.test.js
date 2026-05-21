@@ -345,6 +345,206 @@ describe('handleIntent query', () => {
   });
 });
 
+// ─── query execution ───────────────────────────────────────────────────────
+
+// Fixed "now": May 21, 2026, 10:00 AM local time.
+const NOW = new Date(2026, 4, 21, 10, 0, 0); // month is 0-indexed
+const TODAY = '2026-05-21';
+
+function scheduledTask(overrides) {
+  return {
+    id: crypto.randomUUID(),
+    title: 'Task',
+    completed: false,
+    duration: 60,
+    isAllDay: true,
+    date: TODAY,
+    ...overrides,
+  };
+}
+
+describe('handleIntent query execution', () => {
+  it('counts tasks scheduled for today', async () => {
+    const ctx = {
+      tasks: [scheduledTask({ date: TODAY }), scheduledTask({ date: TODAY })],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r.success).toBe(true);
+    expect(r['%dg_count_today']).toBe(2);
+  });
+
+  it('counts overdue tasks (date before today)', async () => {
+    const ctx = {
+      tasks: [scheduledTask({ date: '2026-05-20' }), scheduledTask({ date: TODAY })],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_count_overdue']).toBe(1);
+  });
+
+  it('counts tasks within the next 7 days (today + 6)', async () => {
+    const ctx = {
+      tasks: [
+        scheduledTask({ date: TODAY }),          // today — in
+        scheduledTask({ date: '2026-05-27' }),   // today+6 — in
+        scheduledTask({ date: '2026-05-28' }),   // today+7 — out
+        scheduledTask({ date: '2026-05-20' }),   // overdue — out
+      ],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_count_week']).toBe(2);
+  });
+
+  it('counts total incomplete tasks across scheduled and inbox', async () => {
+    const ctx = {
+      tasks: [scheduledTask(), scheduledTask()],
+      unscheduledTasks: [{ id: 'u1', title: 'Inbox', completed: false }],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_count_total']).toBe(3);
+  });
+
+  it('counts inbox (unscheduled) tasks', async () => {
+    const ctx = {
+      tasks: [],
+      unscheduledTasks: [
+        { id: 'u1', title: 'A', completed: false },
+        { id: 'u2', title: 'B', completed: false },
+      ],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_count_inbox']).toBe(2);
+  });
+
+  it('excludes completed tasks from all counts', async () => {
+    const ctx = {
+      tasks: [
+        scheduledTask({ date: TODAY, completed: true }),
+        scheduledTask({ date: '2026-05-20', completed: true }),
+      ],
+      unscheduledTasks: [{ id: 'u1', title: 'Done', completed: true }],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_count_today']).toBe(0);
+    expect(r['%dg_count_overdue']).toBe(0);
+    expect(r['%dg_count_total']).toBe(0);
+    expect(r['%dg_count_inbox']).toBe(0);
+  });
+
+  it('excludes _native OS calendar tasks from all counts', async () => {
+    const ctx = {
+      tasks: [scheduledTask({ date: TODAY, _native: true })],
+      unscheduledTasks: [{ id: 'u1', title: 'Native inbox', completed: false, _native: true }],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_count_today']).toBe(0);
+    expect(r['%dg_count_total']).toBe(0);
+    expect(r['%dg_count_inbox']).toBe(0);
+  });
+
+  it('detects an in-progress timed task', async () => {
+    // NOW is 10:00; task runs 09:30–10:30 (60 min)
+    const ctx = {
+      tasks: [scheduledTask({ date: TODAY, isAllDay: false, startTime: '09:30', duration: 60, title: 'Team sync' })],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_in_progress_title']).toBe('Team sync');
+    expect(r['%dg_in_progress_end']).toBe('10:30');
+    expect(r['%dg_in_progress_remaining_min']).toBe(30);
+  });
+
+  it('reports no in-progress task when now is before it starts', async () => {
+    // NOW is 10:00; task starts 11:00
+    const ctx = {
+      tasks: [scheduledTask({ date: TODAY, isAllDay: false, startTime: '11:00', duration: 60 })],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_in_progress_title']).toBe('');
+    expect(r['%dg_in_progress_remaining_min']).toBe(0);
+  });
+
+  it('reports no in-progress task when now is at or after it ends', async () => {
+    // NOW is 10:00; task ran 08:00–09:00 (60 min)
+    const ctx = {
+      tasks: [scheduledTask({ date: TODAY, isAllDay: false, startTime: '08:00', duration: 60 })],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_in_progress_title']).toBe('');
+  });
+
+  it('ignores all-day tasks when computing in-progress', async () => {
+    const ctx = {
+      tasks: [scheduledTask({ date: TODAY, isAllDay: true })],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_in_progress_title']).toBe('');
+  });
+
+  it('reports the next upcoming timed task today', async () => {
+    // NOW is 10:00; two future tasks at 11:00 and 14:00 — next is 11:00
+    const ctx = {
+      tasks: [
+        scheduledTask({ date: TODAY, isAllDay: false, startTime: '14:00', title: 'Later' }),
+        scheduledTask({ date: TODAY, isAllDay: false, startTime: '11:00', title: 'Standup' }),
+      ],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_next_title']).toBe('Standup');
+    expect(r['%dg_next_time']).toBe('11:00');
+  });
+
+  it('returns empty next fields when no timed tasks remain today', async () => {
+    // Only past timed task (09:00 ended before 10:00)
+    const ctx = {
+      tasks: [scheduledTask({ date: TODAY, isAllDay: false, startTime: '08:00', duration: 30 })],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_next_title']).toBe('');
+    expect(r['%dg_next_time']).toBe('');
+  });
+
+  it('does not show in-progress task as next-up', async () => {
+    // NOW is 10:00; task 09:30–10:30 is in progress — nothing is "next"
+    const ctx = {
+      tasks: [scheduledTask({ date: TODAY, isAllDay: false, startTime: '09:30', duration: 60, title: 'Sync' })],
+      unscheduledTasks: [],
+      now: NOW,
+    };
+    const r = await handleIntent('query', {}, ctx);
+    expect(r['%dg_in_progress_title']).toBe('Sync');
+    expect(r['%dg_next_title']).toBe('');
+  });
+
+  it('returns zero-values when no context is provided (skeleton mode)', async () => {
+    const r = await handleIntent('query', {});
+    expect(r['%dg_count_today']).toBe(0);
+    expect(r['%dg_count_total']).toBe(0);
+    expect(r['%dg_in_progress_title']).toBe('');
+    expect(r['%dg_next_title']).toBe('');
+  });
+});
+
 // ─── unknown action ────────────────────────────────────────────────────────
 
 describe('handleIntent unknown action', () => {

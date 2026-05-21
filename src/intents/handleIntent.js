@@ -324,16 +324,72 @@ function handleOpen(payload, context) {
   return ok({ _normalized: { tab } });
 }
 
-function handleQuery(payload) {
+function handleQuery(payload, context) {
   const v = validate(QuerySchema, payload);
   if (!v.ok) return fail(v.error);
 
-  // Query vars are populated by the executor (PR #6); skeleton returns typed zero-values.
-  const queryVars = Object.fromEntries(
-    Object.values(QUERY_RETURN_VARS).map(k => [k, RETURN_VAR_TYPES[k] === 'string' ? '' : 0])
-  );
+  const { tasks = [], unscheduledTasks = [], now = new Date() } = context;
 
-  return ok(queryVars);
+  const todayStr = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  const weekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 6);
+  const weekEndStr = [
+    weekEnd.getFullYear(),
+    String(weekEnd.getMonth() + 1).padStart(2, '0'),
+    String(weekEnd.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const toMinutes = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+  const activeTasks = tasks.filter(t => !t._native && !t.archived && !t.completed);
+  const activeInbox = unscheduledTasks.filter(t => !t._native && !t.archived && !t.completed);
+
+  const countToday = activeTasks.filter(t => t.date === todayStr).length;
+  const countOverdue = activeTasks.filter(t => t.date < todayStr).length;
+  const countWeek = activeTasks.filter(t => t.date >= todayStr && t.date <= weekEndStr).length;
+  const countTotal = activeTasks.length + activeInbox.length;
+  const countInbox = activeInbox.length;
+
+  const todayTimed = activeTasks.filter(t => t.date === todayStr && !t.isAllDay && t.startTime);
+
+  let inProgressTitle = '';
+  let inProgressEnd = '';
+  let inProgressRemainingMin = 0;
+
+  for (const t of todayTimed) {
+    const start = toMinutes(t.startTime);
+    const end = start + (t.duration ?? 30);
+    if (nowMinutes >= start && nowMinutes < end) {
+      const endH = Math.floor(end / 60) % 24;
+      const endM = end % 60;
+      inProgressTitle = t.title;
+      inProgressEnd = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+      inProgressRemainingMin = end - nowMinutes;
+      break;
+    }
+  }
+
+  const nextTask = todayTimed
+    .filter(t => toMinutes(t.startTime) > nowMinutes)
+    .sort((a, b) => toMinutes(a.startTime) - toMinutes(b.startTime))[0] ?? null;
+
+  return ok({
+    [QUERY_RETURN_VARS.COUNT_TODAY]: countToday,
+    [QUERY_RETURN_VARS.COUNT_OVERDUE]: countOverdue,
+    [QUERY_RETURN_VARS.COUNT_WEEK]: countWeek,
+    [QUERY_RETURN_VARS.COUNT_TOTAL]: countTotal,
+    [QUERY_RETURN_VARS.COUNT_INBOX]: countInbox,
+    [QUERY_RETURN_VARS.IN_PROGRESS_TITLE]: inProgressTitle,
+    [QUERY_RETURN_VARS.IN_PROGRESS_END]: inProgressEnd,
+    [QUERY_RETURN_VARS.IN_PROGRESS_REMAINING_MIN]: inProgressRemainingMin,
+    [QUERY_RETURN_VARS.NEXT_TITLE]: nextTask?.title ?? '',
+    [QUERY_RETURN_VARS.NEXT_TIME]: nextTask?.startTime ?? '',
+  });
 }
 
 /**
@@ -355,7 +411,7 @@ export async function handleIntent(action, payload, context = {}) {
     case ACTIONS.OPEN:
       return handleOpen(payload, context);
     case ACTIONS.QUERY:
-      return handleQuery(payload);
+      return handleQuery(payload, context);
     default:
       return fail(`Unknown action: ${action}`);
   }

@@ -48,6 +48,7 @@ const ShortcutHelpModal = () => {
                 ['F', 'Focus mode'],
                 ['G', 'Goals & Projects'],
                 ['H', 'Habits'],
+                ['L', 'Intent activity log'],
                 ['D', 'Toggle dark mode'],
                 ['B', 'Backup menu'],
                 [',', 'Side panel: Glance'],

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { parseEnvelope, parseEncryptedEnvelope, filenameFor, parseFilename, NoKeyError, WrongKeyError, NotEncryptedError, MalformedEnvelopeError } from '@glance-apps/intents';
-import { getSessionKey } from '@glance-apps/sync';
+import { deriveKeyForSalt } from '@glance-apps/sync';
 import { webdavFetch } from '../utils/cloudSyncProviders.js';
 import { handleIntent } from './handleIntent.js';
 import { logActivity } from './intentLog.js';
@@ -176,7 +176,7 @@ async function poll(config, context) {
       let envelope;
       try {
         if (raw?.encrypted === true) {
-          envelope = await parseEncryptedEnvelope(raw, getSessionKey());
+          envelope = await parseEncryptedEnvelope(raw, deriveKeyForSalt);
         } else {
           envelope = parseEnvelope(raw);
         }

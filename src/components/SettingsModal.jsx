@@ -1525,7 +1525,7 @@ const SettingsModal = () => {
                               Encrypt intent events
                             </label>
                             {cloudSyncConfig?.encryptionEnabled ? (
-                              <p className={`text-xs ${textSecondary} mt-0.5`}>Uses your cloud sync passphrase. Consumers without the key skip encrypted events gracefully.</p>
+                              <p className={`text-xs ${textSecondary} mt-0.5`}>Uses your cloud sync passphrase. Each event is independently re-keyed; no setup beyond entering the passphrase.</p>
                             ) : (
                               <p className={`text-xs ${textSecondary} mt-0.5`}>Requires cloud sync encryption to be enabled first.</p>
                             )}

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { buildEnvelope, buildEncryptedEnvelope, eventId as makeEventId, EVENTS, ENTITY_TYPES } from '@glance-apps/intents';
-import { hasEncryptionReady, getSessionKey } from '@glance-apps/sync';
+import { hasEncryptionReady, deriveKeyForSalt } from '@glance-apps/sync';
 import { writeEventFile, INTENT_CONFIG_KEY } from './useIntentPoller.js';
 import { logActivity } from './intentLog.js';
 
@@ -141,7 +141,7 @@ export function useNotifyEmitter({ tasks, unscheduledTasks }) {
 
         try {
           const envelope = useEncryption
-            ? await buildEncryptedEnvelope({ action: 'notify', payload, emittedBy: 'app.dayglance' }, getSessionKey())
+            ? await buildEncryptedEnvelope({ action: 'notify', payload, emittedBy: 'app.dayglance' }, deriveKeyForSalt)
             : buildEnvelope({ action: 'notify', payload, emittedBy: 'app.dayglance' });
           await writeEventFile(config, envelope);
           logActivity({

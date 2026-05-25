@@ -6,7 +6,9 @@ This doc is the source of truth for *how the package is being built*. The protoc
 
 ## Status
 
-**Phases 1, 2, and 2.5 intents-package work complete (May 2026).** `@glance-apps/intents@1.0.0` and `@glance-apps/intents@1.1.0` published. dayGLANCE consumes `1.0.0` in production. Phase 2.5 pre-work resolved (see "dayGLANCE PRs" below): one precursor patch release of `@glance-apps/sync` (`1.0.1` → `1.0.2`) adds a `getSessionKey()` export, then dayGLANCE PRs #12-16 are the active work and (along with that sync patch) block Phase 3 (lastGLANCE adoption).
+**Phase 2.5 superseded by Phase 2.6 (May 2026).** Integration testing between dayGLANCE and lastGLANCE surfaced a design flaw in the Phase 2.5 "same key as cloud sync" model: sync's session key is salt-bound, salts are per-app-instance (each app generates its own random 16-byte salt and stores it in its own IndexedDB), and therefore same passphrase across two apps produces two different `CryptoKey`s. `WrongKeyError` fires on every cross-app decrypt. See Phase 2.6 below for the resolution (per-envelope salt embedded in the envelope, mirroring sync's own per-file salt pattern). Phase 2.5 dayGLANCE PRs #12-16 are paused; their replacements live in Phase 2.6.
+
+`@glance-apps/intents@1.0.0` and `@glance-apps/intents@1.1.0` published. `@glance-apps/sync@1.0.3` published. dayGLANCE consumes `@glance-apps/intents@1.0.0` (plaintext intents) in production. Phase 2.6 is the active work and blocks Phase 3 (lastGLANCE adoption of intents encryption).
 
 ## Why a shared package
 
@@ -162,7 +164,7 @@ Affects both the `@glance-apps/intents` package (envelope format + helpers) and 
 
 **Locked decisions:**
 
-- **Same key as cloud sync.** Users who want intents encryption must have cloud sync encryption enabled first; the same passphrase derives the same key, used for both features. Intents encryption is a separate toggle but gated on sync encryption being on. The settings UI hides or disables the intents encryption toggle when sync encryption is off, with copy explaining the prerequisite.
+- ~~**Same key as cloud sync.** Users who want intents encryption must have cloud sync encryption enabled first; the same passphrase derives the same key, used for both features. Intents encryption is a separate toggle but gated on sync encryption being on. The settings UI hides or disables the intents encryption toggle when sync encryption is off, with copy explaining the prerequisite.~~ **Superseded by Phase 2.6.** The premise — "same passphrase derives the same key" — is false in the actual sync implementation because each app generates its own random salt and stores it in its own IndexedDB. The replacement model (per-envelope salt) is in Phase 2.6.
 - **Per-app toggle, not protocol-wide.** Each app decides independently whether to write encrypted events. Consumers handle both encrypted and plaintext events transparently.
 - **Cipher: AES-GCM**, matching cloud sync. Per-event random IV stored in the envelope. No IV reuse.
 - **Envelope shape with encryption:** plaintext envelope retains `event_id`, `timestamp`, `source_app`, `source_entity_id`, `due`, plus new fields `encrypted: true`, `iv`, and `payload_ciphertext`. Encrypted payload (base64-encoded ciphertext) contains `action`, `title`, `notes`, `tags`, `priority`, `recurring`, `project`, and any other user-readable fields. The plaintext envelope is the minimum needed for consumers to filter by `source_app`, compute idempotency keys (`source_app` + `source_entity_id` + `due`), and order/GC events without bulk decryption.
@@ -217,15 +219,97 @@ if (hasEncryptionReady()) {
 
 The two-check pattern (settings-time `intentsConfig.encryptionEnabled` plus runtime `hasEncryptionReady()`) handles the case where intents encryption is configured-on but no key is currently cached in session (e.g., new device that hasn't entered the passphrase yet). When `hasEncryptionReady()` is false but encryption is configured, the emitter falls back to plaintext (defensible default — events still flow) or queues the event for later (more correct but more state to manage). PR #14 should pick one and document the choice in the PR description; default recommendation is fall back to plaintext with an activity-log entry noting the configuration drift, since the absence of a session key typically means the user hasn't completed setup on this device yet and the alternative (silent queueing) is harder to diagnose.
 
+**Status: paused.** dayGLANCE PRs #12-16 as originally scoped depend on the "same `CryptoKey` from `getSessionKey()` works on both sides" premise that Phase 2.6 invalidates. The replacement PRs live in Phase 2.6. Original scope retained below for historical reference.
+
 | PR | Scope |
 |---|---|
-| #12 | Upgrade to `@glance-apps/intents@1.1.0` and `@glance-apps/sync@1.0.2`; no behavior change |
-| #13 | Settings UI: intents encryption toggle in the integration settings panel; gated on sync encryption being enabled (hidden or disabled with explanatory copy when not). Surface the "uses cloud sync passphrase" note inline. |
-| #14 | Emitter (Phase 2 PR #9): when intents encryption is on, call `hasEncryptionReady()` and `getSessionKey()` from `@glance-apps/sync`; pass the `CryptoKey` to `buildEncryptedEnvelope`. Wrap in try/catch for typed errors; surface failures to activity log. Document the fallback behavior when `hasEncryptionReady()` is false. |
-| #15 | Poller (Phase 2 PR #7): inspect envelope; if `encrypted: true`, call `parseEncryptedEnvelope` with the `CryptoKey`; if plaintext, call `parseEnvelope`. On any typed error from the encrypted path (`NoKeyError`, `WrongKeyError`, `NotEncryptedError`, `MalformedEnvelopeError`), log distinct activity-log entry and skip event. |
-| #16 | Activity log (Phase 2 PR #10): render distinct activity-log entries per error class. `NoKeyError` → "encryption not configured." `WrongKeyError` → "decryption failed (wrong key)." `NotEncryptedError` and `MalformedEnvelopeError` are defensive-only (shouldn't happen in normal operation) and surface as warnings if they do fire. |
+| #12 | ~~Upgrade to `@glance-apps/intents@1.1.0` and `@glance-apps/sync@1.0.2`; no behavior change~~ Superseded |
+| #13 | ~~Settings UI: intents encryption toggle in the integration settings panel; gated on sync encryption being enabled (hidden or disabled with explanatory copy when not). Surface the "uses cloud sync passphrase" note inline.~~ Superseded (settings UI shape carries over to Phase 2.6 with revised copy) |
+| #14 | ~~Emitter (Phase 2 PR #9): when intents encryption is on, call `hasEncryptionReady()` and `getSessionKey()` from `@glance-apps/sync`; pass the `CryptoKey` to `buildEncryptedEnvelope`. Wrap in try/catch for typed errors; surface failures to activity log. Document the fallback behavior when `hasEncryptionReady()` is false.~~ Superseded |
+| #15 | ~~Poller (Phase 2 PR #7): inspect envelope; if `encrypted: true`, call `parseEncryptedEnvelope` with the `CryptoKey`; if plaintext, call `parseEnvelope`. On any typed error from the encrypted path (`NoKeyError`, `WrongKeyError`, `NotEncryptedError`, `MalformedEnvelopeError`), log distinct activity-log entry and skip event.~~ Superseded |
+| #16 | ~~Activity log (Phase 2 PR #10): render distinct activity-log entries per error class. `NoKeyError` → "encryption not configured." `WrongKeyError` → "decryption failed (wrong key)." `NotEncryptedError` and `MalformedEnvelopeError` are defensive-only (shouldn't happen in normal operation) and surface as warnings if they do fire.~~ Superseded (activity-log copy carries over to Phase 2.6 mostly unchanged; `WrongKeyError` becomes far rarer once per-envelope salt is in place) |
 
-**Critical-path subset for Phase 3:** `@glance-apps/sync@1.0.2` must be published before dayGLANCE PR #12. dayGLANCE PRs #12-16 land in parallel with lastGLANCE Phase 3 PRs; lastGLANCE needs both packages at their new versions but does not need dayGLANCE-side encryption to be enabled by any specific user when Phase 3 ships (the encryption is opt-in per app per user).
+**Critical-path subset for Phase 3:** see Phase 2.6 below. The original Phase 2.5 critical path (`@glance-apps/sync@1.0.2` → dayGLANCE PR #12 → Phase 3) is replaced by the Phase 2.6 critical path.
+
+### Phase 2.6: Per-envelope salt (supersedes Phase 2.5 cross-app key model)
+
+**Active work. Blocks Phase 3.**
+
+#### Why this exists
+
+Phase 2.5 assumed that sync's session key (`getSessionKey()`) would be the same across apps using the same passphrase, and that the intents emitter could just hand that key to `buildEncryptedEnvelope`. Integration testing between dayGLANCE and lastGLANCE produced `WrongKeyError` on every cross-app decrypt despite identical passphrases.
+
+Investigation into `@glance-apps/sync` source (`src/crypto.js`) revealed why:
+
+- Each app generates its own random 16-byte salt via `crypto.getRandomValues` at first encryption (`crypto.js:180`).
+- Each app stores its salt in its own IndexedDB (`KEY_STORE = 'keys'`, record id `sync-key`, in a database named by the caller-supplied `cryptoDBName` — distinct per app).
+- The salt is therefore per-app-instance, not shared. Two apps + same passphrase + independently-random salts = two different `CryptoKey`s.
+- Sync itself dodges this for its own files by **embedding the salt in the first 16 bytes of every encrypted file** (`crypto.js:254,277`) and re-deriving the key from the passphrase + extracted salt on read (`crypto.js:300-320`). The cached session key is a hot-path optimization for the common case of an app reading its own files; the *real* key for any file is derivable from passphrase + the salt in that file.
+
+The intents emitter pattern in Phase 2.5 short-circuits this by passing the cached session key directly. That works inside one app. It does not work cross-app.
+
+#### Resolution: mirror sync's per-file salt pattern in the envelope
+
+The intents package generates a fresh 16-byte salt per envelope, embeds it alongside `iv` and `payload_ciphertext`, and the consumer re-derives the key from the passphrase + the salt in the envelope. Same passphrase + same salt-from-envelope = same key, regardless of which app encrypted it. `getSessionKey()` is no longer involved in the cross-app encrypted path.
+
+This adds 16 bytes (24 base64 chars) per encrypted envelope. Negligible relative to a typical task payload.
+
+#### Locked decisions
+
+- **Per-envelope random salt, embedded in the envelope alongside `iv` and `payload_ciphertext`.** Field name: `salt` (base64). Generated fresh per envelope via `crypto.getRandomValues(new Uint8Array(16))`. No salt reuse across envelopes (matches sync's per-file pattern).
+- **Key derivation happens on both emit and consume sides, per envelope.** The cached session key from `getSessionKey()` is not used in the cross-app encrypted path. Sync's cached session key remains for sync's own purposes.
+- **`@glance-apps/sync` exposes `deriveKeyForSalt(salt: Uint8Array): Promise<CryptoKey>`.** Takes a salt, runs PBKDF2 against the cached passphrase, returns a non-extractable `CryptoKey`. Replaces the previously planned `getSessionKey()` export for the intents use case. (`getSessionKey()` may still be added if useful for other consumers; not on this critical path.) Sync's existing derivation parameters are preserved: PBKDF2-SHA-256, 310,000 iterations, AES-256-GCM, non-extractable.
+- **Passphrase stays inside sync.** The intents package never sees the passphrase; it only ever calls `deriveKeyForSalt(salt)` on sync and receives a `CryptoKey` back. This preserves the boundary where sync owns passphrase lifecycle and key derivation.
+- **Intents-package API: `buildEncryptedEnvelope` and `parseEncryptedEnvelope` take a `deriveKey` callback rather than a `CryptoKey`.** Signature: `deriveKey: (salt: Uint8Array) => Promise<CryptoKey>`. The emitter passes `sync.deriveKeyForSalt`. The package generates the salt internally on build, extracts it from the envelope on parse, and calls the callback to get the key for that salt. This keeps the package decoupled from sync — any consumer that can produce a `CryptoKey` for a given salt can use it. The callback shape also leaves room for non-sync consumers (e.g., future apps with their own passphrase pipelines).
+- **Envelope shape:** plaintext envelope retains `event_id`, `timestamp`, `source_app`, `source_entity_id`, `due`, plus new fields `encrypted: true`, `salt` (base64, 16 bytes), `iv` (base64, 12 bytes), and `payload_ciphertext` (base64). The plaintext-header fields remain unencrypted so consumers can filter by `source_app`, compute idempotency keys, and order/GC events without bulk decryption.
+- **Versioning: `@glance-apps/intents@1.2.0`.** Additive minor bump. Plaintext envelopes still parse. `@glance-apps/intents@1.1.0` encrypted envelopes (no `salt` field) become legacy; package validators reject them with `MalformedEnvelopeError` (no `salt` present in an `encrypted: true` envelope). Since 1.1.0 encrypted envelopes never worked cross-app in practice, no real-world data is at risk; the only such envelopes that exist are from integration testing and can be wiped.
+- **`@glance-apps/sync`: minor bump to `1.1.0`** for the `deriveKeyForSalt` export. (`getSessionKey()` in `1.0.2`/`1.0.3` remains; it's just not what intents uses going forward.)
+- **Error classes unchanged.** `NoKeyError`, `WrongKeyError`, `NotEncryptedError`, `MalformedEnvelopeError`, `InvalidPayloadError` keep their meanings. `WrongKeyError` becomes rare-to-vanishing in practice once per-envelope salt is in place — it would fire only on actual passphrase mismatch between apps, not on the salt-mismatch case that motivated this phase. Same passphrase on both sides + per-envelope salt = `WrongKeyError` should not occur in normal operation.
+
+#### Package PRs (`@glance-apps/intents`)
+
+| PR | Scope |
+|---|---|
+| #13 | `schemas/v1/`: extend encrypted envelope schema with required `salt` (base64) field when `encrypted: true`. Validators reject encrypted envelopes without `salt`. |
+| #14 | `crypto/`: refactor AES-GCM helpers to accept a `deriveKey` callback. Internal-only change for the helper signatures; the public API change is in PR #15. |
+| #15 | `webdav/`: change `buildEncryptedEnvelope` signature from `(payload, key)` to `(payload, deriveKey)` and `parseEncryptedEnvelope` signature from `(file, key)` to `(file, deriveKey)`. Build path: generate salt, call `deriveKey(salt)`, encrypt, embed salt+iv+ciphertext in envelope. Parse path: read salt from envelope, call `deriveKey(salt)`, decrypt. |
+| #16 | Bump package to `1.2.0`; CHANGELOG entry noting the breaking change to the encrypted-path API (plaintext path unchanged); `npm publish`. |
+
+The 1.1.0 → 1.2.0 jump is technically a breaking change to the encrypted-path function signatures, but no production consumer is on the encrypted path yet (dayGLANCE in prod uses plaintext intents only; lastGLANCE hasn't shipped intents at all). Bumping minor rather than major reflects the protocol `schema_version` discipline (envelope shape is additive: a new required field inside an already-optional encrypted form) rather than the package API discipline. If this feels uncomfortable, bumping to `2.0.0` is also defensible; recommendation is `1.2.0` for the protocol-shape reason but worth a moment of reflection before publishing.
+
+#### Package PR in `@glance-apps/sync`
+
+| PR | Scope |
+|---|---|
+| sync #2 | Add `deriveKeyForSalt(salt: Uint8Array): Promise<CryptoKey>` export to `crypto.js`. Reuses the existing PBKDF2 pipeline (310k iters, SHA-256) and the cached passphrase. Returns non-extractable `CryptoKey`. CHANGELOG entry; minor bump to `1.1.0`; `npm publish`. |
+
+Must publish before the dayGLANCE Phase 2.6 PRs below.
+
+#### dayGLANCE PRs
+
+| PR | Scope |
+|---|---|
+| #12b | Upgrade to `@glance-apps/intents@1.2.0` and `@glance-apps/sync@1.1.0`; no behavior change |
+| #13b | Settings UI: intents encryption toggle in the integration settings panel; gated on sync encryption being enabled. Revised copy: "Uses your cloud sync passphrase. Each event is independently re-keyed; no setup beyond entering the passphrase." (Replaces the Phase 2.5 "uses cloud sync passphrase" line with copy that's accurate to the per-envelope model.) |
+| #14b | Emitter (Phase 2 PR #9): when intents encryption is on, pass `sync.deriveKeyForSalt` to `buildEncryptedEnvelope`. Wrap in try/catch for typed errors; surface failures to activity log. Fallback when sync passphrase isn't unlocked on this session: emit plaintext with an activity-log note (same default as Phase 2.5 #14 carried). |
+| #15b | Poller (Phase 2 PR #7): inspect envelope; if `encrypted: true`, call `parseEncryptedEnvelope(file, sync.deriveKeyForSalt)`; if plaintext, call `parseEnvelope`. On any typed error from the encrypted path, log distinct activity-log entry and skip event. |
+| #16b | Activity log: copy mostly unchanged from Phase 2.5 #16. `WrongKeyError` copy revised to acknowledge it now indicates passphrase mismatch (not salt mismatch): "decryption failed (wrong passphrase — verify same passphrase used in both apps)." |
+
+#### Critical path to Phase 3
+
+`@glance-apps/intents@1.2.0` published **and** `@glance-apps/sync@1.1.0` published → dayGLANCE PR #12b lands → Phase 3 (lastGLANCE adoption) unblocks.
+
+dayGLANCE PRs #13b–#16b land in parallel with lastGLANCE Phase 3 PRs. lastGLANCE Phase 3 PRs #11-13 (the intents-encryption surface) need to be updated to the per-envelope-salt API; this is a small mechanical change since the package contract is the same shape for both consumers.
+
+#### Test plan
+
+- **Package**: round-trip test in the intents repo: build an encrypted envelope with one `deriveKey` callback, parse with a separately-constructed `deriveKey` callback that runs PBKDF2 with the same passphrase. Confirm payload matches. Also: round-trip with mismatched passphrases produces `WrongKeyError`. Round-trip with envelope missing `salt` produces `MalformedEnvelopeError`.
+- **End-to-end**: replay the original failing scenario. Emit an encrypted `create` from lastGLANCE; confirm dayGLANCE's poller decrypts it. Emit an encrypted `notify` from dayGLANCE; confirm lastGLANCE's poller decrypts it. Both should produce no `WrongKeyError` in the activity log.
+
+#### Migration / cleanup
+
+- Any encrypted envelopes from Phase 2.5 integration testing in the shared WebDAV directory should be deleted manually before Phase 2.6 testing begins. They lack the `salt` field and will fail `MalformedEnvelopeError` under the new schema.
+- No production migration needed: no production user has ever had a working encrypted intents envelope, because the bug prevented cross-app decryption in the only configuration that mattered.
 
 ### Phase 3: lastGLANCE adopts the protocol
 
@@ -307,13 +391,13 @@ End-to-end tests (lastGLANCE emits `create`, dayGLANCE picks it up, completes it
 
 ## Critical-path ordering
 
-Phases 1, 2, and 2.5 package work complete. Current critical path to lastGLANCE shipping integration:
+Phases 1 and 2 complete. Phase 2.5 superseded by Phase 2.6. Current critical path to lastGLANCE shipping integration:
 
-**`@glance-apps/sync@1.0.2` patch release (add `getSessionKey()` export)** → **dayGLANCE PR #12 (version bumps)** → **Phase 3 (lastGLANCE)**
+**`@glance-apps/sync@1.1.0` (add `deriveKeyForSalt`)** + **`@glance-apps/intents@1.2.0` (per-envelope salt)** → **dayGLANCE PR #12b (version bumps)** → **Phase 3 (lastGLANCE)**
 
-Phase 2.5 dayGLANCE PRs #13-16 land in parallel with Phase 3. Phase 4 transports run parallel.
+dayGLANCE PRs #13b–#16b land in parallel with Phase 3. Phase 4 transports run parallel.
 
-This is the chosen ordering. End-to-end working before polish.
+End-to-end working before polish.
 
 ## Open items
 

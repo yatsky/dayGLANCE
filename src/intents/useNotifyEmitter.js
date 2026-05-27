@@ -15,7 +15,8 @@ const isTrayMode = typeof window !== 'undefined' && new URLSearchParams(window.l
 function taskDue(task) {
   if (!task.date) return undefined;
   if (task.isAllDay) return task.date;
-  return `${task.date}T${task.startTime}:00`;
+  // Parse as local time and emit as UTC — satisfies the intents datetime({ offset: true }) schema.
+  return new Date(`${task.date}T${task.startTime}:00`).toISOString();
 }
 
 /**
@@ -26,7 +27,11 @@ function taskDue(task) {
 function detectChange(prev, next) {
   // Completion state changes
   if (!prev.completed && next.completed) {
-    return { event: EVENTS.COMPLETED, completed_at: next.completedAt || new Date().toISOString() };
+    // completedAt may be stored as a bare YYYY-MM-DD date; normalize to ISO datetime.
+    const completed_at = next.completedAt
+      ? new Date(next.completedAt).toISOString()
+      : new Date().toISOString();
+    return { event: EVENTS.COMPLETED, completed_at };
   }
   if (prev.completed && !next.completed) {
     return { event: EVENTS.UNCOMPLETED };

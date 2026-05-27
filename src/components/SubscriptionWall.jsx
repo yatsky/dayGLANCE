@@ -142,11 +142,22 @@ export default function SubscriptionWall({
               : <span className={`text-xs ${sub}`}>Loading…</span>
             }
           </div>
-          <div className={`text-xs mt-0.5 ${sub}`}>{trialEligible ? '14-day free trial · billed yearly · cancel any time' : 'Billed yearly · cancel any time'}</div>
+          <div className={`text-xs mt-0.5 ${sub}`}>
+            {trialEligible
+              ? `14-day free trial, then ${prices?.yearly ?? '$9.99'}/yr`
+              : `Billed yearly · ${prices?.yearly ?? '$9.99'}/yr`}
+          </div>
           {pending === 'yearly' && <Loader className={`w-4 h-4 mt-2 animate-spin ${sub}`} />}
         </button>
 
       </div>
+
+      {/* Subscription disclosure — required by App Store guideline 3.1.2 and Play Subscriptions policy */}
+      <p className={`text-xs text-center mb-3 max-w-xs leading-relaxed ${sub}`}>
+        {trialEligible
+          ? `Your 14-day free trial automatically converts to a ${prices?.yearly ?? '$9.99'}/year subscription that renews annually until canceled. Cancel anytime in your ${isIOSApp ? 'App Store' : 'Google Play'} subscription settings.`
+          : `Your ${prices?.yearly ?? '$9.99'}/year subscription automatically renews annually until canceled. Cancel anytime in your ${isIOSApp ? 'App Store' : 'Google Play'} subscription settings.`}
+      </p>
 
       <p className={`text-xs text-center mb-6 max-w-xs ${sub}`}>
         {isIOSApp ? 'Payment via App Store.' : 'Payment via Google Play.'}

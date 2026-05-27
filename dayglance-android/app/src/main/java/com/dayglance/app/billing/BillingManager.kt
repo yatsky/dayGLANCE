@@ -135,11 +135,18 @@ class BillingManager(
             billingClient.queryProductDetailsAsync(subsParams) { result, detailsList ->
                 if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryProductDetailsAsync
                 for (details in detailsList) {
-                    val price = details.subscriptionOfferDetails
-                        ?.flatMap { it.pricingPhases.pricingPhaseList }
-                        ?.firstOrNull { it.recurrenceMode == 1 }
-                        ?.formattedPrice ?: continue
-                    if (details.productId == PRODUCT_ANNUAL) dataStore.productPriceAnnual = price
+                    if (details.productId != PRODUCT_ANNUAL) continue
+                    val offerDetails = details.subscriptionOfferDetails ?: continue
+                    val price = offerDetails
+                        .flatMap { it.pricingPhases.pricingPhaseList }
+                        .firstOrNull { it.recurrenceMode == 1 }
+                        ?.formattedPrice
+                    if (price != null) dataStore.productPriceAnnual = price
+                    // A zero-price phase indicates a free trial. Play only surfaces this offer
+                    // when the user is still eligible; absence means the trial has been used.
+                    dataStore.trialEligibleAnnual = offerDetails.any { offer ->
+                        offer.pricingPhases.pricingPhaseList.any { it.priceAmountMicros == 0L }
+                    }
                 }
             }
             billingClient.queryProductDetailsAsync(inappParams) { result, detailsList ->

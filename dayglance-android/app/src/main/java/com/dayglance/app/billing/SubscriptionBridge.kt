@@ -110,6 +110,18 @@ class SubscriptionBridge(
         """["${BillingManager.PRODUCT_ANNUAL}","${BillingManager.PRODUCT_LIFETIME}"]"""
 
     /**
+     * Returns trial eligibility per subscription product as JSON.
+     * True = user is eligible for the free trial offer.
+     * False = trial already used or not available in this region.
+     * Defaults to true until BillingManager has queried product details at least once.
+     *
+     * Response: `{"dayglance_pro_annual": bool}`
+     */
+    @JavascriptInterface
+    fun getTrialEligibility(): String =
+        """{"dayglance_pro_annual":${dataStore.trialEligibleAnnual}}"""
+
+    /**
      * Consumes the stored lifetime purchase token so it can be bought again.
      * Only available on play builds (BILLING_ENABLED=true). Intended for testing.
      * Result is delivered via window.__billingEvent with status "consumed" or "consume_failed".

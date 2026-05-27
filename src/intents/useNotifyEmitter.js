@@ -15,7 +15,13 @@ const isTrayMode = typeof window !== 'undefined' && new URLSearchParams(window.l
 function taskDue(task) {
   if (!task.date) return undefined;
   if (task.isAllDay) return task.date;
-  return `${task.date}T${task.startTime}:00`;
+  // Append the local UTC offset so the wall-clock time is preserved (e.g. 09:00+05:00,
+  // not converted to 04:00Z). The intents schema requires datetime({ offset: true }).
+  const off = -new Date().getTimezoneOffset(); // minutes east of UTC
+  const sign = off >= 0 ? '+' : '-';
+  const pad = n => String(Math.abs(n)).padStart(2, '0');
+  const offsetStr = `${sign}${pad(Math.floor(Math.abs(off) / 60))}:${pad(Math.abs(off) % 60)}`;
+  return `${task.date}T${task.startTime}:00${offsetStr}`;
 }
 
 /**
@@ -26,7 +32,11 @@ function taskDue(task) {
 function detectChange(prev, next) {
   // Completion state changes
   if (!prev.completed && next.completed) {
-    return { event: EVENTS.COMPLETED, completed_at: next.completedAt || new Date().toISOString() };
+    // completedAt may be stored as a bare YYYY-MM-DD date; normalize to ISO datetime.
+    const completed_at = next.completedAt
+      ? new Date(next.completedAt).toISOString()
+      : new Date().toISOString();
+    return { event: EVENTS.COMPLETED, completed_at };
   }
   if (prev.completed && !next.completed) {
     return { event: EVENTS.UNCOMPLETED };

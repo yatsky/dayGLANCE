@@ -213,11 +213,18 @@ async function poll(config, context) {
         }
       } catch (parseErr) {
         let errorCode = parseErr.name ?? 'parse_error';
+        // MalformedEnvelopeError means the envelope decrypted fine but failed schema
+        // validation — a protocol mismatch, not a genuine key/network failure.
+        // Log as 'warn' so it gets an amber badge rather than red in the activity log.
+        let logStatus = 'error';
         if (parseErr instanceof NoKeyError) {
           console.warn('[intent] Skipping encrypted event (no key):', name);
         } else if (parseErr instanceof WrongKeyError) {
           console.warn('[intent] Skipping encrypted event (wrong key):', name);
-        } else if (parseErr instanceof NotEncryptedError || parseErr instanceof MalformedEnvelopeError) {
+        } else if (parseErr instanceof MalformedEnvelopeError) {
+          console.warn('[intent] Skipping malformed envelope:', name);
+          logStatus = 'warn';
+        } else if (parseErr instanceof NotEncryptedError) {
           console.warn('[intent] Skipping malformed envelope:', name);
         } else {
           console.warn('[intent] Unparseable envelope, skipping:', name);
@@ -230,7 +237,7 @@ async function poll(config, context) {
           source_app: null,
           title: null,
           timestamp: new Date().toISOString(),
-          status: 'error',
+          status: logStatus,
           error: errorCode,
         });
         setCursor(parsed.event_id);

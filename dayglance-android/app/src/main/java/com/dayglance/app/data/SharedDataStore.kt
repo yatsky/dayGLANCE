@@ -206,6 +206,15 @@ class SharedDataStore(context: Context) {
             else remove(KEY_PRODUCT_PRICE_LIFETIME)
         }
 
+    /**
+     * Whether the user is eligible for the free trial on the annual plan.
+     * Set by BillingManager when subscriptionOfferDetails are queried; defaults to true
+     * so the trial copy shows until Play confirms otherwise.
+     */
+    var trialEligibleAnnual: Boolean
+        get() = prefs.getBoolean(KEY_TRIAL_ELIGIBLE_ANNUAL, true)
+        set(value) = prefs.edit { putBoolean(KEY_TRIAL_ELIGIBLE_ANNUAL, value) }
+
     // ── Step count cache ────────────────────────────────────────────────────
 
     /** Cached step count for today, updated by WidgetUpdateWorker. */
@@ -245,6 +254,7 @@ class SharedDataStore(context: Context) {
         private const val KEY_SUBSCRIPTION_TOKEN = "subscription_token"
         private const val KEY_PRODUCT_PRICE_ANNUAL   = "product_price_annual"
         private const val KEY_PRODUCT_PRICE_LIFETIME = "product_price_lifetime"
+        private const val KEY_TRIAL_ELIGIBLE_ANNUAL  = "trial_eligible_annual"
 
         const val DEFAULT_DAILY_NOTE_PATTERN = "yyyy-MM-dd"
         const val DEFAULT_NEW_NOTES_FOLDER = "dayGLANCE"

@@ -68,7 +68,13 @@ function readPrices() {
   return {};
 }
 
-function readTrialEligibilityIOS() {
+function readTrialEligibility() {
+  if (BILLING) {
+    try {
+      const data = JSON.parse(BILLING.getTrialEligibility());
+      return data?.['dayglance_pro_annual'] !== false;
+    } catch { return true; }
+  }
   if (!IOS) return true;
   try {
     const data = JSON.parse(window.DayGlanceNative.getTrialEligibility());
@@ -114,7 +120,7 @@ function billingErrorMessage(code) {
 export function useSubscription() {
   const [status, setStatus]               = useState(() => readStatus());
   const [prices, setPrices]               = useState(() => readPrices());
-  const [trialEligible, setTrialEligible] = useState(() => readTrialEligibilityIOS());
+  const [trialEligible, setTrialEligible] = useState(() => readTrialEligibility());
   const [isLoading, setIsLoading]         = useState(false);
   const [billingEvent, setBillingEvent]   = useState(null);
   const timeoutRef = useRef(null);
@@ -174,7 +180,7 @@ export function useSubscription() {
       setTimeout(() => {
         setStatus(readStatusIOS());
         setPrices(readPricesIOS());
-        setTrialEligible(readTrialEligibilityIOS());
+        setTrialEligible(readTrialEligibility());
       }, 3000);
     }
 

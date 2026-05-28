@@ -1345,13 +1345,13 @@ const DayPlanner = () => {
   // Upload only (no download) to avoid the applyEngineData → state-change → debounce
   // re-trigger loop. The 60-second poll handles keeping remote changes in sync.
   useEffect(() => {
-    if (isTrayMode || !cloudSyncConfig?.enabled || !dataLoaded || suppressCloudUploadRef.current) return;
+    if (isTrayMode || !cloudSyncConfig?.enabled || !dataLoaded || suppressCloudUploadRef.current || !syncKeyReadyRef.current) return;
     if (cloudSyncDebounceRef.current) clearTimeout(cloudSyncDebounceRef.current);
     cloudSyncDebounceRef.current = setTimeout(() => {
       cloudSyncEngineRef.current.upload();
     }, 5000);
     return () => { if (cloudSyncDebounceRef.current) clearTimeout(cloudSyncDebounceRef.current); };
-  }, [tasks, unscheduledTasks, recycleBin, taskCalendarUrl, completedTaskUids, recurringTasks, routineDefinitions, todayRoutines, routinesDate, routineCompletions, removedTodayRoutineIds, use24HourClock, habits, habitLogs, habitsEnabled, routinesEnabled, dailyNotes, gtdFrames, cloudSyncConfig?.enabled]);
+  }, [tasks, unscheduledTasks, recycleBin, taskCalendarUrl, completedTaskUids, recurringTasks, routineDefinitions, todayRoutines, routinesDate, routineCompletions, removedTodayRoutineIds, use24HourClock, habits, habitLogs, habitsEnabled, routinesEnabled, dailyNotes, gtdFrames, cloudSyncConfig?.enabled, syncKeyReady]);
 
   // ── Config field timestamp tracking ──────────────────────────────────────
   // Tracks when habitsEnabled/routinesEnabled/goalsProjectsEnabled/obsidianConfig

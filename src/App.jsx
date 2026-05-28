@@ -9498,8 +9498,9 @@ const DayPlanner = () => {
       {/* GTD Frames Modal (Desktop/Tablet) */}
       {showFramesModal && !isMobile && <FramesModal />}
 
-      {/* Subscription wall — shown on Android, iOS, and macOS when subscription is inactive */}
-      {(isAndroidApp || isIOSApp || isElectronApp) && (subLoading || !isPro) && !isReviewerUnlocked && (
+      {/* Subscription wall — shown on Android, iOS, and macOS when subscription is inactive.
+          In dev builds, ?wall in the URL forces it visible for local testing. */}
+      {(import.meta.env.DEV && new URLSearchParams(location.search).has('wall') || (isAndroidApp || isIOSApp || isElectronApp)) && (subLoading || !isPro) && !isReviewerUnlocked && (
         <SubscriptionWall
           isIOSApp={isIOSApp || isElectronApp}
           isLoading={subLoading}

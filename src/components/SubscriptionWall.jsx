@@ -198,7 +198,7 @@ export default function SubscriptionWall({
           onClick={handleShowCodeInput}
           className={`mt-4 text-xs ${sub} opacity-50 hover:opacity-80 transition-opacity`}
         >
-          Have an access code?
+          Reviewer access
         </button>
       ) : (
         <div className="mt-4 w-full max-w-xs flex flex-col items-center gap-2">

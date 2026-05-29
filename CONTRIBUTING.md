@@ -10,6 +10,7 @@ Thanks for your interest in contributing! Whether you're fixing a typo, squashin
 - [Running tests](#running-tests)
 - [Project structure](#project-structure)
 - [Making a pull request](#making-a-pull-request)
+- [Reporting security issues](#reporting-security-issues)
 - [Reporting bugs](#reporting-bugs)
 
 ---
@@ -69,7 +70,7 @@ When adding new logic, please add a test file alongside it if the logic is non-t
 ```
 dayGLANCE/
 ├── src/
-│   ├── App.jsx             # Top-level orchestrator — wires state, hooks, and layout
+│   ├── App.jsx             # Top-level orchestrator, wires state, hooks, and layout
 │   ├── main.jsx            # Entry point
 │   ├── ai.js               # AI provider integration (API calls, config)
 │   ├── ai-prompts.js       # Prompt templates for all AI features
@@ -89,7 +90,7 @@ dayGLANCE/
 │   ├── utils/              # Pure utility functions (formatting, task helpers, etc.)
 │   ├── constants/          # Static data (default frames, habit presets)
 │   ├── config/             # Runtime configuration (feature flags, reviewer access)
-│   ├── intents/            # @glance-apps/intents — intent polling, handling, logging
+│   ├── intents/            # @glance-apps/intents: intent polling, handling, logging
 │   └── sync/
 │       └── adapter.js      # @glance-apps/sync adapter with dayGLANCE-specific config
 ├── api/                    # Vercel serverless functions (WebDAV and calendar proxies)
@@ -119,18 +120,27 @@ If you're looking for a specific feature, searching for a UI string or function 
 
 2. **Keep changes focused.** One logical change per PR makes review much easier. If you find an unrelated bug while working, open a separate issue or PR for it.
 
-3. **Test your change** — run `npm run test` and make sure nothing is broken. If you're touching the Android widget, build and check it on a real device or emulator if you can.
+3. **Test your change**: run `npm run test` and make sure nothing is broken. If you're touching the Android widget, build and check it on a real device or emulator if you can.
 
-4. **Write a clear PR description.** Explain *what* changed and *why* — not just what the code does. If it fixes a bug, link the issue.
+4. **Write a clear PR description.** Explain *what* changed and *why*, not just what the code does. If it fixes a bug, link the issue.
 
 5. **Don't sweat perfection.** If you're unsure about something, open the PR as a draft and ask. We'd rather see a rough PR than no PR.
 
 ### Guidelines
 
 - Follow the existing code style. The project uses standard React/JSX conventions and Tailwind for styling.
-- Avoid adding dependencies unless necessary — the bundle size matters on mobile.
-- Plain text only in AI prompt responses — no markdown or emojis (see `ai-prompts.js` for examples).
+- Avoid adding dependencies unless necessary, since the bundle size matters on mobile.
+- No em dashes in user-facing copy (UI strings, docs, READMEs). Commit messages and PR descriptions are fine.
+- Plain text only in AI prompt responses, with no markdown or emojis (see `ai-prompts.js` for examples).
 - Widget layouts use `sp` units for text and `dp` for spacing. Minimum text size is `11sp`.
+
+---
+
+## Reporting security issues
+
+Please do **not** file public issues for security vulnerabilities. Use GitHub's [private vulnerability reporting](https://github.com/krelltunez/dayGLANCE/security/advisories/new) instead, which sends the report directly to maintainers without exposing it publicly. This applies to anything that could compromise user data: sync credential leaks, encryption flaws, XSS, etc.
+
+For non-sensitive bugs, use the public issue tracker as described below.
 
 ---
 
@@ -140,7 +150,7 @@ Please [open an issue](https://github.com/krelltunez/dayGLANCE/issues) and inclu
 
 - **What you expected** to happen
 - **What actually happened** (error message, screenshot, or screen recording if relevant)
-- **Steps to reproduce** — the more specific, the better
+- **Steps to reproduce**: the more specific, the better
 - **Environment:** browser/OS, or Android version and device if it's an Android-specific issue
 
 If you're not sure whether something is a bug or by design, open an issue anyway and we'll figure it out together.

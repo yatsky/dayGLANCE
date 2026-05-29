@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react';
+import { X, ArrowDownLeft, ArrowUpRight, ChevronRight, Trash2 } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { getActivityLog, clearActivityLog } from '../intents/intentLog.js';
@@ -98,10 +98,22 @@ const IntentActivityLogModal = () => {
   const { cardBg, borderClass, textPrimary, textSecondary, darkMode, hoverBg } = useDayPlannerCtx();
   const { showIntentActivityLog, setShowIntentActivityLog } = useSyncCtx();
   const [entries, setEntries] = useState(() => getActivityLog());
+  const [expandedErrors, setExpandedErrors] = useState(new Set());
 
   useEffect(() => {
-    if (showIntentActivityLog) setEntries(getActivityLog());
+    if (showIntentActivityLog) {
+      setEntries(getActivityLog());
+      setExpandedErrors(new Set());
+    }
   }, [showIntentActivityLog]);
+
+  const toggleError = (id) => {
+    setExpandedErrors(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   if (!showIntentActivityLog) return null;
 
@@ -192,7 +204,23 @@ const IntentActivityLogModal = () => {
                           <p className={`text-xs ${textPrimary} mt-0.5 truncate`}>{entry.title}</p>
                         )}
                         {entry.error && (
-                          <p className={`text-xs ${errorTextClass(entry)} mt-0.5 truncate`}>{errorMessage(entry)}</p>
+                          <div className="mt-0.5">
+                            <button
+                              onClick={() => toggleError(entry.id)}
+                              className={`flex items-center gap-0.5 ${errorTextClass(entry)} hover:opacity-75 transition-opacity text-left w-full`}
+                            >
+                              <ChevronRight
+                                size={11}
+                                className={`flex-shrink-0 transition-transform ${expandedErrors.has(entry.id) ? 'rotate-90' : ''}`}
+                              />
+                              <span className="text-xs">{errorMessage(entry)}</span>
+                            </button>
+                            {expandedErrors.has(entry.id) && (
+                              <pre className={`mt-1.5 text-[10px] font-mono rounded p-2 whitespace-pre-wrap break-all leading-relaxed ${darkMode ? 'bg-gray-900/60 text-gray-300' : 'bg-stone-100 text-stone-700'}`}>
+                                {entry.error}
+                              </pre>
+                            )}
+                          </div>
                         )}
                       </div>
 

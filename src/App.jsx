@@ -468,7 +468,7 @@ const DayPlanner = () => {
   // Keyboard shortcut cheat sheet
   const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-
+  const [storagePersisted, setStoragePersisted] = useState(null);
 
   const tagFilterBtnRef = useRef(null);
 
@@ -1168,6 +1168,11 @@ const DayPlanner = () => {
   // Best-effort request for persistent storage on startup.
   // Keeps IndexedDB / Cache Storage alive even when the browser is under quota pressure.
   useEffect(() => { navigator.storage?.persist?.(); }, []);
+
+  // Refresh persisted status each time the ? modal opens.
+  useEffect(() => {
+    if (showHelpModal) navigator.storage?.persisted?.().then(p => setStoragePersisted(p));
+  }, [showHelpModal]);
 
   // Lock body/html scrolling to prevent scroll chaining (all devices incl. desktop PWA)
   useEffect(() => {
@@ -9128,6 +9133,19 @@ const DayPlanner = () => {
                     </button>
                   );
                 })()}
+                {storagePersisted === false && (
+                  <div className={`p-2.5 rounded-lg border ${darkMode ? 'bg-amber-900/20 border-amber-700' : 'bg-amber-50 border-amber-300'}`}>
+                    <p className={`text-xs ${darkMode ? 'text-amber-300' : 'text-amber-800'} mb-1.5`}>
+                      Your data may be cleared by the browser when storage is low.
+                    </p>
+                    <button
+                      onClick={() => navigator.storage?.persist?.().then(granted => setStoragePersisted(granted))}
+                      className={`px-2.5 py-1 text-xs rounded font-medium ${darkMode ? 'bg-amber-700 hover:bg-amber-600 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} transition-colors`}
+                    >
+                      Allow persistent storage
+                    </button>
+                  </div>
+                )}
                 <div className={`flex items-center justify-between`}>
                   <p className={`text-xs ${textSecondary}`}>
                     {typeof __APP_VERSION__ !== 'undefined' ? `v${__APP_VERSION__}` : 'dayGLANCE'}

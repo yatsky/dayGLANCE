@@ -4,7 +4,7 @@ import {
   CalendarDays, CheckCircle, CheckSquare, ChevronDown, ChevronUp,
   ChevronLeft, ChevronRight, Clock, Cloud, ExternalLink,
   Footprints, FolderOpen, Globe, GripVertical, HelpCircle, Key, LayoutGrid,
-  Loader, Mic, Moon, Pencil, Plus,
+  Loader, Lock, Mic, Moon, Pencil, Plus,
   Flag, RefreshCw, Save, Settings, Sparkles, Sun, Target, Trash2,
   Undo2, Upload, Volume2, VolumeX, Wifi, WifiOff, Zap,
 } from 'lucide-react';
@@ -23,6 +23,9 @@ import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { INTENT_CONFIG_KEY } from '../intents/useIntentPoller.js';
+import { getSyncPassphrase, setSyncPassphrase } from '../utils/crypto.js';
+import { setupIntentsEncryption } from '../intents/intentsEncryptionSetup.js';
+import { loadIntentsRootKey, clearIntentsRootKey } from '../intents/intentsKeyStore.js';
 
 const MobileSettingsPanel = () => {
   const {
@@ -119,9 +122,12 @@ const MobileSettingsPanel = () => {
       foregroundInterval: saved.foregroundInterval ?? 120000,
       backgroundInterval: saved.backgroundInterval ?? 900000,
       gcRetentionDays: saved.gcRetentionDays ?? 30,
+      encryptionEnabled: saved.encryptionEnabled ?? false,
     };
   });
   const [intentSaved, setIntentSaved] = useState(false);
+  const [intentSetupPhase, setIntentSetupPhase] = useState(null);
+  const [intentPassphraseInput, setIntentPassphraseInput] = useState('');
 
   // Commit staged routines on unmount (e.g. user switches tabs while in routines view)
   const mobileSettingsViewRef = useRef(mobileSettingsView);
@@ -302,11 +308,13 @@ const MobileSettingsPanel = () => {
         onClick={() => setMobileSettingsView('intent')}
         className={`w-full ${cardBg} border ${borderClass} rounded-xl p-4 flex items-center gap-3`}
       >
-        <Activity size={20} className={intentForm.webdavUrl ? 'text-blue-500' : textSecondary} />
+        <div className="relative">
+          <Activity size={20} className={intentForm.webdavUrl ? 'text-blue-500' : textSecondary} />
+          {intentForm.webdavUrl && (
+            <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 ${darkMode ? 'border-gray-800' : 'border-white'} bg-green-500`} />
+          )}
+        </div>
         <span className={`font-medium ${textPrimary} flex-1 text-left`}>GLANCE Integrations</span>
-        {intentForm.webdavUrl && (
-          <span className="w-2 h-2 rounded-full bg-green-500 mr-1" />
-        )}
         <ChevronRight size={18} className={textSecondary} />
       </button>
     </div>
@@ -1560,20 +1568,6 @@ const MobileSettingsPanel = () => {
     const labelCls = `block text-sm ${textSecondary} mb-1`;
     const sectionCls = `text-xs font-semibold uppercase tracking-wide ${textSecondary} px-1 mb-2`;
 
-    const saveIntentConfig = () => {
-      const cfg = {
-        ...intentForm,
-        gcRetentionDays: Number(intentForm.gcRetentionDays) || 30,
-      };
-      if (cfg.webdavUrl || cfg.username || cfg.appPassword) {
-        localStorage.setItem(INTENT_CONFIG_KEY, JSON.stringify(cfg));
-      } else {
-        localStorage.removeItem(INTENT_CONFIG_KEY);
-      }
-      setIntentSaved(true);
-      setTimeout(() => setIntentSaved(false), 2000);
-    };
-
     const fgOptions = [
       { label: '30 sec', value: 30000 },
       { label: '1 min', value: 60000 },
@@ -1712,19 +1706,141 @@ const MobileSettingsPanel = () => {
           </div>
         </div>
 
+        {/* Encryption */}
+        <div>
+          <h5 className={sectionCls}>Encryption</h5>
+          <div className={`flex items-start gap-3 p-3 rounded-lg border ${borderClass} ${cloudSyncConfig?.encryptionEnabled ? '' : 'opacity-60'}`}>
+            <input
+              type="checkbox"
+              id="intent-encryption-toggle-mobile"
+              checked={intentForm.encryptionEnabled && !!cloudSyncConfig?.encryptionEnabled}
+              disabled={!cloudSyncConfig?.encryptionEnabled || intentSetupPhase !== null}
+              onChange={e => setIntentForm(p => ({ ...p, encryptionEnabled: e.target.checked }))}
+              className="mt-0.5 h-4 w-4 rounded"
+            />
+            <div>
+              <label htmlFor="intent-encryption-toggle-mobile" className={`text-sm font-medium ${textPrimary} ${cloudSyncConfig?.encryptionEnabled ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                Encrypt intent events
+              </label>
+              {cloudSyncConfig?.encryptionEnabled ? (
+                <p className={`text-xs ${textSecondary} mt-0.5`}>Uses your cloud sync passphrase. Set up once; remains active across sessions.</p>
+              ) : (
+                <p className={`text-xs ${textSecondary} mt-0.5`}>Requires cloud sync encryption to be enabled first.</p>
+              )}
+            </div>
+          </div>
+          {intentSetupPhase === 'passphrase-needed' && (
+            <div className={`mt-2 p-3 rounded-lg border ${borderClass} ${darkMode ? 'bg-gray-700/50' : 'bg-stone-50'}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Lock size={13} className="text-blue-500 flex-shrink-0" />
+                <span className={`text-sm font-medium ${textPrimary}`}>Enter your sync passphrase to complete setup</span>
+              </div>
+              <p className={`text-xs ${textSecondary} mb-3`}>Required once to derive the intents encryption key. After this, no passphrase is needed across sessions.</p>
+              <input
+                type="password"
+                autoFocus
+                value={intentPassphraseInput}
+                onChange={e => setIntentPassphraseInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Escape') { setIntentSetupPhase(null); setIntentPassphraseInput(''); } }}
+                placeholder="Your sync passphrase"
+                className={`w-full px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm mb-2`}
+              />
+              <div className="flex gap-2">
+                <button
+                  disabled={!intentPassphraseInput.trim()}
+                  onClick={async () => {
+                    const passphrase = intentPassphraseInput.trim();
+                    setSyncPassphrase(passphrase);
+                    setIntentPassphraseInput('');
+                    setIntentSetupPhase('running');
+                    const cfg = { ...intentForm, gcRetentionDays: Number(intentForm.gcRetentionDays) || 30, encryptionEnabled: true };
+                    try {
+                      await setupIntentsEncryption(cfg, passphrase);
+                      if (cfg.webdavUrl || cfg.username || cfg.appPassword) {
+                        localStorage.setItem(INTENT_CONFIG_KEY, JSON.stringify(cfg));
+                      }
+                      setIntentSetupPhase(null);
+                      setIntentSaved(true);
+                      setTimeout(() => setIntentSaved(false), 2000);
+                    } catch (err) {
+                      setIntentSetupPhase({ error: err.message });
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => { setIntentSetupPhase(null); setIntentPassphraseInput(''); }}
+                  className={`px-3 py-1.5 ${darkMode ? 'bg-gray-600 hover:bg-gray-500' : 'bg-stone-200 hover:bg-stone-300'} ${textPrimary} rounded-lg text-sm transition-colors`}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          {intentSetupPhase === 'running' && (
+            <div className={`mt-2 flex items-center gap-2 p-3 rounded-lg border ${borderClass} ${darkMode ? 'bg-gray-700/50' : 'bg-stone-50'}`}>
+              <Loader size={14} className="animate-spin text-blue-500" />
+              <span className={`text-sm ${textSecondary}`}>Setting up intents encryption...</span>
+            </div>
+          )}
+          {intentSetupPhase?.error && (
+            <div className={`mt-2 p-3 rounded-lg border border-red-300 ${darkMode ? 'bg-red-900/20' : 'bg-red-50'}`}>
+              <p className="text-sm text-red-500">Setup failed: {intentSetupPhase.error}</p>
+              <button onClick={() => setIntentSetupPhase(null)} className="mt-1 text-xs text-red-400 hover:text-red-300 underline">Dismiss</button>
+            </div>
+          )}
+        </div>
+
         {/* Save */}
         <div className="flex items-center gap-3">
           <button
-            onClick={saveIntentConfig}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            disabled={intentSetupPhase === 'running' || intentSetupPhase === 'passphrase-needed'}
+            onClick={async () => {
+              const wantsEncryption = intentForm.encryptionEnabled && !!cloudSyncConfig?.encryptionEnabled;
+              const cfg = { ...intentForm, gcRetentionDays: Number(intentForm.gcRetentionDays) || 30, encryptionEnabled: wantsEncryption };
+              if (!wantsEncryption) {
+                await clearIntentsRootKey();
+              }
+              if (wantsEncryption) {
+                const rootKey = await loadIntentsRootKey();
+                if (!rootKey) {
+                  const passphrase = getSyncPassphrase();
+                  if (passphrase) {
+                    setIntentSetupPhase('running');
+                    try {
+                      await setupIntentsEncryption(cfg, passphrase);
+                    } catch (err) {
+                      setIntentSetupPhase({ error: err.message });
+                      return;
+                    }
+                    setIntentSetupPhase(null);
+                  } else {
+                    setIntentSetupPhase('passphrase-needed');
+                    return;
+                  }
+                }
+              }
+              if (cfg.webdavUrl || cfg.username || cfg.appPassword) {
+                localStorage.setItem(INTENT_CONFIG_KEY, JSON.stringify(cfg));
+              } else {
+                localStorage.removeItem(INTENT_CONFIG_KEY);
+              }
+              setIntentSaved(true);
+              setTimeout(() => setIntentSaved(false), 2000);
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60 transition-colors flex items-center gap-1.5"
           >
+            {intentSetupPhase === 'running' && <Loader size={13} className="animate-spin" />}
             {intentSaved ? 'Saved' : 'Save'}
           </button>
           {intentForm.webdavUrl && (
             <button
               onClick={() => {
-                setIntentForm({ webdavUrl: '', username: '', appPassword: '', eventsPath: '/GLANCE/events/', foregroundInterval: 120000, backgroundInterval: 900000, gcRetentionDays: 30 });
+                setIntentForm({ webdavUrl: '', username: '', appPassword: '', eventsPath: '/GLANCE/events/', foregroundInterval: 120000, backgroundInterval: 900000, gcRetentionDays: 30, encryptionEnabled: false });
                 localStorage.removeItem(INTENT_CONFIG_KEY);
+                clearIntentsRootKey();
               }}
               className={`px-4 py-2 ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-stone-200 hover:bg-stone-300'} ${textPrimary} rounded-lg text-sm transition-colors`}
             >

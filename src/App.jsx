@@ -6218,17 +6218,17 @@ const DayPlanner = () => {
   const tasksByDate = useMemo(() => {
     const map = {};
     for (const task of tasks) {
-      if (!task.date) continue;
+      if (!task.date || !isVisibleForUser(task)) continue;
       if (!map[task.date]) map[task.date] = [];
       map[task.date].push(task);
     }
     for (const task of expandedRecurringTasks) {
-      if (!task.date) continue;
+      if (!task.date || !isVisibleForUser(task)) continue;
       if (!map[task.date]) map[task.date] = [];
       map[task.date].push(task);
     }
     return map;
-  }, [tasks, expandedRecurringTasks]);
+  }, [tasks, expandedRecurringTasks, isVisibleForUser]);
 
   // Helper to get tasks for a specific date (must be after filterByTags)
   const getTasksForDate = (date) => {

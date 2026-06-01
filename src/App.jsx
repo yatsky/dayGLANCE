@@ -597,7 +597,7 @@ const DayPlanner = () => {
 
   // Settings & Reminders modals
   const [showSettings, setShowSettings] = useState(false);
-  const [collapsedSettings, setCollapsedSettings] = useState({ cloudSync: true, calSync: !isNativeApp(), ai: true, obsidian: !isNativeApp(), trmnl: true });
+  const [collapsedSettings, setCollapsedSettings] = useState({ cloudSync: true, calSync: !isNativeApp(), ai: true, obsidian: !isNativeApp(), trmnl: true, multiUser: true });
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDismissedVersion, setUpdateDismissedVersion] = useState(() => localStorage.getItem('dayglance-update-dismissed') || null);
   const toggleSettingsSection = (key) => setCollapsedSettings(prev => ({ ...prev, [key]: !prev[key] }));
@@ -3007,6 +3007,7 @@ const DayPlanner = () => {
         deadline: newTask.deadline || null,
         priority: newTask.priority || 0,
         projectId: newTask.projectId || undefined,
+        assignedUserSyncIds: newTask.assignedUserSyncIds ?? t.assignedUserSyncIds,
       } : t));
     } else if (typeof taskId === 'string' && taskId.startsWith('recurring-')) {
       const parsed = parseRecurringId(taskId);
@@ -3142,6 +3143,7 @@ const DayPlanner = () => {
           isAllDay: newTask.isAllDay || false,
           color: newTask.color || colors[0].class,
           projectId: newTask.projectId || undefined,
+          assignedUserSyncIds: newTask.assignedUserSyncIds ?? t.assignedUserSyncIds,
         } : t));
       } else {
         // Task was unscheduled (e.g. a project task) — move it to the scheduled list
@@ -3157,6 +3159,7 @@ const DayPlanner = () => {
           isAllDay: newTask.isAllDay || false,
           color: newTask.color || colors[0].class,
           projectId: newTask.projectId || undefined,
+          assignedUserSyncIds: newTask.assignedUserSyncIds ?? existing?.assignedUserSyncIds,
         }]);
       }
     }

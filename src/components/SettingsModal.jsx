@@ -956,6 +956,26 @@ const SettingsModal = () => {
                       </button>
                       {!collapsedSettings.multiUser && (
                         <div className="space-y-4">
+                          {/* Enable toggle */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className={`text-sm font-medium ${textPrimary}`}>Multi-user mode</p>
+                              <p className={`${textSecondary} text-xs`}>Tag chores with specific household members</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = !multiUserEnabled;
+                                setMultiUserEnabled(next);
+                                localStorage.setItem('dayglance-multi-user-enabled', JSON.stringify(next));
+                              }}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${multiUserEnabled ? 'bg-green-500' : darkMode ? 'bg-gray-600' : 'bg-stone-300'}`}
+                              role="switch"
+                              aria-checked={multiUserEnabled}
+                            >
+                              <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${multiUserEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                          </div>
                           <div className="flex items-center justify-between gap-3">
                             <p className={`${textSecondary} text-xs`}>
                               Share dayGLANCE with your household. Tasks can be assigned to specific people; unassigned tasks are visible to everyone.

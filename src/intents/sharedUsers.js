@@ -1,11 +1,14 @@
 import { webdavFetch } from '../utils/cloudSyncProviders.js';
 
 const USERS_FILENAME = 'glance-users.json';
-const GLANCE_DIR = '/GLANCE/';
+const DEFAULT_EVENTS_PATH = '/GLANCE/events/';
 
-function glanceDir(config) {
+// Mirrors the eventsDir logic in useIntentPoller / intentsEncryptionSetup
+// so the users file lives in the same configured directory as intent events.
+function eventsDir(config) {
   const base = (config.webdavUrl ?? '').replace(/\/+$/, '');
-  return `${base}${GLANCE_DIR}`;
+  const path = (config.eventsPath ?? DEFAULT_EVENTS_PATH).replace(/\/+$/, '') + '/';
+  return `${base}${path}`;
 }
 
 function authHeaders(config) {
@@ -26,7 +29,8 @@ function mergeUsers(local, remote) {
 }
 
 /**
- * Sync the local user list with GLANCE/glance-users.json on WebDAV.
+ * Sync the local user list with glance-users.json in the configured events
+ * directory on WebDAV (default: GLANCE/events/glance-users.json).
  * - If the file doesn't exist, write local users (this app is first).
  * - If it exists, merge remote + local (last-write-wins by updatedAt per syncId)
  *   and write the merged result back.
@@ -35,7 +39,7 @@ function mergeUsers(local, remote) {
 export async function syncSharedUsers(config, localUsers) {
   if (!config?.webdavUrl || !config?.username || !config?.appPassword) return null;
 
-  const dir = glanceDir(config);
+  const dir = eventsDir(config);
   const fileUrl = `${dir}${USERS_FILENAME}`;
   const headers = authHeaders(config);
   const putHeaders = { ...headers, 'Content-Type': 'application/json' };

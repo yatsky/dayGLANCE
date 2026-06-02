@@ -1421,31 +1421,16 @@ const DayPlanner = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { writeConfigTimestamp('dayglance-multi-user-enabled-updated-at'); }, [multiUserEnabled]);
 
-  // Sync user list with GLANCE/glance-users.json on WebDAV so dayGLANCE and
-  // lastGLANCE share the same roster regardless of which app is opened first.
-  // intentConfigUrl is kept in state so saving WebDAV credentials re-triggers this.
-  const [intentConfigUrl, setIntentConfigUrl] = useState(() => {
-    const raw = localStorage.getItem(INTENT_CONFIG_KEY);
-    return raw ? (JSON.parse(raw).webdavUrl ?? null) : null;
-  });
+  // Sync user list with glance-users.json on WebDAV using cloud sync credentials,
+  // so dayGLANCE and lastGLANCE share the same roster regardless of which app is
+  // opened first. Re-runs when users change or cloud sync config changes.
   useEffect(() => {
-    const refresh = () => {
+    if (!cloudSyncConfig?.enabled) return;
+    const usersPath = (() => {
       const raw = localStorage.getItem(INTENT_CONFIG_KEY);
-      setIntentConfigUrl(raw ? (JSON.parse(raw).webdavUrl ?? null) : null);
-    };
-    // 'storage' fires in other tabs; custom event fires in the same tab (from SettingsModal)
-    window.addEventListener('storage', refresh);
-    window.addEventListener('dayglance-intent-config-saved', refresh);
-    return () => {
-      window.removeEventListener('storage', refresh);
-      window.removeEventListener('dayglance-intent-config-saved', refresh);
-    };
-  }, []);
-  useEffect(() => {
-    const raw = localStorage.getItem(INTENT_CONFIG_KEY);
-    const intentConfig = raw ? JSON.parse(raw) : null;
-    if (!intentConfig?.webdavUrl) return;
-    syncSharedUsers(intentConfig, users).then(merged => {
+      return raw ? (JSON.parse(raw).usersPath ?? undefined) : undefined;
+    })();
+    syncSharedUsers(cloudSyncConfig, usersPath, users).then(merged => {
       if (!merged) return;
       const localById = new Map(users.map(u => [u.syncId, u]));
       const hasNew = merged.some(u => {
@@ -1458,7 +1443,7 @@ const DayPlanner = () => {
       }
     }).catch(err => console.warn('[shared-users] sync error:', err.message));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, intentConfigUrl]);
+  }, [users, cloudSyncConfig?.enabled, cloudSyncConfig?.nextcloudUrl, cloudSyncConfig?.webdavUrl]);
 
   // Only track obsidianConfig on non-native apps; native apps auto-populate fields from the vault.
   // eslint-disable-next-line react-hooks/exhaustive-deps

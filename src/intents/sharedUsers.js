@@ -87,7 +87,7 @@ export async function syncSharedUsers(cloudSyncConfig, usersPath, localUsers) {
   const body = JSON.stringify({ version: 1, users: merged, updated_at: new Date().toISOString() });
 
   let putRes = await webdavFetch('PUT', fileUrl, putHeaders, body);
-  if (putRes.status === 404 || putRes.status === 409) {
+  if (putRes.status === 403 || putRes.status === 404 || putRes.status === 409) {
     await webdavFetch('MKCOL', dir, headers);
     putRes = await webdavFetch('PUT', fileUrl, putHeaders, body);
   }

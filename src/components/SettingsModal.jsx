@@ -1032,22 +1032,36 @@ const SettingsModal = () => {
                                       <span className={`flex-1 text-sm ${textPrimary}`}>{u.name}</span>
                                       <button
                                         type="button"
+                                        onClick={() => {
+                                          const key = u.syncId ?? u.id;
+                                          const next = meUserSyncId === key ? null : key;
+                                          setMeUserSyncId(next);
+                                          localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(MULTI_USER_CONFIG_KEY) || '{}'), meUserSyncId: next }));
+                                        }}
+                                        className={`px-2 py-1 rounded text-xs border transition-colors ${meUserSyncId === (u.syncId ?? u.id)
+                                          ? 'border-green-500 bg-green-500/20 text-green-400'
+                                          : `${borderClass} ${darkMode ? 'bg-transparent text-gray-400 hover:text-gray-200' : 'bg-transparent text-stone-500 hover:text-stone-700'}`}`}
+                                      >{meUserSyncId === (u.syncId ?? u.id) ? '✓ Me' : 'Me'}</button>
+                                      <button
+                                        type="button"
                                         onClick={() => { setEditingUserId(u.id); setEditingUserName(u.name); }}
-                                        className={`px-2 py-1 rounded text-xs ${darkMode ? 'bg-gray-600 text-gray-200 hover:bg-gray-500' : 'bg-stone-200 text-stone-700 hover:bg-stone-300'}`}
-                                      >Edit</button>
+                                        className={`px-1.5 py-1 rounded text-xs ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-stone-400 hover:text-stone-600'}`}
+                                        aria-label="Edit"
+                                      >✎</button>
                                       <button
                                         type="button"
                                         onClick={() => {
                                           const updated = users.map(usr => usr.id === u.id ? { ...usr, deleted: true, updatedAt: new Date().toISOString() } : usr);
                                           setUsers(updated);
                                           localStorage.setItem('dayglance-users', JSON.stringify(updated));
-                                          if (meUserSyncId === u.syncId) {
+                                          if (meUserSyncId === (u.syncId ?? u.id)) {
                                             setMeUserSyncId(null);
                                             localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(MULTI_USER_CONFIG_KEY) || '{}'), meUserSyncId: null }));
                                           }
                                         }}
-                                        className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-500 hover:bg-red-500/30"
-                                      >Remove</button>
+                                        className={`px-1.5 py-1 rounded text-xs ${darkMode ? 'text-gray-500 hover:text-red-400' : 'text-stone-400 hover:text-red-500'}`}
+                                        aria-label="Delete"
+                                      >🗑</button>
                                     </>
                                   )}
                                 </div>
@@ -1103,46 +1117,6 @@ const SettingsModal = () => {
                               >+ Add person</button>
                             )}
                           </div>
-                          {/* I am picker */}
-                          {users.filter(u => !u.deleted).length > 0 && (
-                            <div>
-                              <p className={`text-xs font-medium ${textSecondary} mb-2`}>I am</p>
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setMeUserSyncId(null);
-                                    localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(MULTI_USER_CONFIG_KEY) || '{}'), meUserSyncId: null }));
-                                  }}
-                                  className={`px-2.5 py-1 rounded-full text-sm border transition-colors ${!meUserSyncId
-                                    ? `border-blue-500 ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`
-                                    : `${borderClass} ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-stone-600'}`}`}
-                                >None</button>
-                                {users.filter(u => !u.deleted).map(u => (
-                                  <button
-                                    key={u.id}
-                                    type="button"
-                                    onClick={() => {
-                                      setMeUserSyncId(u.syncId);
-                                      localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(MULTI_USER_CONFIG_KEY) || '{}'), meUserSyncId: u.syncId }));
-                                    }}
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm border transition-colors ${meUserSyncId === u.syncId
-                                      ? `border-blue-500 ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`
-                                      : `${borderClass} ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-white text-stone-600'}`}`}
-                                  >
-                                    <span
-                                      style={{ width: 18, height: 18, fontSize: 10 }}
-                                      className="rounded-full bg-gray-500 text-white flex items-center justify-center font-semibold leading-none flex-shrink-0"
-                                    >
-                                      {u.name[0].toUpperCase()}
-                                    </span>
-                                    {u.name}
-                                  </button>
-                                ))}
-                              </div>
-                              {meUserSyncId && <p className={`text-xs ${textSecondary} mt-1.5`}>Tasks assigned to others will be hidden. Unassigned tasks are shared.</p>}
-                            </div>
-                          )}
                           {/* Users path — only shown when GLANCE Integrations WebDAV is configured */}
                           {intentForm.webdavUrl && (
                             <div>

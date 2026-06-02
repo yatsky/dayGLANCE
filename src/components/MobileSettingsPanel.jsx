@@ -23,6 +23,7 @@ import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { INTENT_CONFIG_KEY, MULTI_USER_CONFIG_KEY } from '../intents/useIntentPoller.js';
+import { syncSharedUsers } from '../intents/sharedUsers.js';
 import { getSyncPassphrase, setSyncPassphrase } from '../utils/crypto.js';
 import { setupIntentsEncryption } from '../intents/intentsEncryptionSetup.js';
 import { loadIntentsRootKey, clearIntentsRootKey } from '../intents/intentsKeyStore.js';
@@ -137,6 +138,7 @@ const MobileSettingsPanel = () => {
     const raw = localStorage.getItem(MULTI_USER_CONFIG_KEY);
     return raw ? (JSON.parse(raw).usersPath ?? '/GLANCE/users/') : '/GLANCE/users/';
   });
+  const [muSyncStatus, setMuSyncStatus] = useState(null); // null | 'syncing' | 'ok' | 'error'
 
   // Commit staged routines on unmount (e.g. user switches tabs while in routines view)
   const mobileSettingsViewRef = useRef(mobileSettingsView);
@@ -2375,7 +2377,40 @@ const MobileSettingsPanel = () => {
         </button>
         <h2 className={`text-lg font-semibold ${textPrimary}`}>Multi-user</h2>
       </div>
-      <p className={`text-xs ${textSecondary}`}>Share dayGLANCE with your household. Tasks can be assigned to specific people; unassigned tasks are visible to everyone.</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className={`text-xs ${textSecondary}`}>Share dayGLANCE with your household. Tasks can be assigned to specific people; unassigned tasks are visible to everyone.</p>
+        {cloudSyncConfig?.enabled && (
+          <button
+            type="button"
+            disabled={muSyncStatus === 'syncing'}
+            onClick={async () => {
+              setMuSyncStatus('syncing');
+              try {
+                const raw = localStorage.getItem(MULTI_USER_CONFIG_KEY);
+                const uPath = raw ? (JSON.parse(raw).usersPath ?? undefined) : undefined;
+                const merged = await syncSharedUsers(cloudSyncConfig, uPath, users);
+                if (merged) {
+                  localStorage.setItem('dayglance-users', JSON.stringify(merged));
+                  setUsers(merged);
+                }
+                setMuSyncStatus('ok');
+                setTimeout(() => setMuSyncStatus(null), 2000);
+              } catch {
+                setMuSyncStatus('error');
+                setTimeout(() => setMuSyncStatus(null), 3000);
+              }
+            }}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 ${
+              muSyncStatus === 'ok' ? 'bg-green-500/20 text-green-500' :
+              muSyncStatus === 'error' ? 'bg-red-500/20 text-red-500' :
+              darkMode ? 'bg-gray-700 text-gray-300' : 'bg-stone-100 text-stone-600'
+            }`}
+          >
+            <RefreshCw size={13} className={muSyncStatus === 'syncing' ? 'animate-spin' : ''} />
+            {muSyncStatus === 'ok' ? 'Synced!' : muSyncStatus === 'error' ? 'Failed' : 'Sync now'}
+          </button>
+        )}
+      </div>
 
       {/* People */}
       <div>

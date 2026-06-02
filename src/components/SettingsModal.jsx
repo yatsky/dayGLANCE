@@ -10,6 +10,7 @@ import { testConnection, PROVIDER_MODELS, PROVIDER_LABELS } from '../ai.js';
 import { isNativeAndroid, isNativeApp, nativeGetCalendars } from '../native.js';
 import { isFileSystemAccessSupported, requestVaultAccess, disconnectVault } from '../obsidian.js';
 import { INTENT_CONFIG_KEY, MULTI_USER_CONFIG_KEY } from '../intents/useIntentPoller.js';
+import { syncSharedUsers } from '../intents/sharedUsers.js';
 import { getSyncPassphrase, setSyncPassphrase } from '../utils/crypto.js';
 import { setupIntentsEncryption } from '../intents/intentsEncryptionSetup.js';
 import { loadIntentsRootKey, clearIntentsRootKey } from '../intents/intentsKeyStore.js';
@@ -97,6 +98,7 @@ const SettingsModal = () => {
     const raw = localStorage.getItem(MULTI_USER_CONFIG_KEY);
     return raw ? (JSON.parse(raw).usersPath ?? '/GLANCE/users/') : '/GLANCE/users/';
   });
+  const [userSyncStatus, setUserSyncStatus] = useState(null); // null | 'syncing' | 'ok' | 'error'
   const [intentSaved, setIntentSaved] = useState(false);
   // null | 'passphrase-needed' | 'running' | { error: string }
   const [intentSetupPhase, setIntentSetupPhase] = useState(null);
@@ -954,9 +956,42 @@ const SettingsModal = () => {
                       </button>
                       {!collapsedSettings.multiUser && (
                         <div className="space-y-4">
-                          <p className={`${textSecondary} text-xs`}>
-                            Share dayGLANCE with your household. Tasks can be assigned to specific people; unassigned tasks are visible to everyone.
-                          </p>
+                          <div className="flex items-center justify-between gap-3">
+                            <p className={`${textSecondary} text-xs`}>
+                              Share dayGLANCE with your household. Tasks can be assigned to specific people; unassigned tasks are visible to everyone.
+                            </p>
+                            {cloudSyncConfig?.enabled && (
+                              <button
+                                type="button"
+                                disabled={userSyncStatus === 'syncing'}
+                                onClick={async () => {
+                                  setUserSyncStatus('syncing');
+                                  try {
+                                    const raw = localStorage.getItem(MULTI_USER_CONFIG_KEY);
+                                    const uPath = raw ? (JSON.parse(raw).usersPath ?? undefined) : undefined;
+                                    const merged = await syncSharedUsers(cloudSyncConfig, uPath, users);
+                                    if (merged) {
+                                      localStorage.setItem('dayglance-users', JSON.stringify(merged));
+                                      setUsers(merged);
+                                    }
+                                    setUserSyncStatus('ok');
+                                    setTimeout(() => setUserSyncStatus(null), 2000);
+                                  } catch {
+                                    setUserSyncStatus('error');
+                                    setTimeout(() => setUserSyncStatus(null), 3000);
+                                  }
+                                }}
+                                className={`flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 ${
+                                  userSyncStatus === 'ok' ? 'bg-green-500/20 text-green-500' :
+                                  userSyncStatus === 'error' ? 'bg-red-500/20 text-red-500' :
+                                  darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                                }`}
+                              >
+                                <RefreshCw size={12} className={userSyncStatus === 'syncing' ? 'animate-spin' : ''} />
+                                {userSyncStatus === 'ok' ? 'Synced!' : userSyncStatus === 'error' ? 'Failed' : 'Sync now'}
+                              </button>
+                            )}
+                          </div>
                           {/* User list */}
                           <div>
                             <p className={`text-xs font-medium ${textSecondary} mb-2`}>People</p>

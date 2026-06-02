@@ -1427,7 +1427,7 @@ const DayPlanner = () => {
   useEffect(() => {
     if (!cloudSyncConfig?.enabled) return;
     const usersPath = (() => {
-      const raw = localStorage.getItem(INTENT_CONFIG_KEY);
+      const raw = localStorage.getItem('dayglance-multi-user-config');
       return raw ? (JSON.parse(raw).usersPath ?? undefined) : undefined;
     })();
     syncSharedUsers(cloudSyncConfig, usersPath, users).then(merged => {

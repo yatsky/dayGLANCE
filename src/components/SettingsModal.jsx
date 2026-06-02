@@ -87,12 +87,15 @@ const SettingsModal = () => {
       username: saved.username ?? '',
       appPassword: saved.appPassword ?? '',
       eventsPath: saved.eventsPath ?? '/GLANCE/events/',
-      usersPath: saved.usersPath ?? '/GLANCE/users/',
       foregroundInterval: saved.foregroundInterval ?? 120000,
       backgroundInterval: saved.backgroundInterval ?? 900000,
       gcRetentionDays: saved.gcRetentionDays ?? 30,
       encryptionEnabled: saved.encryptionEnabled ?? false,
     };
+  });
+  const [usersPath, setUsersPath] = useState(() => {
+    const raw = localStorage.getItem(MULTI_USER_CONFIG_KEY);
+    return raw ? (JSON.parse(raw).usersPath ?? '/GLANCE/users/') : '/GLANCE/users/';
   });
   const [intentSaved, setIntentSaved] = useState(false);
   // null | 'passphrase-needed' | 'running' | { error: string }
@@ -1005,7 +1008,7 @@ const SettingsModal = () => {
                                           localStorage.setItem('dayglance-users', JSON.stringify(updated));
                                           if (meUserSyncId === u.syncId) {
                                             setMeUserSyncId(null);
-                                            localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ meUserSyncId: null }));
+                                            localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(MULTI_USER_CONFIG_KEY) || '{}'), meUserSyncId: null }));
                                           }
                                         }}
                                         className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-500 hover:bg-red-500/30"
@@ -1074,7 +1077,7 @@ const SettingsModal = () => {
                                   type="button"
                                   onClick={() => {
                                     setMeUserSyncId(null);
-                                    localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ meUserSyncId: null }));
+                                    localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(MULTI_USER_CONFIG_KEY) || '{}'), meUserSyncId: null }));
                                   }}
                                   className={`px-2.5 py-1 rounded-full text-sm border transition-colors ${!meUserSyncId
                                     ? `border-blue-500 ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`
@@ -1086,7 +1089,7 @@ const SettingsModal = () => {
                                     type="button"
                                     onClick={() => {
                                       setMeUserSyncId(u.syncId);
-                                      localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ meUserSyncId: u.syncId }));
+                                      localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ ...JSON.parse(localStorage.getItem(MULTI_USER_CONFIG_KEY) || '{}'), meUserSyncId: u.syncId }));
                                     }}
                                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm border transition-colors ${meUserSyncId === u.syncId
                                       ? `border-blue-500 ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-50 text-blue-700'}`
@@ -1112,8 +1115,14 @@ const SettingsModal = () => {
                               <input
                                 type="text"
                                 placeholder="/GLANCE/users/"
-                                value={intentForm.usersPath}
-                                onChange={e => setIntentForm(p => ({ ...p, usersPath: e.target.value }))}
+                                value={usersPath}
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setUsersPath(val);
+                                  const existing = localStorage.getItem(MULTI_USER_CONFIG_KEY);
+                                  const prev = existing ? JSON.parse(existing) : {};
+                                  localStorage.setItem(MULTI_USER_CONFIG_KEY, JSON.stringify({ ...prev, usersPath: val }));
+                                }}
                                 className={`w-full px-3 py-2 border ${borderClass} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${darkMode ? 'bg-gray-700 text-white' : 'bg-white text-stone-900'} text-sm`}
                               />
                               <p className={`text-xs ${textSecondary} mt-1`}>WebDAV path where the shared user list is stored. Must match across all GLANCE apps.</p>

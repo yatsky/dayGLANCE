@@ -180,6 +180,8 @@ async function poll(config, context) {
 
       const raw = await fileRes.json();
 
+      console.debug('[intent] raw envelope:', name, JSON.stringify(raw));
+
       // Check emitted_by on the raw object before parsing. Our own notify
       // envelopes use a different action schema that parseEnvelope rejects as
       // malformed, so the post-parse check would never be reached for them.
@@ -223,7 +225,7 @@ async function poll(config, context) {
         } else if (parseErr instanceof WrongKeyError) {
           console.warn('[intent] Skipping encrypted event (wrong key):', name);
         } else if (parseErr instanceof MalformedEnvelopeError) {
-          console.warn('[intent] Skipping malformed envelope:', name);
+          console.warn('[intent] Skipping malformed envelope:', name, parseErr.message);
           logStatus = 'warn';
         } else if (parseErr instanceof NotEncryptedError) {
           console.warn('[intent] Skipping malformed envelope:', name);

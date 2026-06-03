@@ -1,0 +1,23 @@
+diff --git a/node_modules/@glance-apps/intents/dist/index.js b/node_modules/@glance-apps/intents/dist/index.js
+index f9379dd..214ddcb 100644
+--- a/node_modules/@glance-apps/intents/dist/index.js
++++ b/node_modules/@glance-apps/intents/dist/index.js
+@@ -396,7 +396,7 @@ var CreateSchema = z.object({
+   source_app: z.string().regex(sourceAppPattern).optional(),
+   source_entity_id: z.string().min(1).optional(),
+   assigned_user_ids: z.array(z.string()).optional()
+-}).strict().refine((data) => data.duration === void 0 || !!data.due && hasTimeComponent(data.due), {
++}).refine((data) => data.duration === void 0 || !!data.due && hasTimeComponent(data.due), {
+   message: "duration requires `due` with a time component",
+   path: ["duration"]
+ }).refine((data) => data.source_entity_id === void 0 || !!data.source_app, {
+@@ -435,7 +435,8 @@ var NotifySchema = z.object({
+   entity_type: z.string().min(1).optional(),
+   due: isoDateOrDateTime2.optional(),
+   previous_due: isoDateOrDateTime2.optional(),
+-  completed_at: z.string().datetime({ offset: true }).optional()
++  completed_at: z.string().datetime({ offset: true }).optional(),
++  completed_by_user_id: z.string().optional()
+ }).strict();
+ var envelopeBase = {
+   schema_version: z.literal(SCHEMA_VERSION),

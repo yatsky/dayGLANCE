@@ -160,6 +160,7 @@ export function useNotifyEmitter({ tasks, unscheduledTasks }) {
           ...(change.due !== undefined ? { due: change.due } : {}),
           ...(change.previous_due !== undefined ? { previous_due: change.previous_due } : {}),
           ...(change.completed_at !== undefined ? { completed_at: change.completed_at } : {}),
+          ...(change.completed_at !== undefined && meUserSyncId ? { completed_by_user_id: meUserSyncId } : {}),
         };
 
         try {

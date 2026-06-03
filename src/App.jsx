@@ -1426,6 +1426,7 @@ const DayPlanner = () => {
   // opened first. Re-runs when users change or cloud sync config changes.
   useEffect(() => {
     if (!cloudSyncConfig?.enabled) return;
+    if (!multiUserEnabled) return;
     const usersPath = (() => {
       const raw = localStorage.getItem('dayglance-multi-user-config');
       return raw ? (JSON.parse(raw).usersPath ?? undefined) : undefined;
@@ -1443,7 +1444,7 @@ const DayPlanner = () => {
       }
     }).catch(err => console.warn('[shared-users] sync error:', err.message));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, cloudSyncConfig?.enabled, cloudSyncConfig?.nextcloudUrl, cloudSyncConfig?.webdavUrl]);
+  }, [users, multiUserEnabled, cloudSyncConfig?.enabled, cloudSyncConfig?.nextcloudUrl, cloudSyncConfig?.webdavUrl]);
 
   // Only track obsidianConfig on non-native apps; native apps auto-populate fields from the vault.
   // eslint-disable-next-line react-hooks/exhaustive-deps

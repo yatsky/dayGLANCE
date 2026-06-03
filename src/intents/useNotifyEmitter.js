@@ -64,6 +64,24 @@ function shouldEmit(task) {
   return !!(task.source_app && task.source_entity_id);
 }
 
+/** Pure payload builder — exported for testing. */
+export function buildNotifyPayload(task, change, now, meUserSyncId = null) {
+  return {
+    event_id: task.transitionId ?? makeEventId(),
+    source_app: task.source_app,
+    source_entity_id: task.source_entity_id,
+    event: change.event,
+    task_id: task.id,
+    title: task.title,
+    timestamp: now,
+    entity_type: ENTITY_TYPES.TASK,
+    ...(change.due !== undefined ? { due: change.due } : {}),
+    ...(change.previous_due !== undefined ? { previous_due: change.previous_due } : {}),
+    ...(change.completed_at !== undefined ? { completed_at: change.completed_at } : {}),
+    ...(change.completed_at !== undefined && meUserSyncId ? { completed_by_user_id: meUserSyncId } : {}),
+  };
+}
+
 // ─── hook ────────────────────────────────────────────────────────────────────
 
 /**
@@ -148,20 +166,7 @@ export function useNotifyEmitter({ tasks, unscheduledTasks }) {
       }
 
       for (const { task, change } of emits) {
-        const payload = {
-          event_id: makeEventId(),
-          source_app: task.source_app,
-          source_entity_id: task.source_entity_id,
-          event: change.event,
-          task_id: task.id,
-          title: task.title,
-          timestamp: now,
-          entity_type: ENTITY_TYPES.TASK,
-          ...(change.due !== undefined ? { due: change.due } : {}),
-          ...(change.previous_due !== undefined ? { previous_due: change.previous_due } : {}),
-          ...(change.completed_at !== undefined ? { completed_at: change.completed_at } : {}),
-          ...(change.completed_at !== undefined && meUserSyncId ? { completed_by_user_id: meUserSyncId } : {}),
-        };
+        const payload = buildNotifyPayload(task, change, now, meUserSyncId);
 
         try {
           const envelope = deriveKey

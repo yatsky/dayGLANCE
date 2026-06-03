@@ -893,6 +893,7 @@ const MobileListView = ({ hideInboxHandle = false }) => {
         duration: state.task.duration || 30,
         color: state.task.color || 'bg-blue-500',
         isAllDay: false,
+        transitionId: crypto.randomUUID(),
       }]);
       setUnscheduledTasks(prev => prev.filter(t => t.id !== state.task.id));
       playUISound('pop');
@@ -1043,7 +1044,7 @@ const MobileListView = ({ hideInboxHandle = false }) => {
       pushUndo();
       if (item._kind === 'task') {
         setTasks(prev => prev.map(t => t.id === item.id
-          ? { ...t, isAllDay: true, startTime: undefined }
+          ? { ...t, isAllDay: true, startTime: undefined, transitionId: crypto.randomUUID() }
           : t
         ));
       } else if (item._kind === 'routine') {
@@ -1061,7 +1062,7 @@ const MobileListView = ({ hideInboxHandle = false }) => {
       pushUndo();
       if (item._kind === 'task') {
         setTasks(prev => prev.map(t => t.id === item.id
-          ? { ...t, startTime: newTime, isAllDay: false, date: item.date || dateStr }
+          ? { ...t, startTime: newTime, isAllDay: false, date: item.date || dateStr, transitionId: crypto.randomUUID() }
           : t
         ));
       } else if (item._kind === 'routine') {

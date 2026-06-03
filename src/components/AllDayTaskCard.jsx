@@ -322,7 +322,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
                 onBlur={async (e) => {
                   const newNotes = e.target.value;
                   if (newNotes === (task.notes || '')) return;
-                  setTasks(prev => prev.map(t => t.id === task.id ? { ...t, notes: newNotes } : t));
+                  setTasks(prev => prev.map(t => t.id === task.id ? { ...t, notes: newNotes, transitionId: crypto.randomUUID() } : t));
                   if (isNativeApp() && task.nativeEventId) {
                     await nativeUpdateEvent({
                       id: task.nativeEventId,

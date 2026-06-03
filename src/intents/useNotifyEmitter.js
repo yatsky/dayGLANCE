@@ -159,7 +159,7 @@ export function useNotifyEmitter({ tasks, unscheduledTasks }) {
           entity_type: ENTITY_TYPES.TASK,
           ...(change.due !== undefined ? { due: change.due } : {}),
           ...(change.previous_due !== undefined ? { previous_due: change.previous_due } : {}),
-          ...(change.completed_at !== undefined ? { completed_at: change.completed_at, completedByUserSyncId: meUserSyncId } : {}),
+          ...(change.completed_at !== undefined ? { completed_at: change.completed_at } : {}),
         };
 
         try {

@@ -1444,7 +1444,7 @@ const DayPlanner = () => {
       }
     }).catch(err => console.warn('[shared-users] sync error:', err.message));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, multiUserEnabled, cloudSyncConfig?.enabled, cloudSyncConfig?.nextcloudUrl, cloudSyncConfig?.webdavUrl]);
+  }, [users, multiUserEnabled, cloudSyncConfig?.enabled, cloudSyncConfig?.nextcloudUrl, cloudSyncConfig?.webdavUrl, cloudSyncLastSynced]);
 
   // Only track obsidianConfig on non-native apps; native apps auto-populate fields from the vault.
   // eslint-disable-next-line react-hooks/exhaustive-deps

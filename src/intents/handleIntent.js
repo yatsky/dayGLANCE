@@ -16,6 +16,18 @@ import {
 
 export const DEFAULT_TASK_COLOR = 'bg-blue-500';
 
+// Derive a deterministic UUID from an intent event_id so that two devices
+// processing the same intent create tasks with the same ID, letting the sync
+// engine deduplicate them naturally rather than keeping both copies.
+async function taskIdFromEventId(eventId) {
+  const data = new TextEncoder().encode(eventId);
+  const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
+  hash[6] = (hash[6] & 0x0f) | 0x40; // version 4
+  hash[8] = (hash[8] & 0x3f) | 0x80; // variant
+  const h = [...hash.slice(0, 16)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+
 function ok(extra = {}) {
   return { success: true, task_id: '', error: '', warning: '', ...extra };
 }
@@ -122,6 +134,7 @@ async function handleCreate(payload, context) {
     setUnscheduledTasks,
     setRecurringTasks,
     projects = [],
+    eventId,
   } = context;
 
   const v = validate(CreateSchema, payload);
@@ -202,7 +215,10 @@ async function handleCreate(payload, context) {
   }
 
   // Execute: create a new task.
-  const taskId = crypto.randomUUID();
+  // Use a deterministic ID derived from the intent event_id so that two devices
+  // processing the same intent produce the same task ID — the sync engine then
+  // merges them as one task rather than keeping both copies.
+  const taskId = eventId ? await taskIdFromEventId(eventId) : crypto.randomUUID();
   const projectId = resolveProjectId(normalized.project, projects);
   const taskTitle = rebuildTitle(cleanedTitle, tags);
 
@@ -214,6 +230,7 @@ async function handleCreate(payload, context) {
     completed: false,
     notes: normalized.notes ?? '',
     subtasks: [],
+    ...(eventId ? { transitionId: eventId } : {}),
     ...(projectId !== undefined ? { projectId } : {}),
     ...(normalized.source_app ? { source_app: normalized.source_app } : {}),
     ...(normalized.source_entity_id ? { source_entity_id: normalized.source_entity_id } : {}),

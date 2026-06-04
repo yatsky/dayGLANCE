@@ -815,7 +815,7 @@ const MobileLayout = () => {
                                 onBlur={async (e) => {
                                   const newNotes = e.target.value;
                                   if (newNotes === (noteTask.notes || '')) return;
-                                  setTasks(prev => prev.map(t => t.id === noteTask.id ? { ...t, notes: newNotes } : t));
+                                  setTasks(prev => prev.map(t => t.id === noteTask.id ? { ...t, notes: newNotes, transitionId: crypto.randomUUID() } : t));
                                   if (isNativeApp() && noteTask.nativeEventId) {
                                     await nativeUpdateEvent({
                                       id: noteTask.nativeEventId,

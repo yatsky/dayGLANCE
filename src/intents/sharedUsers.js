@@ -34,21 +34,46 @@ function authHeaders(username, appPassword) {
   return { 'X-WebDAV-Auth': `Basic ${cred}` };
 }
 
-// Merge two user arrays: last-write-wins per syncId by updatedAt.
-// After merging, drop syncId-less duplicates: if a versioned entry (with syncId)
-// exists for a given id, the bare-id entry from other apps (e.g. lastGLANCE) is redundant.
-function mergeUsers(local, remote) {
-  const map = new Map();
-  for (const u of [...local, ...remote]) {
-    const key = u.syncId ?? u.id;
-    const existing = map.get(key);
-    if (!existing || u.updatedAt > existing.updatedAt) {
-      map.set(key, u);
+// lastGLANCE's SharedUser schema: { id: sync_id, name, updatedAt, deleted? }
+// dayGLANCE's user schema:        { id: local_id, syncId: sync_id, name, ... }
+//
+// At the WebDAV boundary we use lastGLANCE's schema (id = sync_id) so both apps
+// read/write the same field. These helpers translate between the two shapes.
+
+function toWireFormat(u) {
+  return { id: u.syncId ?? u.id, name: u.name, updatedAt: u.updatedAt, ...(u.deleted ? { deleted: true } : {}) };
+}
+
+// Given a wire entry { id: sync_id, ... } and the matching local user (if any),
+// reconstruct a dayGLANCE user shape so the local id is preserved.
+function fromWireFormat(entry, localUser) {
+  if (localUser) {
+    // Keep the local user but update mutable fields from the wire entry.
+    return { ...localUser, name: entry.name, updatedAt: entry.updatedAt, ...(entry.deleted ? { deleted: true } : { deleted: undefined }) };
+  }
+  // New user introduced by another app: wire id IS the syncId; no local id yet.
+  return { id: entry.id, syncId: entry.id, name: entry.name, updatedAt: entry.updatedAt, ...(entry.deleted ? { deleted: true } : {}) };
+}
+
+// Merge remote wire entries into the local user list.
+// Remote entries are keyed by sync_id (entry.id). Local users are keyed by syncId ?? id.
+// Last-write-wins by updatedAt.
+function mergeUsers(localUsers, remoteWire) {
+  // Index local users by their sync_id (syncId field, falling back to id).
+  const bySyncId = new Map(localUsers.map(u => [u.syncId ?? u.id, u]));
+
+  const result = new Map(localUsers.map(u => [u.syncId ?? u.id, u]));
+
+  for (const entry of remoteWire) {
+    const syncId = entry.id; // wire format: id = sync_id
+    const local = bySyncId.get(syncId);
+    const existing = result.get(syncId);
+    if (!existing || entry.updatedAt > existing.updatedAt) {
+      result.set(syncId, fromWireFormat(entry, local));
     }
   }
-  const arr = [...map.values()];
-  const idsWithSyncId = new Set(arr.filter(u => u.syncId).map(u => u.id));
-  return arr.filter(u => u.syncId || !idsWithSyncId.has(u.id));
+
+  return [...result.values()];
 }
 
 /**
@@ -74,14 +99,14 @@ export async function syncSharedUsers(cloudSyncConfig, usersPath, localUsers) {
 
   let merged;
   if (getRes.ok) {
-    let remote = [];
+    let remoteWire = [];
     try {
       const data = await getRes.json();
-      remote = Array.isArray(data.users) ? data.users : [];
+      remoteWire = Array.isArray(data.users) ? data.users : [];
     } catch {
-      remote = [];
+      remoteWire = [];
     }
-    merged = mergeUsers(localUsers, remote);
+    merged = mergeUsers(localUsers, remoteWire);
   } else if (getRes.status === 404) {
     merged = localUsers;
   } else {
@@ -89,7 +114,9 @@ export async function syncSharedUsers(cloudSyncConfig, usersPath, localUsers) {
     return null;
   }
 
-  const body = JSON.stringify({ version: 1, users: merged, updated_at: new Date().toISOString() });
+  // Write using lastGLANCE's wire format so both apps share the same schema.
+  const wire = merged.map(toWireFormat);
+  const body = JSON.stringify({ version: 1, users: wire, updated_at: new Date().toISOString() });
 
   let putRes = await webdavFetch('PUT', fileUrl, putHeaders, body);
   if (putRes.status === 403 || putRes.status === 404 || putRes.status === 409) {

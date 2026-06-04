@@ -34,7 +34,9 @@ function authHeaders(username, appPassword) {
   return { 'X-WebDAV-Auth': `Basic ${cred}` };
 }
 
-// Merge two user arrays: last-write-wins per syncId by updatedAt
+// Merge two user arrays: last-write-wins per syncId by updatedAt.
+// After merging, drop syncId-less duplicates: if a versioned entry (with syncId)
+// exists for a given id, the bare-id entry from other apps (e.g. lastGLANCE) is redundant.
 function mergeUsers(local, remote) {
   const map = new Map();
   for (const u of [...local, ...remote]) {
@@ -44,7 +46,9 @@ function mergeUsers(local, remote) {
       map.set(key, u);
     }
   }
-  return [...map.values()];
+  const arr = [...map.values()];
+  const idsWithSyncId = new Set(arr.filter(u => u.syncId).map(u => u.id));
+  return arr.filter(u => u.syncId || !idsWithSyncId.has(u.id));
 }
 
 /**

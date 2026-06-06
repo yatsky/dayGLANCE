@@ -74,6 +74,7 @@ import useGTDFrames from './hooks/useGTDFrames.js';
 import { getGlanceHGInstances, isHGSessionReachable } from './hooks/useHyperGlance.js';
 import { useIntentPoller, INTENT_CONFIG_KEY } from './intents/useIntentPoller.js';
 import { useNotifyEmitter } from './intents/useNotifyEmitter.js';
+import { useGoalNotifyEmitter } from './intents/useGoalNotifyEmitter.js';
 import { syncSharedUsers, syncSharedUsersViaICloud } from './intents/sharedUsers.js';
 import useVoiceAI from './hooks/useVoiceAI.js';
 import useNavigation from './hooks/useNavigation.js';
@@ -899,6 +900,7 @@ const DayPlanner = () => {
     },
   });
   useNotifyEmitter({ tasks, unscheduledTasks });
+  useGoalNotifyEmitter({ goals });
 
   const {
     todayTasks,

@@ -10,6 +10,7 @@ import { HABIT_COLORS, HABIT_ICONS } from '../constants/habits.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { useTranslation } from 'react-i18next';
 
 const MobileBottomSheets = () => {
   const {

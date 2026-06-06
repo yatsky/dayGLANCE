@@ -14,6 +14,7 @@ import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { useTranslation } from 'react-i18next';
 
 const AllDayTaskCard = ({ task, fillWidth = true }) => {
   const {

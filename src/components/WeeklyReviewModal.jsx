@@ -6,6 +6,7 @@ import { dateToString, stripWikilinks } from '../utils/taskUtils.js';
 import { getOccurrencesInRange } from '../utils/recurrenceEngine.js';
 import { calculateProjectProgress, isProjectStalled } from '../utils/projectProgress.js';
 import { calculateGoalProgress } from '../utils/goalProgress.js';
+import { useTranslation } from 'react-i18next';
 
 const WeeklyReviewModal = () => {
   const {

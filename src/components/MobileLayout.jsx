@@ -39,6 +39,7 @@ import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import InboxFilterPopover from './InboxFilterPopover.jsx';
 import InboxArchivedBar from './InboxArchivedBar.jsx';
+import { useTranslation } from 'react-i18next';
 
 const MobileLayout = () => {
   const [tzBannerDismissed, setTzBannerDismissed] = useState(false);

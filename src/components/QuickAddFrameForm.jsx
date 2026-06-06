@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { FRAME_COLORS } from '../constants/frames.js';
 import ClockTimePicker from './ClockTimePicker.jsx';
+import { useTranslation } from 'react-i18next';
 
 const QuickAddFrameForm = ({ dateStr, dateDisplay, defaultStart, defaultEnd, defaultColor, existingFrames, getFrameInstancesForDate, onSave, onCancel, darkMode, textPrimary, textSecondary, borderClass, hoverBg, formatTime, isTablet, use24HourClock }) => {
   const { t } = useTranslation();

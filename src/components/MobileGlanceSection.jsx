@@ -20,6 +20,7 @@ import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { getGlanceHGInstances, isHGSessionReachable } from '../hooks/useHyperGlance.js';
+import { useTranslation } from 'react-i18next';
 
 const MobileGlanceSection = () => {
   const {

@@ -14,6 +14,7 @@ import { syncSharedUsers } from '../intents/sharedUsers.js';
 import { getSyncPassphrase, setSyncPassphrase } from '../utils/crypto.js';
 import { setupIntentsEncryption } from '../intents/intentsEncryptionSetup.js';
 import { loadIntentsRootKey, clearIntentsRootKey } from '../intents/intentsKeyStore.js';
+import { useTranslation } from 'react-i18next';
 
 const SettingsModal = () => {
   const { t } = useTranslation();

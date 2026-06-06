@@ -16,6 +16,7 @@ import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { getHGBarsForDate } from '../hooks/useHyperGlance.js';
 import HyperGlanceBar from './HyperGlanceBar.jsx';
+import { useTranslation } from 'react-i18next';
 
 const TimeGrid = () => {
   const {

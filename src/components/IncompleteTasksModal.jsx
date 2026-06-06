@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronRight, X } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { stripWikilinks } from '../utils/taskUtils.js';
+import { useTranslation } from 'react-i18next';
 
 const IncompleteTasksModal = () => {
   const {

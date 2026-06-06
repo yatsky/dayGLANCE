@@ -14,6 +14,7 @@ import { taskColorToHex } from '../utils/colorUtils.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { getHGBarsForDate, isHGSessionReachable } from '../hooks/useHyperGlance.js';
+import { useTranslation } from 'react-i18next';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

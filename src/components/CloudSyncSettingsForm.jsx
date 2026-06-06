@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { cloudSyncProviders } from '../utils/cloudSyncProviders.js';
 import { setupEncryptionKey, setSyncPassphrase, clearEncryptionKey } from '../utils/crypto.js';
+import { useTranslation } from 'react-i18next';
 
 // Cloud sync settings form (extracted to avoid hooks-in-conditional issues)
 const CloudSyncSettingsForm = ({ darkMode, textPrimary, textSecondary, borderClass, hoverBg, cloudSyncConfig, setCloudSyncConfig, cloudSyncTest, provider, currentProvider, onClose, cloudSyncLastSynced, cloudSyncStatus, cloudSyncError, onSyncKeyReady }) => {

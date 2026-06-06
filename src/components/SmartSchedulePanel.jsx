@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrainCircuit, LayoutGrid, Inbox, CalendarDays, Check, Loader } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const SmartSchedulePanel = ({ aiConfig, inboxTasks, smartScheduleResults, smartScheduleLoading, smartScheduleError, smartScheduleAccepted, setSmartScheduleAccepted, onRun, onApply, onCancel, darkMode, textPrimary, textSecondary, borderClass, cardBg, hoverBg, gtdFrames, formatTime, mode = 'inbox' }) => {
   const { t } = useTranslation();

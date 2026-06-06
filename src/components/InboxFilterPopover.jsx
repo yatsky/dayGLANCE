@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { extractTags } from '../utils/taskUtils.js';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Popover for inbox filtering. Attach a ref to the trigger button and pass it

@@ -124,6 +124,7 @@ import SpotlightModal from './components/SpotlightModal.jsx';
 import HabitModal from './components/HabitModal.jsx';
 import SubscriptionWall from './components/SubscriptionWall.jsx';
 import { useSubscription } from './hooks/useSubscription.js';
+import { useTranslation } from 'react-i18next';
 
 // Encode a string that may contain non-ASCII characters as Base64.
 // btoa() throws InvalidCharacterError for codepoints > 255 (CJK, emoji, etc.).

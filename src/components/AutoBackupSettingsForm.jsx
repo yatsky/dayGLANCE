@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Save, Cloud } from 'lucide-react';
 import { autoBackupProviders } from '../utils/autoBackup.js';
+import { useTranslation } from 'react-i18next';
 
 // Auto-Backup Settings Form (extracted to avoid hooks-in-conditional issues)
 const AutoBackupSettingsForm = ({ config, setConfig, status, darkMode, textPrimary, textSecondary, borderClass, hoverBg, onRemoteBackupNow }) => {

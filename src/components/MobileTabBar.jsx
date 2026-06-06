@@ -3,6 +3,7 @@ import { Calendar, Eye, Flag, Inbox, Settings } from 'lucide-react';
 import { isNativeAndroid } from '../native.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { useTranslation } from 'react-i18next';
 
 const MobileTabBar = () => {
   const {

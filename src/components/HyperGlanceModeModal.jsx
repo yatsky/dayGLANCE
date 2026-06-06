@@ -8,6 +8,7 @@ import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import { extractWikilinks, stripWikilinks } from '../utils/taskUtils.js';
 import { hexToRgba } from '../utils/colorUtils.js';
 import { isNativeAndroid, nativeIsDndPermissionGranted, nativeRequestDndPermission, nativeShowFocusTimerNotification, nativeDismissFocusTimerNotification, nativeGetFocusPendingAction } from '../native.js';
+import { useTranslation } from 'react-i18next';
 
 const HyperGlanceModeModal = () => {
   const {

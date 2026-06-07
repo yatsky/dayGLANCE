@@ -71,7 +71,7 @@ const GoalCard = forwardRef(
           <span className="flex-1 text-white font-semibold text-sm leading-tight truncate">
             {goal.title}
           </span>
-          {goal.source_app === 'app.lifeglance' && (
+          {(goal.source_app === 'app.lifeglance' || goal.synced_to_lifeglance) && (
             <span title="Linked with lifeGLANCE" className="flex-shrink-0 text-white/70">
               <Link2 size={12} />
             </span>

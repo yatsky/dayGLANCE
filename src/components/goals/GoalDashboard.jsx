@@ -833,7 +833,7 @@ const GoalMiniCard = ({ goal, onClick }) => {
         <p className={`text-sm font-semibold ${textPrimary} leading-tight truncate flex-1 min-w-0`}>
           {goal.title}
         </p>
-        {goal.source_app === 'app.lifeglance' && (
+        {goal.source_app === 'app.lifeglance' || goal.synced_to_lifeglance && (
           <span title="Linked with lifeGLANCE" className={`flex-shrink-0 ${textSecondary} opacity-60`}>
             <Link2 size={11} />
           </span>
@@ -1950,7 +1950,7 @@ const GoalDashboard = ({ embedded = false, isActive = false, addGoalTrigger = 0,
       }
       updateGoal(goalForm.editing.id, goalFields);
     } else {
-      const newGoal = addGoal(goalFields);
+      const newGoal = addGoal({ ...goalFields, ...(trackInLifeGlance ? { synced_to_lifeglance: true } : {}) });
       if (trackInLifeGlance) emitGoalCreate(newGoal);
     }
     setGoalForm(null);

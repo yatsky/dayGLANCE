@@ -20,6 +20,7 @@ import {
   GitBranch,
   GripVertical,
   Layers,
+  Link2,
   LogIn,
   Plus,
   RotateCcw,
@@ -46,6 +47,8 @@ import ProjectCard from '../projects/ProjectCard.jsx';
 import ConfirmDialog from '../ConfirmDialog.jsx';
 import DatePicker from '../DatePicker.jsx';
 import ClockTimePicker from '../ClockTimePicker.jsx';
+import { emitGoalCreate } from '../../intents/emitGoalCreate.js';
+import { INTENT_CONFIG_KEY } from '../../intents/useIntentPoller.js';
 
 // ─── Tiny helpers ─────────────────────────────────────────────────────────────
 
@@ -111,15 +114,17 @@ function findDefaultActiveIdx(sortedGoals) {
 
 // ─── Goal form (create / edit) ────────────────────────────────────────────────
 
-const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mobile }) => {
+const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mobile, showLifeGlanceCheckbox = false }) => {
   const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg, isMobile } =
     useDayPlannerCtx();
+  const { t } = useTranslation();
 
   const [title, setTitle] = useState(initial?.title || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [targetDate, setTargetDate] = useState(initial?.targetDate || '');
   const [color, setColor] = useState(initial?.color || TASK_COLORS[0].class);
   const [status, setStatus] = useState(initial?.status || 'active');
+  const [trackInLifeGlance, setTrackInLifeGlance] = useState(false);
 
   // "Completed" only available when all child projects are completed (or none exist)
   const activeChildProjects = childProjects.filter(p => p.status !== 'archived');
@@ -128,7 +133,7 @@ const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mob
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onSave({ title: title.trim(), description: description.trim(), targetDate: targetDate || undefined, color, status });
+    onSave({ title: title.trim(), description: description.trim(), targetDate: targetDate || undefined, color, status, trackInLifeGlance: showLifeGlanceCheckbox && !initial && trackInLifeGlance });
   };
 
   return (
@@ -238,6 +243,27 @@ const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mob
               Complete all projects first to mark this goal as done.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Track in lifeGLANCE — checkbox on create, read-only indicator on edit */}
+      {showLifeGlanceCheckbox && !initial && (
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={trackInLifeGlance}
+            onChange={e => setTrackInLifeGlance(e.target.checked)}
+            className="w-4 h-4 rounded accent-blue-500"
+          />
+          <span className={`text-sm ${textSecondary}`}>Track in lifeGLANCE</span>
+        </label>
+      )}
+      {initial && (initial.source_app === 'app.lifeglance' || initial.synced_to_lifeglance) && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+          <Link2 size={14} className="text-blue-400 flex-shrink-0" />
+          <span className="text-sm text-blue-400">
+            {initial.source_app === 'app.lifeglance' ? t('goals.fromLifeGlance') : t('goals.trackedInLifeGlance')}
+          </span>
         </div>
       )}
 
@@ -811,9 +837,16 @@ const GoalMiniCard = ({ goal, onClick }) => {
         darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-stone-50 hover:bg-stone-100'
       }`}
     >
-      <p className={`text-sm font-semibold ${textPrimary} leading-tight truncate`}>
-        {goal.title}
-      </p>
+      <div className="flex items-center gap-1.5">
+        <p className={`text-sm font-semibold ${textPrimary} leading-tight truncate flex-1 min-w-0`}>
+          {goal.title}
+        </p>
+        {(goal.source_app === 'app.lifeglance' || goal.synced_to_lifeglance) && (
+          <span title="Linked with lifeGLANCE" className={`flex-shrink-0 ${textSecondary} opacity-60`}>
+            <Link2 size={11} />
+          </span>
+        )}
+      </div>
       {(!isCompleted && (daysLabel || showCaution || allProjectsDone)) ? (
         <div className="flex items-center gap-1 mt-0.5">
           {daysLabel && <span className={`text-xs ${labelColor}`}>{daysLabel}</span>}
@@ -855,6 +888,7 @@ const DesktopDashboard = ({
   projectCardRefs,
 }) => {
   const { darkMode, textPrimary, textSecondary, borderClass, hoverBg } = useDayPlannerCtx();
+  const { t } = useTranslation();
   const { moveProject, goalsDashboardFocusId, setGoalsDashboardFocusId } = useFeaturesCtx();
 
   const containerRef = useRef(null);
@@ -1343,6 +1377,7 @@ const MobileDashboard = ({
 }) => {
   const { darkMode, textPrimary, textSecondary, hoverBg, cardBg, borderClass, tasks: scheduledTasks, unscheduledTasks } = useDayPlannerCtx();
   const { updateGoal, moveProject, goalsDashboardFocusId, setGoalsDashboardFocusId } = useFeaturesCtx();
+  const { t } = useTranslation();
 
   const scrollRef = useRef(null);
   const swipeRef = useRef(null); // { startX, startY, locked }
@@ -1873,11 +1908,19 @@ const GoalDashboard = ({ embedded = false, isActive = false, addGoalTrigger = 0,
     addGoal, updateGoal, deleteGoal,
     addProject, updateProject,
   } = useFeaturesCtx();
+  const { t } = useTranslation();
 
   const [goalForm, setGoalForm] = useState(null);
   const [projectForm, setProjectForm] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, onConfirm }
   const [showArchived, setShowArchived] = useState(false);
+
+  const hasWebDAVIntents = useMemo(() => {
+    const raw = localStorage.getItem(INTENT_CONFIG_KEY);
+    if (!raw) return false;
+    const cfg = JSON.parse(raw);
+    return !!(cfg?.webdavUrl && cfg?.username && cfg?.appPassword);
+  }, []);
 
   // Trigger props from header buttons (mobile embedded mode)
   useEffect(() => { if (addGoalTrigger > 0) setGoalForm({ editing: null }); }, [addGoalTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1894,9 +1937,10 @@ const GoalDashboard = ({ embedded = false, isActive = false, addGoalTrigger = 0,
   const archivedCount = archivedGoals.length + archivedProjects.length;
 
   const handleSaveGoal = (fields) => {
+    const { trackInLifeGlance, ...goalFields } = fields;
     if (goalForm.editing) {
       const wasArchived = goalForm.editing.status === 'archived';
-      const nowArchived = fields.status === 'archived';
+      const nowArchived = goalFields.status === 'archived';
       if (nowArchived && !wasArchived) {
         // Cascade: archive completed child projects; detach incomplete ones as standalone.
         // Single atomic setProjects call so all changes land in one state update.
@@ -1912,9 +1956,10 @@ const GoalDashboard = ({ embedded = false, isActive = false, addGoalTrigger = 0,
           return { ...rest, updatedAt: now };
         }));
       }
-      updateGoal(goalForm.editing.id, fields);
+      updateGoal(goalForm.editing.id, goalFields);
     } else {
-      addGoal(fields);
+      const newGoal = addGoal({ ...goalFields, ...(trackInLifeGlance ? { synced_to_lifeglance: true } : {}) });
+      if (trackInLifeGlance) emitGoalCreate(newGoal);
     }
     setGoalForm(null);
   };
@@ -2054,7 +2099,7 @@ const GoalDashboard = ({ embedded = false, isActive = false, addGoalTrigger = 0,
         </div>
         {goalForm && (
           <FormOverlay onClose={() => setGoalForm(null)} mobile cardBg={cardBg}>
-            <GoalForm initial={goalForm.editing} onSave={handleSaveGoal} onDelete={goalForm.editing ? () => handleDeleteGoal(goalForm.editing.id) : undefined} onCancel={() => setGoalForm(null)} mobile />
+            <GoalForm initial={goalForm.editing} onSave={handleSaveGoal} onDelete={goalForm.editing ? () => handleDeleteGoal(goalForm.editing.id) : undefined} onCancel={() => setGoalForm(null)} mobile showLifeGlanceCheckbox={hasWebDAVIntents} />
           </FormOverlay>
         )}
         {projectForm && (
@@ -2227,6 +2272,7 @@ const GoalDashboard = ({ embedded = false, isActive = false, addGoalTrigger = 0,
             onCancel={() => setGoalForm(null)}
             onDelete={goalForm.editing ? () => handleDeleteGoal(goalForm.editing.id) : undefined}
             mobile={isMobile}
+            showLifeGlanceCheckbox={hasWebDAVIntents}
           />
         </FormOverlay>
       )}

@@ -2,8 +2,14 @@ import UIKit
 import AVFoundation
 import UserNotifications
 import RevenueCat
+import BackgroundTasks
+import CoreSpotlight
+import WidgetKit
 
 class AppDelegate: NSObject, UIApplicationDelegate {
+
+    static var pendingShortcutAction: String? = nil
+    static var pendingDeepLink: String? = nil
 
     func application(
         _ application: UIApplication,
@@ -21,6 +27,55 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Phase 9 — RevenueCat subscriptions
         SubscriptionBridge.shared.configure(apiKey: "appl_uHejfwubTbYOTpEPNYFsjXAgnHw")
 
+        // Phase 10 — Background widget refresh
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: "com.dayglance.widgetrefresh", using: nil) { task in
+            // The WebView is suspended when this fires so posting a notification to it
+            // does nothing. Reload from whatever is already in the App Group container —
+            // it's the freshest data available without the app running.
+            WidgetCenter.shared.reloadAllTimelines()
+            task.setTaskCompleted(success: true)
+        }
+
+        return true
+    }
+
+    func applicationDidEnterBackground(_ application: UIApplication) {
+        scheduleWidgetRefresh()
+    }
+
+    private func scheduleWidgetRefresh() {
+        let request = BGAppRefreshTaskRequest(identifier: "com.dayglance.widgetrefresh")
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+        try? BGTaskScheduler.shared.submit(request)
+    }
+
+    // MARK: - Home Screen Quick Actions
+
+    func application(
+        _ application: UIApplication,
+        performActionFor shortcutItem: UIApplicationShortcutItem,
+        completionHandler: @escaping (Bool) -> Void
+    ) {
+        AppDelegate.pendingShortcutAction = shortcutItem.type
+        completionHandler(true)
+    }
+
+    // MARK: - URL / Deep Link handling
+
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        if url.scheme == "dayglance" {
+            AppDelegate.pendingDeepLink = url.absoluteString
+        }
+        return true
+    }
+
+    // MARK: - Spotlight / NSUserActivity
+
+    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        if userActivity.activityType == CSSearchableItemActionType,
+           let id = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
+            AppDelegate.pendingDeepLink = "dayglance://task?id=\(id)"
+        }
         return true
     }
 }

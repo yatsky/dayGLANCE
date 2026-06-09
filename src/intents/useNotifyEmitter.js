@@ -178,9 +178,12 @@ export function useNotifyEmitter({ tasks, unscheduledTasks }) {
             : buildEnvelope({ action: 'notify', payload, emittedBy: 'app.dayglance' });
           await writeEventFile(config, envelope);          // WebDAV (no-ops if not configured)
           await writeEventFileICloud(config, envelope);    // iCloud (no-ops if not available)
-          if (isNativeAndroid()) {
+          // Android broadcast: only on the plaintext path. Encrypted envelopes can't be
+          // used by local listeners (no key), and their ciphertext fields don't survive
+          // JSON.stringify cleanly. Tasker users should rely on WebDAV for encrypted setups.
+          if (isNativeAndroid() && !deriveKey) {
             try {
-              window.DayGlanceNative?.sendNotifyBroadcast?.(JSON.stringify(envelope));
+              window.DayGlanceNative?.sendNotifyBroadcast?.(JSON.stringify(payload));
             } catch (_) {}
           }
           logActivity({

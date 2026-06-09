@@ -750,21 +750,23 @@ const DayPlanner = () => {
     playUISound,
   });
 
+  // Kept updated every render so the URL action handler reads the latest task state,
+  // including tasks that loaded from persistence after the initial render.
+  const urlActionContextRef = useRef(null);
+  urlActionContextRef.current = {
+    tasks, unscheduledTasks, recurringTasks, projects,
+    setTasks, setUnscheduledTasks, setRecurringTasks,
+    goals, addGoal, updateGoal, deleteGoal,
+    navigate: tab => {
+      const mobileTab = tab === 'glance' ? 'dayglance' : tab;
+      setMobileActiveTab(mobileTab);
+      if (tab === 'glance' || tab === 'inbox') setTabletActiveTab(tab === 'glance' ? 'glance' : 'inbox');
+    },
+  };
+
   // URL action handler: fires once on mount. Reads ?action= from the URL, dispatches
   // through handleIntent (or shows a hint for 'query'), and shows a toast outcome.
-  useUrlActionHandler({
-    context: {
-      tasks, unscheduledTasks, recurringTasks, projects,
-      setTasks, setUnscheduledTasks, setRecurringTasks,
-      goals, addGoal, updateGoal, deleteGoal,
-      navigate: tab => {
-        const mobileTab = tab === 'glance' ? 'dayglance' : tab;
-        setMobileActiveTab(mobileTab);
-        if (tab === 'glance' || tab === 'inbox') setTabletActiveTab(tab === 'glance' ? 'glance' : 'inbox');
-      },
-    },
-    setUndoToast,
-  });
+  useUrlActionHandler({ contextRef: urlActionContextRef, setUndoToast });
 
   const {
     showEmptyBinConfirm, setShowEmptyBinConfirm,

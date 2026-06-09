@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ACTIONS } from '@glance-apps/intents';
 import { handleIntent } from './handleIntent.js';
 
@@ -33,7 +33,10 @@ function intentSuccessMessage(action, result) {
 function parseParamValue(value) {
   if (value === 'true') return true;
   if (value === 'false') return false;
-  if (value !== '' && !isNaN(Number(value))) return Number(value);
+  // Only coerce to number when the round-trip is lossless. This prevents large integers
+  // (e.g. source_entity_id="123456789012345678") from silently losing precision.
+  const n = Number(value);
+  if (value.trim() !== '' && !isNaN(n) && String(n) === value) return n;
   try {
     const parsed = JSON.parse(value);
     if (typeof parsed === 'object' || Array.isArray(parsed)) return parsed;
@@ -54,9 +57,18 @@ function parseParamValue(value) {
  * Special case: `action=query` shows a static toast instead of calling handleIntent
  * (per the locked decision that web query is no-op + UI).
  *
- * @param {{ context: object, setUndoToast: function }} param0
+ * Note: on a cold start, tasks may not have loaded from persistence by the time this
+ * effect fires. Actions that read task state (complete, query) may therefore see empty
+ * lists. This is an inherent limitation of deep-linking into a not-yet-loaded app.
+ *
+ * @param {{ contextRef: React.RefObject<object>, setUndoToast: function }} param0
  */
-export function useUrlActionHandler({ context, setUndoToast }) {
+export function useUrlActionHandler({ contextRef, setUndoToast }) {
+  // Stable ref so the async run() always reads the latest context, including tasks that
+  // loaded from persistence after the initial render.
+  const setUndoToastRef = useRef(setUndoToast);
+  setUndoToastRef.current = setUndoToast;
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
@@ -74,15 +86,15 @@ export function useUrlActionHandler({ context, setUndoToast }) {
 
     if (action === 'query' || action === ACTIONS.QUERY) {
       // Web query is no-op + UI — just navigate to the glance tab and show a hint
-      context.navigate?.('glance');
-      setUndoToast?.({ message: 'Query: open dayGLANCE to see your task counts', actionable: false });
+      contextRef.current?.navigate?.('glance');
+      setUndoToastRef.current?.({ message: 'Query: open dayGLANCE to see your task counts', actionable: false });
       return;
     }
 
     const run = async () => {
       let result;
       try {
-        result = await handleIntent(action, payload, context);
+        result = await handleIntent(action, payload, contextRef.current ?? {});
       } catch (err) {
         result = { success: false, error: err?.message ?? String(err) };
       }
@@ -91,7 +103,7 @@ export function useUrlActionHandler({ context, setUndoToast }) {
         ? intentSuccessMessage(action, result)
         : `Intent error: ${result.error}`;
 
-      setUndoToast?.({ message, actionable: false });
+      setUndoToastRef.current?.({ message, actionable: false });
     };
 
     run();

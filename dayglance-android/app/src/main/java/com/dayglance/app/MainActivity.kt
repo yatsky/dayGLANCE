@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
+import org.json.JSONObject
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.Uri
@@ -587,12 +588,13 @@ class MainActivity : AppCompatActivity() {
     private fun storeIntentAction(intent: Intent, store: SharedDataStore) {
         val action = intent.action ?: return
         val payloadExtra = intent.getStringExtra("payload")
-        val escapedAction = action.replace("\\", "\\\\").replace("\"", "\\\"")
-        store.pendingIntentJson = if (payloadExtra != null) {
-            """{"action":"$escapedAction","payload":$payloadExtra}"""
-        } else {
-            """{"action":"$escapedAction","payload":{}}"""
+        // Parse and re-serialize via JSONObject to prevent JSON injection.
+        val payloadObj = try {
+            if (payloadExtra != null) JSONObject(payloadExtra) else JSONObject()
+        } catch (e: Exception) {
+            JSONObject()
         }
+        store.pendingIntentJson = JSONObject().put("action", action).put("payload", payloadObj).toString()
     }
 
     companion object {

@@ -479,7 +479,6 @@
     "sessionComplete": "Session Complete!",
     "totalTime": "Total time",
     "tasksCompleted": "Tasks completed",
-    "pomoroCycles": "Pomodoro cycles",
     "sessionElapsed": "Session: {{minutes}}m elapsed",
     "breakLabel": "Break",
     "pomodoroTimer": "Pomodoro Timer",

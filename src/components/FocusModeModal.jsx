@@ -225,7 +225,7 @@ const FocusModeModal = () => {
               <span className="text-white font-medium">{focusCompletedTasks.size}</span>
             </div>
             <div className="flex justify-between bg-gray-800 rounded-lg px-4 py-3">
-              <span className="text-gray-400">{t('focus.pomoroCycles')}</span>
+              <span className="text-gray-400">{t('focus.pomodoroCycles')}</span>
               <span className="text-white font-medium">{focusCycleCount}</span>
             </div>
           </div>

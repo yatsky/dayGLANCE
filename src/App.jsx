@@ -699,6 +699,11 @@ const DayPlanner = () => {
     return assigned.length === 0 || assigned.includes(meUserSyncId);
   }, [multiUserEnabled, meUserSyncId]);
 
+  // Projects visible to the current user — used to filter hyperGLANCE sessions
+  // (a project's sessions only show for its assigned users, or everyone if
+  // unassigned). Shared so every timeline/glance surface filters identically.
+  const hgVisibleProjects = useMemo(() => projects.filter(isVisibleForUser), [projects, isVisibleForUser]);
+
   // Habits & Routines use a single-owner model (not the broadcast-with-filter
   // model used by tasks/goals/projects). Everyday rings and the timeline always
   // show the current user's ("me") items; the management dashboards have a
@@ -6196,7 +6201,7 @@ const DayPlanner = () => {
     if (!goalsProjectsEnabled) return [];
     const todayStr = dateToString(new Date());
     const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-    return getGlanceHGInstances(projects, nowMin)
+    return getGlanceHGInstances(hgVisibleProjects, nowMin)
       .filter(({ instance }) => !instance.isOverdue && instance.date === todayStr)
       .flatMap(({ project, instance }) => {
         const hg = project.hyperglance;
@@ -6213,7 +6218,7 @@ const DayPlanner = () => {
         ).length + (alreadyInstantiated ? 0 : (hg.templateTasks?.length || 0));
         return [{ id: project.id, title: project.title, date: instance.date, startMinutes: startH * 60 + startM, taskCount }];
       });
-  }, [projects, goalsProjectsEnabled, tasks, unscheduledTasks]);
+  }, [hgVisibleProjects, goalsProjectsEnabled, tasks, unscheduledTasks]);
 
   const {
     activeReminders, setActiveReminders,
@@ -6936,7 +6941,7 @@ const DayPlanner = () => {
     if (!goalsProjectsEnabled) return [];
     const todayStr = getTodayStr();
     const nowMin = currentTime.getHours() * 60 + currentTime.getMinutes();
-    return getGlanceHGInstances(projects, nowMin)
+    return getGlanceHGInstances(hgVisibleProjects, nowMin)
       .map(({ project, instance }) => {
         const hg = project.hyperglance;
         const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
@@ -6945,7 +6950,7 @@ const DayPlanner = () => {
         return { id: project.id, title: project.title, colorHex: hg.color || '#4f46e5', startTime: effectiveTime, duration, isOverdue: instance.isOverdue, date: instance.date, reachable, isHGSession: true };
       })
       .filter(s => !s.isOverdue && s.date === todayStr && s.startTime);
-  }, [goalsProjectsEnabled, projects, currentTime]);
+  }, [goalsProjectsEnabled, hgVisibleProjects, currentTime]);
 
   useElectronBridge({
     todayAgenda,
@@ -7363,7 +7368,7 @@ const DayPlanner = () => {
 
     // ── hyperGLANCE sessions (today + overdue) ────────────────────────────
     const hyperGlanceItems = goalsProjectsEnabled
-      ? getGlanceHGInstances(projects, nowMinW).map(({ project, instance }) => {
+      ? getGlanceHGInstances(hgVisibleProjects, nowMinW).map(({ project, instance }) => {
           const hg = project.hyperglance;
           const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
           const duration = hg.scheduledDurationOverrides?.[instance.date] || hg.scheduledDuration || 60;
@@ -7446,6 +7451,7 @@ const DayPlanner = () => {
     glanceAhead,
     currentTime,
     projects,
+    hgVisibleProjects,
     goals,
     goalsProjectsEnabled,
   ]);
@@ -8377,6 +8383,7 @@ const DayPlanner = () => {
     // ── Goals & Projects ──────────────────────────────────────────────────────
     goals, setGoals,
     projects, setProjects,
+    hgVisibleProjects,
     showGoalsDashboard, setShowGoalsDashboard,
     goalsDashboardFocusId, setGoalsDashboardFocusId,
     goalsProjectsEnabled, setGoalsProjectsEnabled,

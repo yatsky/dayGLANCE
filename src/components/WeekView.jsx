@@ -117,7 +117,7 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, startHour, onTaskCl
     handleDragStart, handleDragEnd, handleDropOnCalendar,
     formatTime,
   } = useDayPlannerCtx();
-  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, goalsProjectsEnabled, projects, getFrameInstancesForDate, setFrameContextMenu, setHgContextMenu } = useFeaturesCtx();
+  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, goalsProjectsEnabled, projects, hgVisibleProjects, getFrameInstancesForDate, setFrameContextMenu, setHgContextMenu } = useFeaturesCtx();
 
   const [overflowPopover, setOverflowPopover] = useState(null); // { routines, rect }
   const overflowPopoverRef = useRef(null);
@@ -175,7 +175,7 @@ const WeekViewColumn = ({ date, dateStr, colIdx, hourHeight, startHour, onTaskCl
   const altRow = darkMode ? 'bg-white/[0.04]' : 'bg-stone-100/50';
 
   const hgBars = goalsProjectsEnabled
-    ? getHGBarsForDate(projects, dateStr, isToday ? nowMinutes : undefined)
+    ? getHGBarsForDate(hgVisibleProjects, dateStr, isToday ? nowMinutes : undefined)
     : [];
   const hasBars = hgBars.length > 0;
 

@@ -105,12 +105,12 @@ const DayViewColumn = ({ col, colIdx, hourHeight }) => {
   const isHoveringThisCol = hoverPreviewTime && !draggedTask && !isResizing
     && hoverPreviewDate && dateToString(hoverPreviewDate) === col.dateStr;
 
-  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion, goalsProjectsEnabled, projects, getFrameInstancesForDate, computeAvailableSlots, setFrameContextMenu } = useFeaturesCtx();
+  const { projectFilter, routinesEnabled, todayRoutines, routineCompletions, toggleRoutineCompletion, goalsProjectsEnabled, projects, hgVisibleProjects, getFrameInstancesForDate, computeAvailableSlots, setFrameContextMenu } = useFeaturesCtx();
 
   const isDateToday = col.dateStr === dateToString(new Date());
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
   const hgBars = goalsProjectsEnabled
-    ? getHGBarsForDate(projects, col.dateStr, isDateToday ? nowMin : undefined)
+    ? getHGBarsForDate(hgVisibleProjects, col.dateStr, isDateToday ? nowMin : undefined)
     : [];
   const hasBars = hgBars.length > 0;
 

@@ -690,7 +690,7 @@ const MobileListView = ({ hideInboxHandle = false }) => {
 
   const {
     routinesEnabled, todayRoutines, setTodayRoutines, routineCompletions, toggleRoutineCompletion,
-    projects, enterHyperGlanceMode, setPendingEditProjectId, updateProject,
+    projects, hgVisibleProjects, enterHyperGlanceMode, setPendingEditProjectId, updateProject,
   } = useFeaturesCtx();
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -759,8 +759,8 @@ const MobileListView = ({ hideInboxHandle = false }) => {
 
   const hgBars = useMemo(() => {
     const nowMin = isToday ? currentTime.getHours() * 60 + currentTime.getMinutes() : undefined;
-    return getHGBarsForDate(projects || [], dateStr, nowMin);
-  }, [projects, dateStr, isToday, currentTime]);
+    return getHGBarsForDate(hgVisibleProjects || [], dateStr, nowMin);
+  }, [hgVisibleProjects, dateStr, isToday, currentTime]);
 
   // Combine and sort all scheduled items
   const allItems = useMemo(() => {

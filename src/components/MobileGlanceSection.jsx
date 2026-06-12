@@ -101,7 +101,7 @@ const MobileGlanceSection = () => {
     showFramesModal, setShowFramesModal,
     framesModalTab, setFramesModalTab,
     editingFrame, setEditingFrame,
-    goals, goalsProjectsEnabled, projects,
+    goals, goalsProjectsEnabled, projects, hgVisibleProjects,
     projectFilter, setProjectFilter,
     showGoalsDashboard, setShowGoalsDashboard,
     goalsDashboardFocusId, setGoalsDashboardFocusId,
@@ -1216,7 +1216,7 @@ const MobileGlanceSection = () => {
   {/* hyperGLANCE sessions — today + overdue */}
   {goalsProjectsEnabled && (() => {
     const nowMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-    const hgItems = getGlanceHGInstances(projects, nowMinutes);
+    const hgItems = getGlanceHGInstances(hgVisibleProjects, nowMinutes);
     if (hgItems.length === 0) return null;
     return (
       <div className={`mt-3 pt-3 border-t ${borderClass}`}>

@@ -28,6 +28,7 @@ const WeeklyReviewModal = () => {
     habitsEnabled, habits, habitLogs,
     gtdFrames,
     aiConfig,
+    ownedBy, meUserSyncId,
   } = useFeaturesCtx();
 
   // Local collapse state for past-week HABITS and FRAME UTILIZATION sections
@@ -270,7 +271,7 @@ const WeeklyReviewModal = () => {
           purple: '#a855f7', pink: '#ec4899', cyan: '#06b6d4', orange: '#f97316',
         };
         const habitStats = (habitsEnabled && habits.length > 0)
-          ? habits.filter(h => h.enabled !== false).map(h => {
+          ? habits.filter(h => h.enabled !== false && ownedBy(h, meUserSyncId)).map(h => {
               const days = pastWeekDates.map(ds => {
                 const count = (habitLogs?.[ds]?.[h.id]) ?? 0;
                 return h.type === 'limit' ? count <= h.target : count >= h.target;

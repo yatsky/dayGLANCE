@@ -91,7 +91,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
     showFramesModal, setShowFramesModal,
     framesModalTab, setFramesModalTab,
     editingFrame, setEditingFrame,
-    goals, goalsProjectsEnabled, projects, projectFilter, setProjectFilter,
+    goals, goalsProjectsEnabled, projects, hgVisibleProjects, projectFilter, setProjectFilter,
     focusModeAvailable,
     enterFocusMode,
     getTodayHabitCount, incrementHabit, setHabitCount,
@@ -1200,7 +1200,7 @@ const GlanceSidebar = ({ variant = 'desktop' }) => {
   {/* hyperGLANCE sessions — today + overdue */}
   {goalsProjectsEnabled && (() => {
     const nowMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-    const hgItems = getGlanceHGInstances(projects, nowMinutes);
+    const hgItems = getGlanceHGInstances(hgVisibleProjects, nowMinutes);
     if (hgItems.length === 0) return null;
     return (
       <div className={isDesktop ? `rounded-lg border ${borderClass} p-3` : `mt-3 pt-3 border-t ${borderClass}`}>

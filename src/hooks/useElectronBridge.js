@@ -57,6 +57,7 @@ export default function useElectronBridge({
   currentTime,
   tasks,
   expandedRecurringTasks,
+  isVisibleForUser = () => true,
   todayHGSessions,
   focusModeAvailable,
   showFocusMode,
@@ -438,28 +439,30 @@ export default function useElectronBridge({
       timeToMinutes(t.startTime) + (t.duration || 0) <= nowMin;
 
     const todayStr = dateToString(currentTime);
-    const todayRecurring = (expandedRecurringTasks || []).filter(t => t.date === todayStr);
+    // Multi-user: only surface the current user's tasks on tray/Stream Deck/menu bar.
+    const vTasks = (tasks || []).filter(isVisibleForUser);
+    const todayRecurring = (expandedRecurringTasks || []).filter(t => t.date === todayStr && isVisibleForUser(t));
 
     const tomorrowDate = new Date(currentTime);
     tomorrowDate.setDate(tomorrowDate.getDate() + 1);
     const tomorrowStr = dateToString(tomorrowDate);
-    const tomorrowRecurring = (expandedRecurringTasks || []).filter(t => t.date === tomorrowStr);
+    const tomorrowRecurring = (expandedRecurringTasks || []).filter(t => t.date === tomorrowStr && isVisibleForUser(t));
     const tomorrowAllDay = [
-      ...tasks.filter(t => t.date === tomorrowStr && !!t.isAllDay),
+      ...vTasks.filter(t => t.date === tomorrowStr && !!t.isAllDay),
       ...tomorrowRecurring.filter(t => !!t.isAllDay),
     ];
     const tomorrowTimed = [
-      ...tasks.filter(t => t.date === tomorrowStr && t.startTime && !t.isAllDay),
+      ...vTasks.filter(t => t.date === tomorrowStr && t.startTime && !t.isAllDay),
       ...tomorrowRecurring.filter(t => t.startTime && !t.isAllDay),
     ].sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime));
     // Include recurring instances in counts (stable denominator — all tasks regardless of completion/time)
     const todayTasks = [
-      ...tasks.filter(t => t.date === todayStr && t.startTime && !t.isAllDay),
+      ...vTasks.filter(t => t.date === todayStr && t.startTime && !t.isAllDay),
       ...todayRecurring.filter(t => t.startTime && !t.isAllDay),
       ...hgSessions,
     ];
     const allDayTasks = [
-      ...tasks.filter(t => t.date === todayStr && t.isAllDay),
+      ...vTasks.filter(t => t.date === todayStr && t.isAllDay),
       ...todayRecurring.filter(t => t.isAllDay),
     ];
 
@@ -487,10 +490,10 @@ export default function useElectronBridge({
       .sort((a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime))[0] ?? null;
 
     // ── Goals ─────────────────────────────────────────────────────────────
-    const allTasksForGoals = [...tasks, ...(unscheduledTasks || [])];
+    const allTasksForGoals = [...vTasks, ...(unscheduledTasks || []).filter(isVisibleForUser)];
     const todayMs = new Date(dateToString(currentTime) + 'T00:00:00').getTime();
     const goalsPayload = goalsProjectsEnabled ? (goals || [])
-      .filter(g => g.status === 'active')
+      .filter(g => g.status === 'active' && isVisibleForUser(g))
       .map(g => {
         const progress = Math.round(calculateGoalProgress(g.id, projects || [], allTasksForGoals) * 100);
         const colorHex = TAILWIND_TO_HEX[g.color] || '#3b82f6';
@@ -520,7 +523,7 @@ export default function useElectronBridge({
       };
     };
     const sortByProgressAsc = (a, b) => a.progress - b.progress;
-    const activeProjects = goalsProjectsEnabled ? (projects || []).filter(p => p.status === 'active') : [];
+    const activeProjects = goalsProjectsEnabled ? (projects || []).filter(p => p.status === 'active' && isVisibleForUser(p)) : [];
     const projectsPayload = [
       ...activeProjects.filter(p => p.goalId).map(mapProject).sort(sortByProgressAsc),
       ...activeProjects.filter(p => !p.goalId).map(mapProject).sort(sortByProgressAsc),

@@ -45,6 +45,7 @@ import { useTranslation } from 'react-i18next';
 import GoalProgress from './GoalProgress.jsx';
 import ProjectCard from '../projects/ProjectCard.jsx';
 import ConfirmDialog from '../ConfirmDialog.jsx';
+import UserAssignmentPicker from '../UserAssignmentPicker.jsx';
 import DatePicker from '../DatePicker.jsx';
 import ClockTimePicker from '../ClockTimePicker.jsx';
 import { emitGoalCreate } from '../../intents/emitGoalCreate.js';
@@ -117,6 +118,7 @@ function findDefaultActiveIdx(sortedGoals) {
 const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mobile, showLifeGlanceCheckbox = false }) => {
   const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg, isMobile } =
     useDayPlannerCtx();
+  const { multiUserEnabled, users } = useFeaturesCtx();
   const { t } = useTranslation();
 
   const [title, setTitle] = useState(initial?.title || '');
@@ -124,6 +126,7 @@ const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mob
   const [targetDate, setTargetDate] = useState(initial?.targetDate || '');
   const [color, setColor] = useState(initial?.color || TASK_COLORS[0].class);
   const [status, setStatus] = useState(initial?.status || 'active');
+  const [assignedUserSyncIds, setAssignedUserSyncIds] = useState(initial?.assignedUserSyncIds || []);
   const [trackInLifeGlance, setTrackInLifeGlance] = useState(false);
 
   // "Completed" only available when all child projects are completed (or none exist)
@@ -133,7 +136,7 @@ const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mob
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onSave({ title: title.trim(), description: description.trim(), targetDate: targetDate || undefined, color, status, trackInLifeGlance: showLifeGlanceCheckbox && !initial && trackInLifeGlance });
+    onSave({ title: title.trim(), description: description.trim(), targetDate: targetDate || undefined, color, status, assignedUserSyncIds, trackInLifeGlance: showLifeGlanceCheckbox && !initial && trackInLifeGlance });
   };
 
   return (
@@ -209,6 +212,17 @@ const GoalForm = ({ initial, childProjects = [], onSave, onCancel, onDelete, mob
       <div
         className="h-1.5 rounded-full w-full"
         style={{ background: toHex(color) }}
+      />
+
+      {/* Assigned users — multi-user only */}
+      <UserAssignmentPicker
+        enabled={multiUserEnabled}
+        users={users}
+        value={assignedUserSyncIds}
+        onChange={setAssignedUserSyncIds}
+        darkMode={darkMode}
+        borderClass={borderClass}
+        textSecondary={textSecondary}
       />
 
       {/* Status — edit only */}
@@ -316,12 +330,14 @@ const HG_ICON_MAP = {
 export const ProjectForm = ({ initial, goals, defaultGoalId, onSave, onCancel, mobile }) => {
   const { darkMode, cardBg, borderClass, textPrimary, textSecondary, hoverBg, tasks, unscheduledTasks, use24HourClock, isMobile, isTablet } =
     useDayPlannerCtx();
+  const { multiUserEnabled, users } = useFeaturesCtx();
   const { t } = useTranslation();
 
   const [title, setTitle] = useState(initial?.title || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [goalId, setGoalId] = useState(initial?.goalId || defaultGoalId || '');
   const [status, setStatus] = useState(initial?.status || 'active');
+  const [assignedUserSyncIds, setAssignedUserSyncIds] = useState(initial?.assignedUserSyncIds || []);
 
   // ── hyperGLANCE state ────────────────────────────────────────────────────
   const initHG = initial?.hyperglance || {};
@@ -380,7 +396,7 @@ export const ProjectForm = ({ initial, goals, defaultGoalId, onSave, onCancel, m
       completions: initHG.completions || [],
       createdAt: initHG.createdAt || new Date().toISOString(),
     } : null;
-    onSave({ title: title.trim(), description: description.trim(), goalId: goalId || undefined, status, hyperglance });
+    onSave({ title: title.trim(), description: description.trim(), goalId: goalId || undefined, status, assignedUserSyncIds, hyperglance });
   };
 
   const activeGoals = goals.filter(g => g.status !== 'archived');
@@ -439,6 +455,17 @@ export const ProjectForm = ({ initial, goals, defaultGoalId, onSave, onCancel, m
           ))}
         </select>
       </div>
+
+      {/* Assigned users — multi-user only */}
+      <UserAssignmentPicker
+        enabled={multiUserEnabled}
+        users={users}
+        value={assignedUserSyncIds}
+        onChange={setAssignedUserSyncIds}
+        darkMode={darkMode}
+        borderClass={borderClass}
+        textSecondary={textSecondary}
+      />
 
       {/* Status — edit only */}
       {initial && (
@@ -803,7 +830,7 @@ export const FormOverlay = ({ children, onClose, mobile, cardBg }) => {
 
 const GoalMiniCard = ({ goal, onClick }) => {
   const { darkMode, textPrimary, textSecondary, tasks, unscheduledTasks } = useDayPlannerCtx();
-  const { projects, updateGoal } = useFeaturesCtx();
+  const { projects, updateGoal, isVisibleForUser } = useFeaturesCtx();
   const { t } = useTranslation();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -823,7 +850,7 @@ const GoalMiniCard = ({ goal, onClick }) => {
     if (diff < 0) isOverdue = true;
   }
 
-  const allTasks = useMemo(() => [...tasks, ...unscheduledTasks], [tasks, unscheduledTasks]);
+  const allTasks = useMemo(() => [...tasks, ...unscheduledTasks].filter(isVisibleForUser), [tasks, unscheduledTasks, isVisibleForUser]);
   const childProjects = useMemo(() => projects.filter(p => p.goalId === goal.id && p.status !== 'archived'), [projects, goal.id]);
   const hasStalledProject = useMemo(() => childProjects.some(p => isProjectStalled(p.id, allTasks, p)), [childProjects, allTasks]);
   const showCaution = isOverdue || hasStalledProject;
@@ -1377,7 +1404,7 @@ const MobileDashboard = ({
   isActive = false,
 }) => {
   const { darkMode, textPrimary, textSecondary, hoverBg, cardBg, borderClass, tasks: scheduledTasks, unscheduledTasks } = useDayPlannerCtx();
-  const { updateGoal, moveProject, goalsDashboardFocusId, setGoalsDashboardFocusId } = useFeaturesCtx();
+  const { updateGoal, moveProject, goalsDashboardFocusId, setGoalsDashboardFocusId, isVisibleForUser } = useFeaturesCtx();
   const { t } = useTranslation();
 
   const scrollRef = useRef(null);
@@ -1599,7 +1626,7 @@ const MobileDashboard = ({
               >
                 {/* Goal header card */}
                 {(() => {
-                  const allTasks = [...scheduledTasks, ...unscheduledTasks];
+                  const allTasks = [...scheduledTasks, ...unscheduledTasks].filter(isVisibleForUser);
                   const goalProgress = calculateGoalProgress(goal.id, activeProjects, allTasks);
                   const nonArchivedProjects = activeProjects.filter(p => p.goalId === goal.id);
                   const isCompleted = goal.status === 'completed';
@@ -1908,6 +1935,7 @@ const GoalDashboard = ({ embedded = false, isActive = false, addGoalTrigger = 0,
     goals, projects, setProjects,
     addGoal, updateGoal, deleteGoal,
     addProject, updateProject,
+    isVisibleForUser,
   } = useFeaturesCtx();
   const { t } = useTranslation();
 
@@ -1931,10 +1959,16 @@ const GoalDashboard = ({ embedded = false, isActive = false, addGoalTrigger = 0,
   const goalCardRefs = useRef({});
   const projectCardRefs = useRef({});
 
-  const activeGoals = useMemo(() => goals.filter(g => g.status !== 'archived'), [goals]);
-  const activeProjects = useMemo(() => projects.filter(p => p.status !== 'archived'), [projects]);
-  const archivedGoals = useMemo(() => goals.filter(g => g.status === 'archived'), [goals]);
-  const archivedProjects = useMemo(() => projects.filter(p => p.status === 'archived'), [projects]);
+  // Multi-user: filter goals and projects independently by assignment (empty =
+  // everybody). Goals are NOT hidden just because their visible children are
+  // filtered out, so shared family goals stay put regardless of who owns the
+  // child projects.
+  const visibleGoals = useMemo(() => goals.filter(isVisibleForUser), [goals, isVisibleForUser]);
+  const visibleProjects = useMemo(() => projects.filter(isVisibleForUser), [projects, isVisibleForUser]);
+  const activeGoals = useMemo(() => visibleGoals.filter(g => g.status !== 'archived'), [visibleGoals]);
+  const activeProjects = useMemo(() => visibleProjects.filter(p => p.status !== 'archived'), [visibleProjects]);
+  const archivedGoals = useMemo(() => visibleGoals.filter(g => g.status === 'archived'), [visibleGoals]);
+  const archivedProjects = useMemo(() => visibleProjects.filter(p => p.status === 'archived'), [visibleProjects]);
   const archivedCount = archivedGoals.length + archivedProjects.length;
 
   const handleSaveGoal = (fields) => {

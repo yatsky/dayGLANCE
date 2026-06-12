@@ -120,3 +120,36 @@ export const formatDeadlineDate = (deadline) => {
   const date = new Date(deadline + 'T12:00:00');
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
+
+// Determine which previously-imported CalDAV task-calendar items have disappeared
+// from the latest fetch and should be tombstoned so the deletion propagates via
+// cloud sync (instead of being resurrected from the remote sync file).
+//
+// Scope (v1): non-recurring task-calendar items only. Recurring series are left to
+// the existing wholesale-replace behaviour because normal occurrence advancement
+// (completing an instance rolls the due date forward) would otherwise be mistaken
+// for a deletion and churn tombstones.
+//
+// Safety: returns [] when the fresh feed is empty — an empty-but-valid calendar is
+// far more likely a transient server/auth glitch than a real "everything deleted",
+// and tombstoning on it would wipe the task calendar across all synced devices.
+//
+//   priorTasks      - tasks from the local snapshot before replacement (any shape)
+//   freshTaskItems  - the full (pre-date-window) expansion of the latest fetch
+//   cutoffDateStr   - YYYY-MM-DD retention cutoff; items dated before it are skipped
+//                     (they won't re-import anyway). null = no window (keep all).
+// Returns: array of task ids (strings) to tombstone.
+export const computeTaskCalendarTombstones = (priorTasks, freshTaskItems, { cutoffDateStr = null } = {}) => {
+  if (!Array.isArray(freshTaskItems) || freshTaskItems.length === 0) return [];
+  if (!Array.isArray(priorTasks) || priorTasks.length === 0) return [];
+  const freshIds = new Set(freshTaskItems.map(t => String(t.id)));
+  return priorTasks
+    .filter(t =>
+      t.isTaskCalendar &&
+      t.importSource !== 'file' &&
+      !t.isRecurringSeries &&
+      !freshIds.has(String(t.id)) &&
+      (!cutoffDateStr || (t.date && t.date >= cutoffDateStr))
+    )
+    .map(t => String(t.id));
+};

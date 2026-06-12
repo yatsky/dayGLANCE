@@ -997,7 +997,7 @@ const DayPlanner = () => {
     consecutiveDayStreak,
     todayIncompleteTasks,
     allTimeIncompleteTasks,
-  } = useStats({ tasks, unscheduledTasks, recurringTasks, goals, projects });
+  } = useStats({ tasks, unscheduledTasks, recurringTasks, goals, projects, isVisibleForUser });
 
   // WebDAV intent transport — both hooks no-op until configured via intent settings (PR #11).
   useIntentPoller({
@@ -6209,7 +6209,7 @@ const DayPlanner = () => {
         if (!effectiveTime || effectiveTime === '0:0') return [];
         const [startH, startM] = effectiveTime.split(':').map(Number);
         if (!Number.isFinite(startH) || !Number.isFinite(startM)) return [];
-        const allProjectTasks = [...tasks, ...unscheduledTasks];
+        const allProjectTasks = [...tasks, ...unscheduledTasks].filter(isVisibleForUser);
         const alreadyInstantiated = allProjectTasks.some(
           t => t.projectId === project.id && t.hyperglanceSessionDate === instance.date
         );
@@ -6231,6 +6231,7 @@ const DayPlanner = () => {
     tasks,
     expandedRecurringTasks,
     hgSessions: hgSessionsForReminders,
+    isVisibleForUser,
     playUISound,
     pushUndo,
     setTasks,
@@ -6957,6 +6958,7 @@ const DayPlanner = () => {
     currentTime,
     tasks,
     expandedRecurringTasks,
+    isVisibleForUser,
     todayHGSessions,
     focusModeAvailable,
     showFocusMode,
@@ -7217,13 +7219,16 @@ const DayPlanner = () => {
     }));
 
     // ── Goals due today ───────────────────────────────────────────────────
-    const allTasksCombinedW = [...tasks, ...unscheduledTasks];
+    // Multi-user: widgets show only the current user's goals/projects/tasks.
+    const allTasksCombinedW = [...tasks, ...unscheduledTasks].filter(isVisibleForUser);
+    const visibleProjectsW = projects.filter(isVisibleForUser);
+    const visibleGoalsW = goals.filter(isVisibleForUser);
     const goalItems = goalsProjectsEnabled
-      ? goals
+      ? visibleGoalsW
           .filter(g => g.status === 'active' && g.targetDate === todayStr)
           .map(g => {
-            const progressPct = Math.round(calculateGoalProgress(g.id, projects, allTasksCombinedW) * 100);
-            const childProjects = projects.filter(p => p.goalId === g.id && p.status !== 'archived');
+            const progressPct = Math.round(calculateGoalProgress(g.id, visibleProjectsW, allTasksCombinedW) * 100);
+            const childProjects = visibleProjectsW.filter(p => p.goalId === g.id && p.status !== 'archived');
             const totalTasks = allTasksCombinedW.filter(t => childProjects.some(p => p.id === t.projectId) && !t.archived).length;
             const completedTasks = allTasksCombinedW.filter(t => childProjects.some(p => p.id === t.projectId) && !t.archived && t.completed).length;
             return { id: g.id, title: g.title, progressPct, totalTasks, completedTasks };
@@ -7259,14 +7264,14 @@ const DayPlanner = () => {
 
     // ── All Goals (for Goal widget) ───────────────────────────────────────
     const allGoalsData = goalsProjectsEnabled
-      ? goals
+      ? visibleGoalsW
           .filter(g => g.status === 'active')
           .map(g => {
-            const childProjects = projects.filter(p => p.goalId === g.id && p.status !== 'archived');
+            const childProjects = visibleProjectsW.filter(p => p.goalId === g.id && p.status !== 'archived');
             const goalTasks = allTasksCombinedW.filter(
               t => childProjects.some(p => p.id === t.projectId) && !t.archived
             );
-            const pct = Math.round(calculateGoalProgress(g.id, projects, allTasksCombinedW) * 100);
+            const pct = Math.round(calculateGoalProgress(g.id, visibleProjectsW, allTasksCombinedW) * 100);
             const goalColorHex = TAILWIND_TO_HEX[g.color] || '#3b82f6';
             let daysUntilDue = null;
             if (g.targetDate) {
@@ -7302,7 +7307,7 @@ const DayPlanner = () => {
 
     // ── All Projects (for Project widget) ─────────────────────────────────
     const allProjectsData = goalsProjectsEnabled
-      ? projects
+      ? visibleProjectsW
           .filter(p => p.status !== 'archived')
           .map(p => {
             const ptasks = allTasksCombinedW.filter(t => t.projectId === p.id && !t.archived);
@@ -7372,7 +7377,7 @@ const DayPlanner = () => {
           const hg = project.hyperglance;
           const effectiveTime = hg.scheduledTimeOverrides?.[instance.date] || hg.scheduledTime || '';
           const duration = hg.scheduledDurationOverrides?.[instance.date] || hg.scheduledDuration || 60;
-          const allProjectTasks = [...tasks, ...unscheduledTasks];
+          const allProjectTasks = [...tasks, ...unscheduledTasks].filter(isVisibleForUser);
           const alreadyInstantiated = allProjectTasks.some(
             t => t.projectId === project.id && t.hyperglanceSessionDate === instance.date
           );
@@ -7461,7 +7466,7 @@ const DayPlanner = () => {
   useEffect(() => {
     if (!window.DayGlanceNative?.indexSpotlight) return;
     if (!dataLoaded) return;
-    const allTasks = [...tasks, ...unscheduledTasks].filter(t => !t.archived && !t.completed);
+    const allTasks = [...tasks, ...unscheduledTasks].filter(t => !t.archived && !t.completed && isVisibleForUser(t));
     const items = allTasks.map(t => ({
       id: t.id,
       title: t.title.replace(/\[\[[^\]]*\]\]/g, '').replace(/#\S+/g, '').replace(/\s+/g, ' ').trim(),
@@ -7471,7 +7476,7 @@ const DayPlanner = () => {
     try {
       window.DayGlanceNative.indexSpotlight(JSON.stringify(items));
     } catch (_) {}
-  }, [dataLoaded, tasks, unscheduledTasks]);
+  }, [dataLoaded, tasks, unscheduledTasks, isVisibleForUser]);
 
   // GTD Frame CRUD operations
   const saveFrame = (frame) => {

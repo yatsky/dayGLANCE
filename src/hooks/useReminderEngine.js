@@ -50,6 +50,7 @@ export default function useReminderEngine({
   tasks,
   expandedRecurringTasks,
   hgSessions = [],
+  isVisibleForUser = () => true,
   playUISound,
   pushUndo,
   setTasks,
@@ -180,8 +181,8 @@ export default function useReminderEngine({
     }
 
     // Gather all today's tasks
-    const todayRegular = tasks.filter(t => t.date === todayStr);
-    const todayRecurring = expandedRecurringTasks.filter(t => t.date === todayStr);
+    const todayRegular = tasks.filter(t => t.date === todayStr && isVisibleForUser(t));
+    const todayRecurring = expandedRecurringTasks.filter(t => t.date === todayStr && isVisibleForUser(t));
     const allTodayTasks = [...todayRegular, ...todayRecurring];
 
     const newReminders = [];
@@ -252,7 +253,7 @@ export default function useReminderEngine({
         }
       }
     }
-  }, [currentTime, reminderSettings, tasks, expandedRecurringTasks, hgSessions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentTime, reminderSettings, tasks, expandedRecurringTasks, hgSessions, isVisibleForUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-dismiss reminders based on type
   useEffect(() => {
@@ -284,8 +285,8 @@ export default function useReminderEngine({
 
     // ── Task reminders (only when globally enabled) ────────────────────────
     if (reminderSettings.enabled) {
-      const todayRegular = tasks.filter(t => t.date === todayStr && !t.completed);
-      const todayRecurring = expandedRecurringTasks.filter(t => t.date === todayStr);
+      const todayRegular = tasks.filter(t => t.date === todayStr && !t.completed && isVisibleForUser(t));
+      const todayRecurring = expandedRecurringTasks.filter(t => t.date === todayStr && isVisibleForUser(t));
       const allTodayTasks = [...todayRegular, ...todayRecurring];
 
       const messageMap = {
@@ -355,7 +356,7 @@ export default function useReminderEngine({
     }
 
     nativeSyncReminders(futureReminders);
-  }, [tasks, expandedRecurringTasks, reminderSettings, hgSessions]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tasks, expandedRecurringTasks, reminderSettings, hgSessions, isVisibleForUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reminder snooze: push task start time forward 15 minutes
   const snoozeReminder = (reminder) => {

@@ -43,7 +43,7 @@ const ProjectCard = forwardRef(({ project, onEditClick, compact, dragHandleProps
     mobileActiveTab,
   } = useDayPlannerCtx();
   const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
-  const { goals, deleteProject, generateAISubtasks, aiSubtasksLoadingForTask, aiConfig, showGoalsDashboard, enterHyperGlanceMode } = useFeaturesCtx();
+  const { goals, deleteProject, generateAISubtasks, aiSubtasksLoadingForTask, aiConfig, showGoalsDashboard, enterHyperGlanceMode, isVisibleForUser } = useFeaturesCtx();
 
   const isScheduled = (t) => !!tasks.find(s => s.id === t.id);
 
@@ -85,7 +85,8 @@ const ProjectCard = forwardRef(({ project, onEditClick, compact, dragHandleProps
   const parentGoal = project.goalId ? goals.find(g => g.id === project.goalId) : null;
   const goalHex = parentGoal ? toHex(parentGoal.color || 'bg-blue-500') : null;
 
-  const allTasks = [...tasks, ...unscheduledTasks];
+  // Multi-user: only count/show the current user's tasks within the project.
+  const allTasks = [...tasks, ...unscheduledTasks].filter(isVisibleForUser);
   const projectTasks = allTasks.filter(t => t.projectId === project.id && !t.archived);
   const completedCount = projectTasks.filter(t => t.completed).length;
   const totalCount = projectTasks.length;
@@ -94,8 +95,8 @@ const ProjectCard = forwardRef(({ project, onEditClick, compact, dragHandleProps
   const stalled = !!project.goalId && !hasHGSession && isProjectStalled(project.id, allTasks, project);
 
   // All project tasks: unscheduled (in array order) then scheduled (by date), completed last
-  const projectUnscheduled = unscheduledTasks.filter(t => t.projectId === project.id && !t.archived);
-  const projectScheduled = tasks.filter(t => t.projectId === project.id && !t.archived)
+  const projectUnscheduled = unscheduledTasks.filter(t => t.projectId === project.id && !t.archived && isVisibleForUser(t));
+  const projectScheduled = tasks.filter(t => t.projectId === project.id && !t.archived && isVisibleForUser(t))
     .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const allProjectDisplayTasks = [
     ...projectScheduled.filter(t => !t.completed),

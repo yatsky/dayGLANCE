@@ -29,9 +29,10 @@ const GoalCard = forwardRef(
       darkMode,
       borderClass, textPrimary, textSecondary, hoverBg,
     } = useDayPlannerCtx();
-    const { updateGoal } = useFeaturesCtx();
+    const { updateGoal, isVisibleForUser } = useFeaturesCtx();
 
-    const allTasks = [...tasks, ...unscheduledTasks];
+    // Multi-user: progress and stalled state reflect only the current user's tasks.
+    const allTasks = [...tasks, ...unscheduledTasks].filter(isVisibleForUser);
     const progress = calculateGoalProgress(goal.id, projects, allTasks);
     const goalColor = goal.color || 'bg-blue-500';
 

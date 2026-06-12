@@ -2,8 +2,14 @@ import { useMemo } from 'react';
 import { dateToString } from '../utils/taskUtils.js';
 import { getOccurrencesInRange } from '../utils/recurrenceEngine.js';
 
-export default function useStats({ tasks, unscheduledTasks, recurringTasks, goals = [], projects = [] }) {
+export default function useStats({ tasks: rawTasks, unscheduledTasks: rawUnscheduled, recurringTasks: rawRecurring, goals = [], projects = [], isVisibleForUser = () => true }) {
   const todayStr = dateToString(new Date());
+
+  // Multi-user: stats reflect only the current user's tasks. Filtering the
+  // inputs here keeps every downstream computation user-scoped.
+  const tasks = useMemo(() => rawTasks.filter(isVisibleForUser), [rawTasks, isVisibleForUser]);
+  const unscheduledTasks = useMemo(() => rawUnscheduled.filter(isVisibleForUser), [rawUnscheduled, isVisibleForUser]);
+  const recurringTasks = useMemo(() => rawRecurring.filter(isVisibleForUser), [rawRecurring, isVisibleForUser]);
 
   // All-time stats helpers (exclude imported events, include recurring)
   // Only count tasks up through today — future tasks aren't "incomplete" yet

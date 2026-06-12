@@ -830,7 +830,7 @@ export const FormOverlay = ({ children, onClose, mobile, cardBg }) => {
 
 const GoalMiniCard = ({ goal, onClick }) => {
   const { darkMode, textPrimary, textSecondary, tasks, unscheduledTasks } = useDayPlannerCtx();
-  const { projects, updateGoal } = useFeaturesCtx();
+  const { projects, updateGoal, isVisibleForUser } = useFeaturesCtx();
   const { t } = useTranslation();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -850,7 +850,7 @@ const GoalMiniCard = ({ goal, onClick }) => {
     if (diff < 0) isOverdue = true;
   }
 
-  const allTasks = useMemo(() => [...tasks, ...unscheduledTasks], [tasks, unscheduledTasks]);
+  const allTasks = useMemo(() => [...tasks, ...unscheduledTasks].filter(isVisibleForUser), [tasks, unscheduledTasks, isVisibleForUser]);
   const childProjects = useMemo(() => projects.filter(p => p.goalId === goal.id && p.status !== 'archived'), [projects, goal.id]);
   const hasStalledProject = useMemo(() => childProjects.some(p => isProjectStalled(p.id, allTasks, p)), [childProjects, allTasks]);
   const showCaution = isOverdue || hasStalledProject;
@@ -1404,7 +1404,7 @@ const MobileDashboard = ({
   isActive = false,
 }) => {
   const { darkMode, textPrimary, textSecondary, hoverBg, cardBg, borderClass, tasks: scheduledTasks, unscheduledTasks } = useDayPlannerCtx();
-  const { updateGoal, moveProject, goalsDashboardFocusId, setGoalsDashboardFocusId } = useFeaturesCtx();
+  const { updateGoal, moveProject, goalsDashboardFocusId, setGoalsDashboardFocusId, isVisibleForUser } = useFeaturesCtx();
   const { t } = useTranslation();
 
   const scrollRef = useRef(null);
@@ -1626,7 +1626,7 @@ const MobileDashboard = ({
               >
                 {/* Goal header card */}
                 {(() => {
-                  const allTasks = [...scheduledTasks, ...unscheduledTasks];
+                  const allTasks = [...scheduledTasks, ...unscheduledTasks].filter(isVisibleForUser);
                   const goalProgress = calculateGoalProgress(goal.id, activeProjects, allTasks);
                   const nonArchivedProjects = activeProjects.filter(p => p.goalId === goal.id);
                   const isCompleted = goal.status === 'completed';

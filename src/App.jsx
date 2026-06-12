@@ -11,7 +11,7 @@ import { getStorageUsage, formatBytes } from './utils/storage.js';
 import { webdavFetch } from './utils/cloudSyncProviders.js';
 import { autoBackupDB, createAutoBackupProvidersForFolder, AUTO_BACKUP_RETENTION, AUTO_BACKUP_INTERVALS } from './utils/autoBackup.js';
 import { URL_REGEX, isOnlyUrl, renderFormattedText, hasNotesOrSubtasks, isLinkOnlyTask, getLinkUrl, hasOnlySubtasks, renderTitle, highlightMatch, renderTitleWithoutTags, extractShareTitle } from './utils/textFormatting.jsx';
-import { dateToString, localDateStr, extractTags, extractWikilinks, stripWikilinks, getRecurrenceLabel, formatDate, formatDateRange, formatShortDate, formatDeadlineDate } from './utils/taskUtils.js';
+import { dateToString, localDateStr, extractTags, extractWikilinks, stripWikilinks, getRecurrenceLabel, formatDate, formatDateRange, formatShortDate, formatDeadlineDate, computeTaskCalendarTombstones } from './utils/taskUtils.js';
 import { TASK_COLORS, TAILWIND_TO_HEX, taskColorToHex } from './utils/colorUtils.js';
 import { calculateGoalProgress } from './utils/goalProgress.js';
 import { HABIT_ICONS, HABIT_ICON_NAMES, HABIT_COLORS } from './constants/habits.js';
@@ -4732,6 +4732,24 @@ const DayPlanner = () => {
         expandMultiDayEvent(event, { asTaskCalendar: true, freshCompletedUids })
       );
       const taskCalendarItems = filterByDateWindow(allTaskItems, syncRetentionDays);
+
+      // Tombstone non-recurring task-calendar items that vanished from the feed
+      // (deleted/moved on the server). Without a tombstone the cloud merge treats
+      // the still-present remote copy as a "remote-only" item and resurrects it.
+      // Diff against the unwindowed expansion so an item merely aged past the
+      // retention window isn't mistaken for a deletion. computeTaskCalendarTombstones
+      // returns [] for an empty feed (likely a transient glitch, not a real wipe).
+      const tombstoneCutoffStr = syncRetentionDays > 0
+        ? dateToString(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - syncRetentionDays))
+        : null;
+      const priorTasksSnapshot = JSON.parse(localStorage.getItem('day-planner-tasks') || '[]');
+      const tombstoneIds = computeTaskCalendarTombstones(priorTasksSnapshot, allTaskItems, { cutoffDateStr: tombstoneCutoffStr });
+      if (tombstoneIds.length > 0) {
+        const tombstones = JSON.parse(localStorage.getItem('day-planner-deleted-task-ids') || '{}');
+        const nowIso = new Date().toISOString();
+        for (const id of tombstoneIds) tombstones[id] = nowIso;
+        localStorage.setItem('day-planner-deleted-task-ids', JSON.stringify(tombstones));
+      }
 
       // Remove old sync-sourced task calendar items and add the fresh ones
       // Preserves file-imported task calendar items; uses functional form to avoid stale closures

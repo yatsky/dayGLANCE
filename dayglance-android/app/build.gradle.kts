@@ -20,7 +20,7 @@ android {
         applicationId = "com.dayglance.app"
         minSdk = 26  // Android 8.0 — required for Health Connect
         targetSdk = 35
-        versionCode = 116
+        versionCode = 117
         versionName = "3.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

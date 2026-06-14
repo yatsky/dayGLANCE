@@ -836,6 +836,34 @@ describe('mergeSyncData — routine definitions', () => {
     expect(data.deletedRoutineChipIds['1']).toBeDefined();
     expect(data.deletedRoutineChipIds['2']).toBeDefined();
   });
+
+  // Regression: a chip edited on one device (e.g. claimed — ownerSyncId stamped
+  // with a fresh lastModified) must propagate to the other device that still has
+  // the older copy of the same chip id. Before @glance-apps/sync v1.3.1 the local
+  // chip was kept verbatim on id collision, so claims/renames never synced.
+  it('SCENARIO: routine chip claim propagates via last-write-wins on collision', () => {
+    // Maggie's device still has the unowned chip (older).
+    const maggie = {
+      ...emptyData(),
+      routineDefinitions: {
+        ...emptyData().routineDefinitions,
+        monday: [{ id: 1, name: 'Workout', lastModified: ts(60) }],
+      },
+    };
+    // Jason claimed it: same id, ownerSyncId stamped, newer lastModified.
+    const jason = {
+      ...emptyData(),
+      routineDefinitions: {
+        ...emptyData().routineDefinitions,
+        monday: [{ id: 1, name: 'Workout', ownerSyncId: 'jason', lastModified: ts(2) }],
+      },
+    };
+
+    const { data, localChanged } = mergeSyncData(maggie, jason);
+    expect(data.routineDefinitions.monday).toHaveLength(1);
+    expect(data.routineDefinitions.monday[0].ownerSyncId).toBe('jason');
+    expect(localChanged).toBe(true); // Maggie's device must pick up the claim
+  });
 });
 
 // ─── mergeSyncData: todayRoutines sync ──────────────────────────────

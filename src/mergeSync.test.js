@@ -1779,3 +1779,53 @@ describe('mergeSyncData — calendar URL change detection', () => {
     expect(localChanged).toBe(true);
   });
 });
+
+// ─── mergeSyncData — multi-user roster preservation ──────────────────
+// Regression coverage for the roster sync that @glance-apps/sync v1.3.0 added:
+// `users` propagate across devices (last-write-wins per user, keyed by syncId)
+// while the per-device `multiUserEnabled` toggle stays local.
+describe('mergeSyncData — multi-user roster', () => {
+  const base = () => ({
+    tasks: [], unscheduledTasks: [], recycleBin: [], recurringTasks: [],
+    completedTaskUids: [], deletedTaskIds: {},
+    routineDefinitions: {}, todayRoutines: [], routinesDate: '',
+  });
+  const U = (id, name, updatedAt, extra = {}) => ({ id, syncId: id, name, updatedAt, ...extra });
+
+  it('preserves users present on only one side', () => {
+    const local = { ...base(), users: [] };
+    const remote = { ...base(), users: [U('a', 'Jason', ts(10)), U('b', 'Maggie', ts(10))] };
+    const { data, localChanged } = mergeSyncData(local, remote);
+    expect(data.users.map(u => u.name).sort()).toEqual(['Jason', 'Maggie']);
+    expect(localChanged).toBe(true); // local must pick up the roster
+  });
+
+  it('flags remoteChanged so a device seeds users the remote lacks', () => {
+    const local = { ...base(), users: [U('a', 'Jason', ts(10))] };
+    const remote = { ...base(), users: [] };
+    const { data, remoteChanged } = mergeSyncData(local, remote);
+    expect(data.users).toHaveLength(1);
+    expect(remoteChanged).toBe(true);
+  });
+
+  it('last-write-wins per user by updatedAt and keeps stable syncIds', () => {
+    const local = { ...base(), users: [U('a', 'Jason', ts(60))] };
+    const remote = { ...base(), users: [U('a', 'Jason Renamed', ts(5))] };
+    const { data } = mergeSyncData(local, remote);
+    expect(data.users).toHaveLength(1);
+    expect(data.users[0].syncId).toBe('a');
+    expect(data.users[0].name).toBe('Jason Renamed');
+  });
+
+  it('produces an empty roster when neither side has any', () => {
+    const { data } = mergeSyncData(base(), base());
+    expect(data.users).toEqual([]);
+  });
+
+  it('does NOT merge the multiUserEnabled toggle (it is per-device)', () => {
+    const local = { ...base(), multiUserEnabled: false, multiUserEnabledUpdatedAt: ts(60) };
+    const remote = { ...base(), multiUserEnabled: true, multiUserEnabledUpdatedAt: ts(5) };
+    const { data } = mergeSyncData(local, remote);
+    expect(data.multiUserEnabled).toBeUndefined();
+  });
+});

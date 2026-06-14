@@ -1781,9 +1781,9 @@ describe('mergeSyncData — calendar URL change detection', () => {
 });
 
 // ─── mergeSyncData — multi-user roster preservation ──────────────────
-// Regression: upstream mergeSyncData drops `users`/`multiUserEnabled`, so the
-// roster never propagated across devices even though tasks did. The local shim
-// re-merges them.
+// Regression coverage for the roster sync that @glance-apps/sync v1.3.0 added:
+// `users` propagate across devices (last-write-wins per user, keyed by syncId)
+// while the per-device `multiUserEnabled` toggle stays local.
 describe('mergeSyncData — multi-user roster', () => {
   const base = () => ({
     tasks: [], unscheduledTasks: [], recycleBin: [], recurringTasks: [],
@@ -1817,9 +1817,9 @@ describe('mergeSyncData — multi-user roster', () => {
     expect(data.users[0].name).toBe('Jason Renamed');
   });
 
-  it('does not touch users when neither side has any', () => {
+  it('produces an empty roster when neither side has any', () => {
     const { data } = mergeSyncData(base(), base());
-    expect(data.users).toBeUndefined();
+    expect(data.users).toEqual([]);
   });
 
   it('does NOT merge the multiUserEnabled toggle (it is per-device)', () => {

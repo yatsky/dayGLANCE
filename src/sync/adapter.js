@@ -7,7 +7,8 @@
 // buildBackupPayload, applyPayload) plus all event callbacks come from App.jsx
 // — they close over React state that this module deliberately does not see.
 
-import { createSyncEngine, mergeSyncData } from '@glance-apps/sync';
+import { createSyncEngine } from '@glance-apps/sync';
+import { mergeSyncData } from '../mergeSync.js';
 import { nativeHttpRequest } from '../native.js';
 
 const isNativeApp =

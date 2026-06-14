@@ -1822,11 +1822,10 @@ describe('mergeSyncData — multi-user roster', () => {
     expect(data.users).toBeUndefined();
   });
 
-  it('syncs multiUserEnabled by its timestamp', () => {
+  it('does NOT merge the multiUserEnabled toggle (it is per-device)', () => {
     const local = { ...base(), multiUserEnabled: false, multiUserEnabledUpdatedAt: ts(60) };
     const remote = { ...base(), multiUserEnabled: true, multiUserEnabledUpdatedAt: ts(5) };
-    const { data, localChanged } = mergeSyncData(local, remote);
-    expect(data.multiUserEnabled).toBe(true);
-    expect(localChanged).toBe(true);
+    const { data } = mergeSyncData(local, remote);
+    expect(data.multiUserEnabled).toBeUndefined();
   });
 });

@@ -14,6 +14,7 @@ export default function useComputedViews({
   inboxTagFilter,
   inboxProjectFilter,
   goalsProjectsEnabled,
+  isVisibleForUser,
 }) {
   // Tasks for the currently selected date
   const todayTasks = useMemo(
@@ -64,6 +65,10 @@ export default function useComputedViews({
   const filteredUnscheduledTasks = useMemo(
     () => unscheduledTasks
       .filter(task => !task.archived)
+      // Multi-user: only show tasks assigned to "me" (or unassigned). Other
+      // surfaces already filter via isVisibleForUser; the inbox list was the
+      // one display path that didn't, so members saw each other's inbox tasks.
+      .filter(task => isVisibleForUser(task))
       .filter(task => {
         if (!goalsProjectsEnabled) return true;
         // If specific projects are selected, show only tasks from those projects
@@ -87,7 +92,8 @@ export default function useComputedViews({
         return (b.priority || 0) - (a.priority || 0);
       }),
     [unscheduledTasks, inboxPriorityFilter, hideCompletedInbox, hideProjectTasksInbox,
-     hideStandaloneTasksInbox, inboxTagFilter, inboxProjectFilter, goalsProjectsEnabled]
+     hideStandaloneTasksInbox, inboxTagFilter, inboxProjectFilter, goalsProjectsEnabled,
+     isVisibleForUser]
   );
 
   // Today's tasks filtered by tag selection

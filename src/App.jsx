@@ -1141,6 +1141,7 @@ const DayPlanner = () => {
     inboxTagFilter,
     inboxProjectFilter,
     goalsProjectsEnabled,
+    isVisibleForUser,
   });
   const { taskWidths, setTaskRef, getConflictingTasks, calculateConflictPosition, wouldExceedMaxColumns } = useTaskDerived({
     tasks,

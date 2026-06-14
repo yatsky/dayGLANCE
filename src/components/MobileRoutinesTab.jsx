@@ -17,6 +17,7 @@ const MobileRoutinesTab = () => {
     addRoutineChip, deleteRoutineChip, toggleRoutineChipSelection,
     multiUserEnabled, users, hrViewUserSyncId, setHrViewUserSyncId,
     managedBy, selectTodayChipsForOwner,
+    meUserSyncId, hasUnownedRoutines, claimUnownedRoutines,
   } = useFeaturesCtx();
 
   const today = new Date();
@@ -45,6 +46,20 @@ const MobileRoutinesTab = () => {
             textSecondary={textSecondary}
             label="Routines for"
           />
+        )}
+        {multiUserEnabled && hasUnownedRoutines && meUserSyncId && hrViewUserSyncId === meUserSyncId && (
+          <div className={`px-3 py-2 rounded-lg border ${borderClass} ${darkMode ? 'bg-amber-500/10' : 'bg-amber-50'} flex items-center justify-between gap-3`}>
+            <p className={`text-xs ${textSecondary}`}>
+              Some routines aren't assigned to anyone yet, so they show for every member. Claim them as yours.
+            </p>
+            <button
+              type="button"
+              onClick={() => claimUnownedRoutines()}
+              className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 text-white hover:bg-amber-600"
+            >
+              Claim
+            </button>
+          </div>
         )}
         {/* Today's selected routine */}
         <div className={`rounded-lg border-2 border-dashed ${darkMode ? 'border-gray-600' : 'border-stone-300'} p-4`}>

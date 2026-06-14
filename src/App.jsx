@@ -776,6 +776,36 @@ const DayPlanner = () => {
       ? prev.map(h => h.ownerSyncId ? h : { ...h, ownerSyncId: meUserSyncId, lastModified: now })
       : prev);
   }, [meUserSyncId, setHabits]);
+
+  // Routine equivalent of the habit claim: unowned routine chips (excluding the
+  // seeded example- chips) or unowned placed today-routines mean the dashboard
+  // would surface them for everyone. Stamp them with "me" deterministically.
+  const hasUnownedRoutines = useMemo(
+    () => multiUserEnabled && (
+      Object.values(routineDefinitions).some(arr => arr.some(c => !c.ownerSyncId && !String(c.id).startsWith('example-')))
+      || allTodayRoutines.some(r => !r.ownerSyncId)
+    ),
+    [multiUserEnabled, routineDefinitions, allTodayRoutines]
+  );
+  const claimUnownedRoutines = useCallback(() => {
+    if (!meUserSyncId) return;
+    const now = new Date().toISOString();
+    setRoutineDefinitions(prev => {
+      let any = false;
+      const next = {};
+      for (const [bucket, arr] of Object.entries(prev)) {
+        next[bucket] = arr.map(c => {
+          if (c.ownerSyncId || String(c.id).startsWith('example-')) return c;
+          any = true;
+          return { ...c, ownerSyncId: meUserSyncId, lastModified: now };
+        });
+      }
+      return any ? next : prev;
+    });
+    setTodayRoutines(prev => prev.some(r => !r.ownerSyncId)
+      ? prev.map(r => r.ownerSyncId ? r : { ...r, ownerSyncId: meUserSyncId, lastModified: now })
+      : prev);
+  }, [meUserSyncId, setRoutineDefinitions, setTodayRoutines]);
   // Everyday timeline/widgets show only my placed routines; persistence and
   // cloud sync use the full `allTodayRoutines` so other members' entries are
   // preserved across saves.
@@ -8322,6 +8352,7 @@ const DayPlanner = () => {
     // ── Habits & Routines multi-user ──────────────────────────────────────────
     hrViewUserSyncId, setHrViewUserSyncId,
     ownedBy, managedBy,
+    hasUnownedRoutines, claimUnownedRoutines,
 
     // ── Habits ────────────────────────────────────────────────────────────────
     habits, setHabits,

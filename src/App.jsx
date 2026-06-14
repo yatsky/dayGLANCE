@@ -807,18 +807,6 @@ const DayPlanner = () => {
       : prev);
   }, [meUserSyncId, setRoutineDefinitions, setTodayRoutines]);
 
-  // GTD Frames equivalent of the habit/routine claim.
-  const hasUnownedFrames = useMemo(
-    () => multiUserEnabled && gtdFrames.some(f => !f.ownerSyncId),
-    [multiUserEnabled, gtdFrames]
-  );
-  const claimUnownedFrames = useCallback(() => {
-    if (!meUserSyncId) return;
-    const now = new Date().toISOString();
-    setGtdFrames(prev => prev.some(f => !f.ownerSyncId)
-      ? prev.map(f => f.ownerSyncId ? f : { ...f, ownerSyncId: meUserSyncId, lastModified: now })
-      : prev);
-  }, [meUserSyncId, setGtdFrames]);
   // Everyday timeline/widgets show only my placed routines; persistence and
   // cloud sync use the full `allTodayRoutines` so other members' entries are
   // preserved across saves.
@@ -1026,6 +1014,21 @@ const DayPlanner = () => {
     () => gtdFrames.filter(f => ownedBy(f, meUserSyncId)),
     [gtdFrames, ownedBy, meUserSyncId]
   );
+
+  // GTD Frames equivalent of the habit/routine claim. Must live after the
+  // useGTDFrames() destructure above — gtdFrames/setGtdFrames are in the
+  // temporal dead zone before that point.
+  const hasUnownedFrames = useMemo(
+    () => multiUserEnabled && gtdFrames.some(f => !f.ownerSyncId),
+    [multiUserEnabled, gtdFrames]
+  );
+  const claimUnownedFrames = useCallback(() => {
+    if (!meUserSyncId) return;
+    const now = new Date().toISOString();
+    setGtdFrames(prev => prev.some(f => !f.ownerSyncId)
+      ? prev.map(f => f.ownerSyncId ? f : { ...f, ownerSyncId: meUserSyncId, lastModified: now })
+      : prev);
+  }, [meUserSyncId, setGtdFrames]);
 
   const [taskContextMenu, setTaskContextMenu] = useState(null); // { x, y, taskId, isRecurring, isImported, isAllDay, dateStr }
   const [timelineContextMenu, setTimelineContextMenu] = useState(null); // { x, y, dateStr, timeMinutes }

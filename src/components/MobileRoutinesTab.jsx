@@ -16,7 +16,7 @@ const MobileRoutinesTab = () => {
     routineFocusedChipId, setRoutineFocusedChipId,
     addRoutineChip, deleteRoutineChip, toggleRoutineChipSelection,
     multiUserEnabled, users, hrViewUserSyncId, setHrViewUserSyncId,
-    ownedBy, selectTodayChipsForOwner,
+    managedBy, selectTodayChipsForOwner,
   } = useFeaturesCtx();
 
   const today = new Date();
@@ -28,7 +28,7 @@ const MobileRoutinesTab = () => {
   const bucketLabel = (b) => b === 'everyday' ? 'Every Day' : b.charAt(0).toUpperCase() + b.slice(1);
   const isHighlighted = (b) => b === todayDayName || b === 'everyday';
 
-  const hasAnyChips = Object.values(routineDefinitions).some(arr => arr.some(c => !String(c.id).startsWith('example-') && ownedBy(c, hrViewUserSyncId)));
+  const hasAnyChips = Object.values(routineDefinitions).some(arr => arr.some(c => !String(c.id).startsWith('example-') && managedBy(c, hrViewUserSyncId)));
 
   return (
     <>
@@ -113,7 +113,7 @@ const MobileRoutinesTab = () => {
 
         {/* Day buckets */}
         {allBuckets.map(bucket => {
-          const chips = (routineDefinitions[bucket] || []).filter(c => !String(c.id).startsWith('example-') && ownedBy(c, hrViewUserSyncId));
+          const chips = (routineDefinitions[bucket] || []).filter(c => !String(c.id).startsWith('example-') && managedBy(c, hrViewUserSyncId));
           return (
             <div
               key={bucket}

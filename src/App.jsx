@@ -738,15 +738,44 @@ const DayPlanner = () => {
     return !item.ownerSyncId || item.ownerSyncId === target;
   }, [multiUserEnabled, meUserSyncId]);
 
+  // Stricter ownership test for the management dashboards (the Habit/Routine
+  // owner switcher). Unlike ownedBy, an UNOWNED item belongs to "me" only — it
+  // must never surface under another member, where it would render and be
+  // deletable by someone who doesn't own it (the cross-owner leak that let
+  // "Maggie" see and delete "Jason"'s habits). ownedBy keeps the looser
+  // "unowned = everyone" rule for the everyday "my" rings/timeline so legacy
+  // unstamped items still show for the primary user.
+  const managedBy = useCallback((item, syncId) => {
+    if (!multiUserEnabled) return true;
+    if (item.ownerSyncId) return item.ownerSyncId === syncId;
+    return syncId === meUserSyncId; // unowned → me's (null === null shows in the default view)
+  }, [multiUserEnabled, meUserSyncId]);
+
   // Everyday "my" habits (rings/glance); management list for the switcher user.
   const activeHabits = useMemo(
     () => allActiveHabits.filter(h => ownedBy(h, meUserSyncId)),
     [allActiveHabits, ownedBy, meUserSyncId]
   );
   const managedHabits = useMemo(
-    () => allActiveHabits.filter(h => ownedBy(h, hrViewUserSyncId)),
-    [allActiveHabits, ownedBy, hrViewUserSyncId]
+    () => allActiveHabits.filter(h => managedBy(h, hrViewUserSyncId)),
+    [allActiveHabits, managedBy, hrViewUserSyncId]
   );
+  // Whether the switcher is pointed at "me" and unowned (legacy/unstamped) habits
+  // are present — gates the "Claim" affordance so the primary user can deterministically
+  // take ownership of habits the one-time migration failed to stamp.
+  const hasUnownedHabits = useMemo(
+    () => multiUserEnabled && habits.some(h => !h.ownerSyncId),
+    [multiUserEnabled, habits]
+  );
+  // Stamp every unowned habit (active + archived) with the current "me" so it
+  // stops surfacing for other members and survives cloud sync as explicitly owned.
+  const claimUnownedHabits = useCallback(() => {
+    if (!meUserSyncId) return;
+    const now = new Date().toISOString();
+    setHabits(prev => prev.some(h => !h.ownerSyncId)
+      ? prev.map(h => h.ownerSyncId ? h : { ...h, ownerSyncId: meUserSyncId, lastModified: now })
+      : prev);
+  }, [meUserSyncId, setHabits]);
   // Everyday timeline/widgets show only my placed routines; persistence and
   // cloud sync use the full `allTodayRoutines` so other members' entries are
   // preserved across saves.
@@ -8292,7 +8321,7 @@ const DayPlanner = () => {
 
     // ── Habits & Routines multi-user ──────────────────────────────────────────
     hrViewUserSyncId, setHrViewUserSyncId,
-    ownedBy,
+    ownedBy, managedBy,
 
     // ── Habits ────────────────────────────────────────────────────────────────
     habits, setHabits,
@@ -8306,6 +8335,7 @@ const DayPlanner = () => {
     habitEditingCountId, setHabitEditingCountId,
     habitDayPopup, setHabitDayPopup,
     activeHabits, managedHabits, habitStreaks,
+    hasUnownedHabits, claimUnownedHabits,
     habitLongPressTimer,
     habitLongPressOpenedAt,
 

@@ -22,7 +22,7 @@ const RoutinesDashboardModal = () => {
     dashboardSelectedChips, setDashboardSelectedChips,
     addRoutineChip, deleteRoutineChip, toggleRoutineChipSelection,
     multiUserEnabled, users, hrViewUserSyncId, setHrViewUserSyncId,
-    ownedBy, selectTodayChipsForOwner,
+    managedBy, selectTodayChipsForOwner,
   } = useFeaturesCtx();
 
   return (
@@ -82,7 +82,7 @@ const RoutinesDashboardModal = () => {
               const isHighlighted = (b) => b === todayDayName || b === 'everyday';
 
               const renderBucket = (bucket) => {
-                const chips = (routineDefinitions[bucket] || []).filter(c => ownedBy(c, hrViewUserSyncId));
+                const chips = (routineDefinitions[bucket] || []).filter(c => managedBy(c, hrViewUserSyncId));
                 return (
                   <div
                     key={bucket}
@@ -165,7 +165,7 @@ const RoutinesDashboardModal = () => {
                 );
               };
 
-              const hasAnyChips = Object.values(routineDefinitions).some(arr => arr.some(c => ownedBy(c, hrViewUserSyncId)));
+              const hasAnyChips = Object.values(routineDefinitions).some(arr => arr.some(c => managedBy(c, hrViewUserSyncId)));
 
               return (
                 <div className="grid grid-cols-3 gap-4">

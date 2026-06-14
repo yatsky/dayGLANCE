@@ -807,18 +807,6 @@ const DayPlanner = () => {
       : prev);
   }, [meUserSyncId, setRoutineDefinitions, setTodayRoutines]);
 
-  // GTD Frames equivalent of the habit/routine claim.
-  const hasUnownedFrames = useMemo(
-    () => multiUserEnabled && gtdFrames.some(f => !f.ownerSyncId),
-    [multiUserEnabled, gtdFrames]
-  );
-  const claimUnownedFrames = useCallback(() => {
-    if (!meUserSyncId) return;
-    const now = new Date().toISOString();
-    setGtdFrames(prev => prev.some(f => !f.ownerSyncId)
-      ? prev.map(f => f.ownerSyncId ? f : { ...f, ownerSyncId: meUserSyncId, lastModified: now })
-      : prev);
-  }, [meUserSyncId, setGtdFrames]);
   // Everyday timeline/widgets show only my placed routines; persistence and
   // cloud sync use the full `allTodayRoutines` so other members' entries are
   // preserved across saves.
@@ -1016,6 +1004,32 @@ const DayPlanner = () => {
     frameAdjustTimeField, setFrameAdjustTimeField,
     frameScheduleModal, setFrameScheduleModal,
   } = useGTDFrames();
+
+  // Frames owned by me — the everyday set used for AI gating (smart-schedule /
+  // reschedule button visibility, empty states, keyboard shortcuts). Mirrors
+  // activeHabits/todayRoutines so the UI reflects my frames only, consistent
+  // with what the AI actually operates on (getFrameInstancesForDate is
+  // already me-filtered).
+  const myFrames = useMemo(
+    () => gtdFrames.filter(f => ownedBy(f, meUserSyncId)),
+    [gtdFrames, ownedBy, meUserSyncId]
+  );
+
+  // GTD Frames equivalent of the habit/routine claim. Must live after the
+  // useGTDFrames() destructure above — gtdFrames/setGtdFrames are in the
+  // temporal dead zone before that point.
+  const hasUnownedFrames = useMemo(
+    () => multiUserEnabled && gtdFrames.some(f => !f.ownerSyncId),
+    [multiUserEnabled, gtdFrames]
+  );
+  const claimUnownedFrames = useCallback(() => {
+    if (!meUserSyncId) return;
+    const now = new Date().toISOString();
+    setGtdFrames(prev => prev.some(f => !f.ownerSyncId)
+      ? prev.map(f => f.ownerSyncId ? f : { ...f, ownerSyncId: meUserSyncId, lastModified: now })
+      : prev);
+  }, [meUserSyncId, setGtdFrames]);
+
   const [taskContextMenu, setTaskContextMenu] = useState(null); // { x, y, taskId, isRecurring, isImported, isAllDay, dateStr }
   const [timelineContextMenu, setTimelineContextMenu] = useState(null); // { x, y, dateStr, timeMinutes }
   const [hgContextMenu, setHgContextMenu] = useState(null); // { x, y, projectId, date, isCompleted }
@@ -3082,7 +3096,7 @@ const DayPlanner = () => {
     aiConfig, setShowVoiceInput,
     habitsEnabled, setHabitsEnabled, setShowHabitModal,
     goalsProjectsEnabled, setGoalsProjectsEnabled, showGoalsDashboard, setShowGoalsDashboard,
-    gtdFrames, setShowRescheduleModal, setRescheduleResults, setRescheduleError,
+    gtdFrames: myFrames, setShowRescheduleModal, setRescheduleResults, setRescheduleError,
     setMobileActiveTab, setMobileSettingsView, setFramesModalTab, setEditingFrame, setShowFramesModal,
     changeDate, setSelectedDate,
     setViewMode, canShowViewCycler,
@@ -6782,7 +6796,7 @@ const DayPlanner = () => {
   const prevFrameNudgeKeyRef = useRef(null);
   useEffect(() => {
     if (isTrayMode || !aiConfig.enabled || !aiConfig.features?.frameNudge) return;
-    if (gtdFrames.filter(f => f.enabled).length === 0) return;
+    if (myFrames.filter(f => f.enabled).length === 0) return;
     if (activeFrameNudgeKey === prevFrameNudgeKeyRef.current) return;
     prevFrameNudgeKeyRef.current = activeFrameNudgeKey;
     // Only auto-fire when inside an active frame (not free time)
@@ -8455,7 +8469,7 @@ const DayPlanner = () => {
     weeklyAIError, setWeeklyAIError,
 
     // ── GTD Frames ────────────────────────────────────────────────────────────
-    gtdFrames, setGtdFrames,
+    gtdFrames, setGtdFrames, myFrames,
     showFramesModal, setShowFramesModal,
     framesModalTab, setFramesModalTab,
     editingFrame, setEditingFrame,

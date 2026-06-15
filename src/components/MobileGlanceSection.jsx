@@ -1152,7 +1152,7 @@ const MobileGlanceSection = () => {
   })()}
   {/* Routines row */}
   {routinesEnabled && (() => {
-    const realRoutines = todayRoutines.filter(r => !String(r.id).startsWith('example-'));
+    const realRoutines = todayRoutines;
     const visibleRoutines = realRoutines.filter(r => !routineCompletions[r.id]);
     if (realRoutines.length > 0 && visibleRoutines.length === 0) return null;
     const openRoutinesSettings = () => {

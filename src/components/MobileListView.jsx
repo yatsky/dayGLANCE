@@ -726,7 +726,7 @@ const MobileListView = ({ hideInboxHandle = false }) => {
 
   const allDayRoutines = useMemo(() =>
     routinesEnabled && isToday
-      ? todayRoutines.filter(r => r.isAllDay && !String(r.id).startsWith('example-'))
+      ? todayRoutines.filter(r => r.isAllDay)
       : [],
     [routinesEnabled, isToday, todayRoutines],
   );
@@ -752,7 +752,7 @@ const MobileListView = ({ hideInboxHandle = false }) => {
 
   const scheduledRoutines = useMemo(() =>
     routinesEnabled && isToday
-      ? todayRoutines.filter(r => r.startTime && !r.isAllDay && !String(r.id).startsWith('example-'))
+      ? todayRoutines.filter(r => r.startTime && !r.isAllDay)
       : [],
     [routinesEnabled, isToday, todayRoutines],
   );

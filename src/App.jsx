@@ -777,12 +777,12 @@ const DayPlanner = () => {
       : prev);
   }, [meUserSyncId, setHabits]);
 
-  // Routine equivalent of the habit claim: unowned routine chips (excluding the
-  // seeded example- chips) or unowned placed today-routines mean the dashboard
-  // would surface them for everyone. Stamp them with "me" deterministically.
+  // Routine equivalent of the habit claim: unowned routine chips or unowned
+  // placed today-routines mean the dashboard would surface them under the
+  // viewer's own tab. Stamp them with "me" deterministically.
   const hasUnownedRoutines = useMemo(
     () => multiUserEnabled && (
-      Object.values(routineDefinitions).some(arr => arr.some(c => !c.ownerSyncId && !String(c.id).startsWith('example-')))
+      Object.values(routineDefinitions).some(arr => arr.some(c => !c.ownerSyncId))
       || allTodayRoutines.some(r => !r.ownerSyncId)
     ),
     [multiUserEnabled, routineDefinitions, allTodayRoutines]
@@ -795,7 +795,7 @@ const DayPlanner = () => {
       const next = {};
       for (const [bucket, arr] of Object.entries(prev)) {
         next[bucket] = arr.map(c => {
-          if (c.ownerSyncId || String(c.id).startsWith('example-')) return c;
+          if (c.ownerSyncId) return c;
           any = true;
           return { ...c, ownerSyncId: meUserSyncId, lastModified: now };
         });
@@ -815,41 +815,13 @@ const DayPlanner = () => {
     [allTodayRoutines, ownedBy, meUserSyncId]
   );
 
-  // One-time migration (per device): when multi-user is enabled, assign existing
-  // unowned habits / routine chips / today-routines to the current user so they
-  // keep showing for "me". Goals and projects are intentionally left untouched.
-  // Anything misattributed (e.g. a pre-existing shared store) is reassignable via
-  // the dashboard switcher.
-  const hrMigratedRef = useRef(false);
-  useEffect(() => {
-    if (hrMigratedRef.current) return;
-    if (!dataLoaded || !multiUserEnabled || !meUserSyncId) return;
-    if (localStorage.getItem('dayglance-hr-owner-migrated')) { hrMigratedRef.current = true; return; }
-    const now = new Date().toISOString();
-    setHabits(prev => prev.some(h => !h.ownerSyncId)
-      ? prev.map(h => h.ownerSyncId ? h : { ...h, ownerSyncId: meUserSyncId, lastModified: now })
-      : prev);
-    setRoutineDefinitions(prev => {
-      let any = false;
-      const next = {};
-      for (const [bucket, arr] of Object.entries(prev)) {
-        next[bucket] = arr.map(c => {
-          if (c.ownerSyncId) return c;
-          any = true;
-          return { ...c, ownerSyncId: meUserSyncId, lastModified: now };
-        });
-      }
-      return any ? next : prev;
-    });
-    setTodayRoutines(prev => prev.some(r => !r.ownerSyncId)
-      ? prev.map(r => r.ownerSyncId ? r : { ...r, ownerSyncId: meUserSyncId, lastModified: now })
-      : prev);
-    setGtdFrames(prev => prev.some(f => !f.ownerSyncId)
-      ? prev.map(f => f.ownerSyncId ? f : { ...f, ownerSyncId: meUserSyncId, lastModified: now })
-      : prev);
-    localStorage.setItem('dayglance-hr-owner-migrated', now);
-    hrMigratedRef.current = true;
-  }, [dataLoaded, multiUserEnabled, meUserSyncId]);
+  // Legacy unowned habits / routine chips / today-routines / frames are
+  // intentionally NOT auto-migrated to the current user. Claiming is explicit
+  // (claimUnownedHabits / claimUnownedRoutines / claimUnownedFrames). A
+  // per-device one-shot migration was removed: it raced cloud sync (a download
+  // reverts the local stamp before the one-shot latch can retry, so it never
+  // actually stamped anything) and, when it did fire, stamped each device's own
+  // user onto shared items — manufacturing competing claims across devices.
 
   const {
     showFocusMode, setShowFocusMode,
@@ -1502,10 +1474,31 @@ const DayPlanner = () => {
   // Catch up on missed reminders and sync when tab becomes visible
   useEffect(() => {
     if (isTrayMode) return;
+    // Release sync guards that a backgrounded app can strand. iOS (and any OS
+    // that suspends a tab) freezes the setTimeout that normally clears the
+    // suppress flags, and can tear down an in-flight sync's network promise so
+    // its finally never runs — leaving suppressCloudUploadRef stuck (uploads
+    // silently blocked, App.jsx:1667) or the iCloud mutex held (sync skipped,
+    // App.jsx:1801) until a manual force-quit. On resume, any prior cycle is
+    // dead, so clear those guards before re-kicking sync. Clearing is safe: the
+    // worst case is one redundant upload of current state, which the merge
+    // engine is idempotent to. The iCloud mutex is only released if it's been
+    // held long enough to be certainly stale (not a cycle that's actually live).
+    const STALE_ICLOUD_LOCK_MS = 30 * 1000;
+    const clearStrandedSyncGuards = () => {
+      suppressCloudUploadRef.current = false;
+      suppressTimestampRef.current = false;
+      suppressClearPendingRef.current = false;
+      if (cloudSyncInProgressRef.current &&
+          Date.now() - iCloudSyncStartedAtRef.current > STALE_ICLOUD_LOCK_MS) {
+        cloudSyncInProgressRef.current = false;
+      }
+    };
     const handleVisibility = () => {
       // iOS uses the dayglanceForeground custom event instead (see below) to
       // avoid a double-sync from both the native visibilitychange and our Swift dispatch.
       if (!document.hidden && !window.DayGlanceIOS) {
+        clearStrandedSyncGuards();
         setCurrentTime(new Date());
         // Direct engine.download() bypasses the poll's backoff check so a
         // user returning to the app gets a prompt retry even mid-backoff.
@@ -1522,6 +1515,7 @@ const DayPlanner = () => {
     // Native iOS fires a custom event to bypass the document.hidden timing gap
     // that occurs when scenePhase fires before WKWebView updates visibility state.
     const handleNativeForeground = () => {
+      clearStrandedSyncGuards();
       setCurrentTime(new Date());
       // iCloud runs first (fast local file I/O), then WebDAV (network).
       // engine.download() bypasses its own backoff for these foreground kicks.
@@ -1678,6 +1672,11 @@ const DayPlanner = () => {
   // of remote-always-wins.
   const configTrackingActiveRef = useRef(false); // false until after initial loadData
   const applyingRemoteDataRef   = useRef(false); // true while applyEngineData is running
+  // Timestamp (ms) when the iCloud mutex was taken, so a foreground resume can
+  // tell a genuinely in-flight cycle from one stranded by iOS suspending the app
+  // mid-sync (the in-flight promise never settles, so its finally never clears
+  // the lock). Used by clearStrandedSyncGuards on resume.
+  const iCloudSyncStartedAtRef  = useRef(0);
 
   useEffect(() => {
     if (dataLoaded) {
@@ -1820,6 +1819,7 @@ const DayPlanner = () => {
     }
 
     cloudSyncInProgressRef.current = true;
+    iCloudSyncStartedAtRef.current = Date.now();
     try {
       const str = onIOS
         ? window.DayGlanceNative.readICloudSync()

@@ -606,7 +606,7 @@ const MobileTimeGrid = () => {
 
           {/* Timeline routine pills (today only) */}
           {routinesEnabled && dateStr === dateToString(new Date()) && (() => {
-            const timelineRoutines = todayRoutines.filter(r => !r.isAllDay && r.startTime && !String(r.id).startsWith('example-'));
+            const timelineRoutines = todayRoutines.filter(r => !r.isAllDay && r.startTime);
             if (timelineRoutines.length === 0) return null;
 
             // Compute side-by-side columns for overlapping routine chips

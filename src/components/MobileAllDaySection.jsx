@@ -39,7 +39,7 @@ const MobileAllDaySection = () => {
   return (
     <>
 {/* All-day tasks - inside sticky header group */}
-{(visibleDates.some(date => getTasksForDate(date).some(t => t.isAllDay && !t.isExample) || getDeadlineTasksForDate(dateToString(date)).some(t => !t.isExample)) || (routinesEnabled && todayRoutines.some(r => r.isAllDay && !String(r.id).startsWith('example-')))) && (
+{(visibleDates.some(date => getTasksForDate(date).some(t => t.isAllDay && !t.isExample) || getDeadlineTasksForDate(dateToString(date)).some(t => !t.isExample)) || (routinesEnabled && todayRoutines.some(r => r.isAllDay))) && (
   <div ref={mobileAllDaySectionRef} className={`border-b ${borderClass} ${cardBg} ${mobileDragPreviewTime === 'all-day' ? 'ring-2 ring-inset ring-blue-500' : ''}`}>
     <div className="flex">
       <div className={`w-12 flex-shrink-0 px-2 py-2 text-[10px] font-semibold ${textSecondary} border-r ${borderClass} flex items-start justify-center`}>
@@ -349,7 +349,7 @@ const MobileAllDaySection = () => {
                 </div>
               ))}
               {/* Routine pills in all-day (today only) */}
-              {routinesEnabled && dateToString(date) === dateToString(new Date()) && todayRoutines.filter(r => r.isAllDay && !String(r.id).startsWith('example-')).map((routine) => (
+              {routinesEnabled && dateToString(date) === dateToString(new Date()) && todayRoutines.filter(r => r.isAllDay).map((routine) => (
                 <div
                   key={`routine-${routine.id}`}
                   className={`rounded-full px-3 py-1 text-xs font-medium inline-block mr-1 mb-1 select-none ${darkMode ? 'bg-teal-700/80 text-teal-100' : 'bg-teal-600/80 text-white'} ${mobileDragTaskIdState === routine.id ? 'scale-105 shadow-2xl z-40' : ''} ${routineCompletions[routine.id] ? 'line-through opacity-75' : ''}`}

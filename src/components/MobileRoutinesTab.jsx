@@ -29,7 +29,7 @@ const MobileRoutinesTab = () => {
   const bucketLabel = (b) => b === 'everyday' ? 'Every Day' : b.charAt(0).toUpperCase() + b.slice(1);
   const isHighlighted = (b) => b === todayDayName || b === 'everyday';
 
-  const hasAnyChips = Object.values(routineDefinitions).some(arr => arr.some(c => !String(c.id).startsWith('example-') && managedBy(c, hrViewUserSyncId)));
+  const hasAnyChips = Object.values(routineDefinitions).some(arr => arr.some(c => managedBy(c, hrViewUserSyncId)));
 
   return (
     <>
@@ -50,7 +50,7 @@ const MobileRoutinesTab = () => {
         {multiUserEnabled && hasUnownedRoutines && meUserSyncId && hrViewUserSyncId === meUserSyncId && (
           <div className={`px-3 py-2 rounded-lg border ${borderClass} ${darkMode ? 'bg-amber-500/10' : 'bg-amber-50'} flex items-center justify-between gap-3`}>
             <p className={`text-xs ${textSecondary}`}>
-              Some routines aren't assigned to anyone yet, so they show for every member. Claim them as yours.
+              Some routines aren't assigned to anyone yet. Claim them as yours so they stay tied to you across devices.
             </p>
             <button
               type="button"
@@ -64,9 +64,9 @@ const MobileRoutinesTab = () => {
         {/* Today's selected routine */}
         <div className={`rounded-lg border-2 border-dashed ${darkMode ? 'border-gray-600' : 'border-stone-300'} p-4`}>
           <div className={`text-xs font-semibold uppercase tracking-wide mb-3 ${textSecondary} text-center`}>Today's Routine</div>
-          {dashboardSelectedChips.filter(c => !String(c.id).startsWith('example-')).length > 0 ? (
+          {dashboardSelectedChips.length > 0 ? (
             <div className="flex flex-wrap gap-1.5 justify-center">
-              {dashboardSelectedChips.filter(c => !String(c.id).startsWith('example-')).map(chip => {
+              {dashboardSelectedChips.map(chip => {
                 const isFocused = routineFocusedChipId === chip.id;
                 return (
                 <div
@@ -128,7 +128,7 @@ const MobileRoutinesTab = () => {
 
         {/* Day buckets */}
         {allBuckets.map(bucket => {
-          const chips = (routineDefinitions[bucket] || []).filter(c => !String(c.id).startsWith('example-') && managedBy(c, hrViewUserSyncId));
+          const chips = (routineDefinitions[bucket] || []).filter(c => managedBy(c, hrViewUserSyncId));
           return (
             <div
               key={bucket}

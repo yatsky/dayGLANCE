@@ -71,7 +71,7 @@ const RoutinesDashboardModal = () => {
                 {hasUnownedRoutines && meUserSyncId && hrViewUserSyncId === meUserSyncId && (
                   <div className={`mt-3 px-3 py-2 rounded-lg border ${borderClass} ${darkMode ? 'bg-amber-500/10' : 'bg-amber-50'} flex items-center justify-between gap-3`}>
                     <p className={`text-xs ${textSecondary}`}>
-                      Some routines aren't assigned to anyone yet, so they show for every member. Claim them as yours.
+                      Some routines aren't assigned to anyone yet. Claim them as yours so they stay tied to you across devices.
                     </p>
                     <button
                       type="button"

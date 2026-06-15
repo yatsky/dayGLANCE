@@ -167,7 +167,6 @@ export function gatherTrmnlData({
   const routineItems = routinesEnabled
     ? todayRoutines
         .filter((r) => {
-          if (String(r.id).startsWith('example-')) return false;
           if (r.isAllDay) return true;
           const rStart = toMinutes(r.startTime);
           if (rStart < 0) return true;

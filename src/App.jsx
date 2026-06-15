@@ -815,41 +815,13 @@ const DayPlanner = () => {
     [allTodayRoutines, ownedBy, meUserSyncId]
   );
 
-  // One-time migration (per device): when multi-user is enabled, assign existing
-  // unowned habits / routine chips / today-routines to the current user so they
-  // keep showing for "me". Goals and projects are intentionally left untouched.
-  // Anything misattributed (e.g. a pre-existing shared store) is reassignable via
-  // the dashboard switcher.
-  const hrMigratedRef = useRef(false);
-  useEffect(() => {
-    if (hrMigratedRef.current) return;
-    if (!dataLoaded || !multiUserEnabled || !meUserSyncId) return;
-    if (localStorage.getItem('dayglance-hr-owner-migrated')) { hrMigratedRef.current = true; return; }
-    const now = new Date().toISOString();
-    setHabits(prev => prev.some(h => !h.ownerSyncId)
-      ? prev.map(h => h.ownerSyncId ? h : { ...h, ownerSyncId: meUserSyncId, lastModified: now })
-      : prev);
-    setRoutineDefinitions(prev => {
-      let any = false;
-      const next = {};
-      for (const [bucket, arr] of Object.entries(prev)) {
-        next[bucket] = arr.map(c => {
-          if (c.ownerSyncId) return c;
-          any = true;
-          return { ...c, ownerSyncId: meUserSyncId, lastModified: now };
-        });
-      }
-      return any ? next : prev;
-    });
-    setTodayRoutines(prev => prev.some(r => !r.ownerSyncId)
-      ? prev.map(r => r.ownerSyncId ? r : { ...r, ownerSyncId: meUserSyncId, lastModified: now })
-      : prev);
-    setGtdFrames(prev => prev.some(f => !f.ownerSyncId)
-      ? prev.map(f => f.ownerSyncId ? f : { ...f, ownerSyncId: meUserSyncId, lastModified: now })
-      : prev);
-    localStorage.setItem('dayglance-hr-owner-migrated', now);
-    hrMigratedRef.current = true;
-  }, [dataLoaded, multiUserEnabled, meUserSyncId]);
+  // Legacy unowned habits / routine chips / today-routines / frames are
+  // intentionally NOT auto-migrated to the current user. Claiming is explicit
+  // (claimUnownedHabits / claimUnownedRoutines / claimUnownedFrames). A
+  // per-device one-shot migration was removed: it raced cloud sync (a download
+  // reverts the local stamp before the one-shot latch can retry, so it never
+  // actually stamped anything) and, when it did fire, stamped each device's own
+  // user onto shared items — manufacturing competing claims across devices.
 
   const {
     showFocusMode, setShowFocusMode,

@@ -323,7 +323,7 @@ const MobileBottomSheets = () => {
                 {todayCompletedProjects.map(p => (
                   <div key={p.id} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${darkMode ? 'bg-green-900/30 text-green-300' : 'bg-green-50 text-green-700'}`}>
                     <FolderOpen size={14} className="flex-shrink-0" />
-                    <span className="truncate">{t('app.projectComplete')}: {p.title}</span>
+                    <span className="truncate">{t('app.projectComplete', { title: p.title })}</span>
                   </div>
                 ))}
               </div>

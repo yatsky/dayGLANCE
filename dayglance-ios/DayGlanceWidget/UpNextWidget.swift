@@ -59,7 +59,7 @@ struct UpNextWidgetView: View {
                     HStack {
                         Text(task.title ?? "")
                             .font(.subheadline).fontWeight(.semibold)
-                            .lineLimit(2)
+                            .lineLimit(family == .systemLarge ? 3 : 2)
                         Spacer()
                         if let time = formattedTime(task) {
                             Text(time)
@@ -75,11 +75,19 @@ struct UpNextWidgetView: View {
                     if let tags = task.tags, !tags.isEmpty {
                         Text(tags.map { "#\($0)" }.joined(separator: " "))
                             .font(.caption2)
+                            .italic()
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
+                    if family == .systemLarge, let notes = task.notes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(3)
+                            .padding(.top, 2)
+                    }
                     // iOS 17+ interactive buttons
-                    if #available(iOS 17.0, *), family != .systemSmall {
+                    if #available(iOS 17.0, *) {
                         HStack(spacing: 8) {
                             Button(intent: CompleteTaskIntent(taskId: task.id ?? "")) {
                                 Label("Done", systemImage: "checkmark.circle")
@@ -96,9 +104,10 @@ struct UpNextWidgetView: View {
                     }
                 }
             }
-            if family != .systemSmall, let subtasks = task.subtasks, !subtasks.isEmpty {
+            if let subtasks = task.subtasks, !subtasks.isEmpty {
                 Divider().padding(.vertical, 4)
-                ForEach(subtasks.prefix(3), id: \.title) { sub in
+                let limit = family == .systemLarge ? 8 : 3
+                ForEach(subtasks.prefix(limit), id: \.title) { sub in
                     HStack(spacing: 6) {
                         Image(systemName: sub.completed ? "checkmark.circle.fill" : "circle")
                             .font(.caption2)
@@ -148,6 +157,6 @@ struct UpNextWidget: Widget {
         }
         .configurationDisplayName("Up Next")
         .description("Your next scheduled task.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemMedium, .systemLarge])
     }
 }

@@ -7403,7 +7403,7 @@ const DayPlanner = () => {
       duration: nextTaskCandidate.duration || 0,
       tags: (nextTaskCandidate.tags || []).slice(0, 5),
       notes: (nextTaskCandidate.notes || '').substring(0, 300),
-      subtasks: (nextTaskCandidate.subtasks || []).slice(0, 5).map(s => ({
+      subtasks: (nextTaskCandidate.subtasks || []).slice(0, 7).map(s => ({
         title: s.title,
         completed: s.completed || false,
       })),

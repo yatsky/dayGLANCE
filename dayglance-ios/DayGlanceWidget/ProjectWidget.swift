@@ -20,16 +20,14 @@ struct ProjectProvider: TimelineProvider {
 
 struct ProjectWidgetView: View {
     var entry: ProjectEntry
-    @Environment(\.widgetFamily) var family
 
     var body: some View {
-        let taskLimit = family == .systemLarge ? 8 : 4
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider().padding(.vertical, 4)
             if let projects = entry.snapshot?.allProjects,
                let proj = projects.first(where: { $0.status != "completed" && $0.status != "archived" }) ?? projects.first {
-                projectView(proj: proj, taskLimit: taskLimit)
+                projectView(proj: proj)
             } else {
                 Text("No active projects")
                     .font(.caption)
@@ -47,7 +45,7 @@ struct ProjectWidgetView: View {
             .foregroundColor(.secondary)
     }
 
-    private func projectView(proj: ProjectData, taskLimit: Int) -> some View {
+    private func projectView(proj: ProjectData) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top) {
                 RoundedRectangle(cornerRadius: 2)
@@ -76,7 +74,7 @@ struct ProjectWidgetView: View {
                 Divider()
                 let incomplete = tasks.filter { !($0.completed ?? false) }
                 let complete = tasks.filter { $0.completed ?? false }
-                let visible = Array((incomplete + complete).prefix(taskLimit))
+                let visible = Array((incomplete + complete).prefix(4))
                 ForEach(visible, id: \.id) { t in
                     HStack(spacing: 6) {
                         Image(systemName: (t.completed ?? false) ? "checkmark.circle.fill" : "circle")
@@ -113,6 +111,6 @@ struct ProjectWidget: Widget {
         }
         .configurationDisplayName("Project")
         .description("Progress on your active project.")
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

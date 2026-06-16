@@ -45,9 +45,7 @@ struct UpNextWidgetView: View {
         .containerBackground(.background, for: .widget)
     }
 
-    @ViewBuilder
     private func taskView(task: NextTaskData) -> some View {
-        let subtaskLimit = family == .systemLarge ? 8 : 3
         VStack(alignment: .leading, spacing: 0) {
             header
             Divider().padding(.vertical, 4)
@@ -60,7 +58,7 @@ struct UpNextWidgetView: View {
                     HStack {
                         Text(task.title ?? "")
                             .font(.subheadline).fontWeight(.semibold)
-                            .lineLimit(family == .systemLarge ? 3 : 2)
+                            .lineLimit(2)
                         Spacer()
                         if let time = formattedTime(task) {
                             Text(time)
@@ -80,13 +78,7 @@ struct UpNextWidgetView: View {
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
-                    if family == .systemLarge, let notes = task.notes, !notes.isEmpty {
-                        Text(notes)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(3)
-                            .padding(.top, 2)
-                    }
+                    // iOS 17+ interactive buttons
                     if #available(iOS 17.0, *), family != .systemSmall {
                         HStack(spacing: 8) {
                             Button(intent: CompleteTaskIntent(taskId: task.id ?? "")) {
@@ -106,7 +98,7 @@ struct UpNextWidgetView: View {
             }
             if family != .systemSmall, let subtasks = task.subtasks, !subtasks.isEmpty {
                 Divider().padding(.vertical, 4)
-                ForEach(subtasks.prefix(subtaskLimit), id: \.title) { sub in
+                ForEach(subtasks.prefix(3), id: \.title) { sub in
                     HStack(spacing: 6) {
                         Image(systemName: sub.completed ? "checkmark.circle.fill" : "circle")
                             .font(.caption2)
@@ -156,6 +148,6 @@ struct UpNextWidget: Widget {
         }
         .configurationDisplayName("Up Next")
         .description("Your next scheduled task.")
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

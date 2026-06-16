@@ -20,6 +20,7 @@ struct GoalProvider: TimelineProvider {
 
 struct GoalWidgetView: View {
     var entry: GoalEntry
+    @Environment(\.widgetFamily) var family
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -75,18 +76,25 @@ struct GoalWidgetView: View {
             }
             if let projects = goal.projects, !projects.isEmpty {
                 Divider()
-                ForEach(projects.prefix(3), id: \.id) { proj in
-                    HStack {
-                        Text(proj.title ?? "")
-                            .font(.caption2)
-                            .lineLimit(1)
-                        Spacer()
-                        if proj.status == "completed" || (proj.progressPct ?? 0) == 100 {
-                            Text("✓").font(.caption2).foregroundColor(.green)
-                        } else {
-                            Text("\(proj.completedTasks ?? 0)/\(proj.totalTasks ?? 0)")
+                let projectLimit = family == .systemLarge ? 5 : 3
+                ForEach(projects.prefix(projectLimit), id: \.id) { proj in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text(proj.title ?? "")
                                 .font(.caption2)
-                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                            Spacer()
+                            if proj.status == "completed" || (proj.progressPct ?? 0) == 100 {
+                                Text("✓").font(.caption2).foregroundColor(.green)
+                            } else {
+                                Text("\(proj.completedTasks ?? 0)/\(proj.totalTasks ?? 0)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        if family == .systemLarge {
+                            ProgressView(value: Double(proj.progressPct ?? 0) / 100.0)
+                                .tint(progressColor(pct: proj.progressPct ?? 0))
                         }
                     }
                 }
@@ -120,6 +128,6 @@ struct GoalWidget: Widget {
         }
         .configurationDisplayName("Goal")
         .description("Progress on your active goal.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemMedium, .systemLarge])
     }
 }

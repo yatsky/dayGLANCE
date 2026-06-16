@@ -2,9 +2,11 @@ import React, { useState, useRef } from 'react';
 import {
   Bell, BookOpen, ChevronLeft, ChevronRight, Cloud,
   Eye, GitBranch, HelpCircle, Inbox, Moon, NotebookPen,
-  RefreshCw, Save, Settings, Sun, Trash2,
+  RefreshCw, Save, Settings, Sun, Trash2, X,
 } from 'lucide-react';
-import { dateToString, formatDateRange } from '../utils/taskUtils.js';
+import { dateToString, extractWikilinks, formatDateRange } from '../utils/taskUtils.js';
+import { renderTitle } from '../utils/textFormatting.jsx';
+import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import { isNativeApp } from '../native.js';
 import DesktopHeader from './DesktopHeader.jsx';
 import CalendarHeader from './CalendarHeader.jsx';
@@ -281,7 +283,7 @@ const DesktopLayout = () => {
     nativeEventToTask, clearNativeEventOverride, parseDatetime, parseICS, filterByDateWindow,
     loadData, saveData,
     cloudSyncDownload, cloudSyncUpload, cloudSyncTest, syncAll,
-    performObsidianSync, loadWikiNote, saveWikiNote,
+    performObsidianSync, loadWikiNote, saveWikiNote, openInObsidian,
     performTrmnlSync,
     performLocalBackup, performRemoteBackup,
     buildAutoBackupPayload, loadAutoBackupHistory,
@@ -831,6 +833,54 @@ const DesktopLayout = () => {
           </div>
         </div>
       </div>
+
+      {/* Notes panel overlay for tablet LIST view */}
+      {tabletListView && expandedNotesTaskId && (() => {
+        const scheduledTask = visibleDates.reduce((found, date) => {
+          if (found) return found;
+          return getTasksForDate(date).find(t => t.id === expandedNotesTaskId);
+        }, null);
+        const deadlineTask = !scheduledTask ? unscheduledTasks.find(t => t.id === expandedNotesTaskId && t.deadline) : null;
+        const noteTask = scheduledTask || deadlineTask;
+        if (!noteTask) return null;
+        return (
+          <div className="notes-panel-container fixed inset-0 z-50 flex flex-col justify-end" onClick={() => setExpandedNotesTaskId(null)}>
+            <div className="bg-black/30 absolute inset-0" />
+            <div
+              className={`relative ${cardBg} rounded-t-2xl shadow-xl max-h-[60vh] overflow-y-auto`}
+              style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={`flex items-center justify-between p-4 border-b ${borderClass}`}>
+                <div className={`font-medium ${textPrimary} truncate flex-1`}>{renderTitle(noteTask.title)}</div>
+                <button onClick={() => setExpandedNotesTaskId(null)} className={`p-1 rounded-lg ${hoverBg} transition-colors`} aria-label="Close notes">
+                  <X size={18} className={textSecondary} />
+                </button>
+              </div>
+              <div className="p-4">
+                <NotesSubtasksPanel
+                  task={noteTask}
+                  isInbox={!!deadlineTask}
+                  darkMode={darkMode}
+                  updateTaskNotes={updateTaskNotes}
+                  addSubtask={addSubtask}
+                  toggleSubtask={toggleSubtask}
+                  deleteSubtask={deleteSubtask}
+                  updateSubtaskTitle={updateSubtaskTitle}
+                  noAutoFocus
+                  aiConfig={aiConfig}
+                  aiSubtasksLoadingForTask={aiSubtasksLoadingForTask}
+                  onGenerateSubtasks={generateAISubtasks}
+                  wikilinks={extractWikilinks(noteTask.title).length > 0 ? extractWikilinks(noteTask.title) : undefined}
+                  onLoadWikiNote={extractWikilinks(noteTask.title).length > 0 ? loadWikiNote : undefined}
+                  onSaveWikiNote={extractWikilinks(noteTask.title).length > 0 ? saveWikiNote : undefined}
+                  onOpenInObsidian={extractWikilinks(noteTask.title).length > 0 ? openInObsidian : undefined}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Trash FAB — visible during desktop drag */}
       {draggedTask && dragSource !== 'routine' && (

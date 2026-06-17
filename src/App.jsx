@@ -11,7 +11,7 @@ import { getStorageUsage, formatBytes } from './utils/storage.js';
 import { webdavFetch } from './utils/cloudSyncProviders.js';
 import { autoBackupDB, createAutoBackupProvidersForFolder, AUTO_BACKUP_RETENTION, AUTO_BACKUP_INTERVALS } from './utils/autoBackup.js';
 import { URL_REGEX, isOnlyUrl, renderFormattedText, hasNotesOrSubtasks, isLinkOnlyTask, getLinkUrl, hasOnlySubtasks, renderTitle, highlightMatch, renderTitleWithoutTags, extractShareTitle } from './utils/textFormatting.jsx';
-import { dateToString, localDateStr, extractTags, extractWikilinks, stripWikilinks, getRecurrenceLabel, formatDate, formatDateRange, formatShortDate, formatDeadlineDate, computeTaskCalendarTombstones, computeRecurringSeriesTombstones } from './utils/taskUtils.js';
+import { dateToString, localDateStr, extractTags, extractWikilinks, stripWikilinks, getRecurrenceLabel, formatDate, formatDateRange, formatShortDate, formatDeadlineDate, getAppLocale, computeTaskCalendarTombstones, computeRecurringSeriesTombstones } from './utils/taskUtils.js';
 import { TASK_COLORS, TAILWIND_TO_HEX, taskColorToHex } from './utils/colorUtils.js';
 import { calculateGoalProgress } from './utils/goalProgress.js';
 import { HABIT_ICONS, HABIT_ICON_NAMES, HABIT_COLORS } from './constants/habits.js';
@@ -5906,7 +5906,7 @@ const DayPlanner = () => {
     setMorningGlanceError('');
     try {
       const todayDate = new Date();
-      const dayOfWeek = todayDate.toLocaleDateString('en-US', { weekday: 'long' });
+      const dayOfWeek = todayDate.toLocaleDateString(getAppLocale(), { weekday: 'long' });
 
       // Gather today's scheduled tasks
       const scheduledToday = tasks.filter(t => t.date === todayStr && !t.imported && !t.isExample && isVisibleForUser(t));
@@ -6003,7 +6003,7 @@ const DayPlanner = () => {
     setEveningGlanceError('');
     try {
       const todayDate = new Date();
-      const dayOfWeek = todayDate.toLocaleDateString('en-US', { weekday: 'long' });
+      const dayOfWeek = todayDate.toLocaleDateString(getAppLocale(), { weekday: 'long' });
       const tomorrow = new Date(todayDate);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowStr = dateToString(tomorrow);
@@ -6187,18 +6187,18 @@ const DayPlanner = () => {
   // Getting Started checklist - uses persistent progress tracking
   const gettingStartedItems = useMemo(() => {
     return [
-      { id: 'inbox', label: 'Add your first inbox task', completed: onboardingProgress.hasAddedInboxTask },
-      { id: 'scheduled', label: 'Add your first scheduled task', completed: onboardingProgress.hasAddedScheduledTask },
-      { id: 'drag', label: isMobile ? 'Schedule a task from inbox' : 'Drag a task to the timeline', completed: onboardingProgress.hasDraggedToTimeline },
-      { id: 'priority', label: 'Set a priority or deadline', completed: onboardingProgress.hasSetPriority || onboardingProgress.hasAddedDeadline },
-      { id: 'notes', label: 'Add notes or subtasks to a task', completed: onboardingProgress.hasAddedNotes },
-      { id: 'tags', label: 'Use #tags in a task title', completed: onboardingProgress.hasUsedTags },
-      { id: 'recurring', label: 'Create a recurring task', completed: onboardingProgress.hasCreatedRecurring },
-      { id: 'focus', label: 'Try Focus Mode', completed: onboardingProgress.hasUsedFocusMode },
-      { id: 'sync', label: 'Set up calendar sync', completed: onboardingProgress.hasSetupSync },
-      { id: 'optional', label: 'Enable routines, habits, or AI', completed: onboardingProgress.hasEnabledOptionalFeature },
+      { id: 'inbox', label: t('gettingStarted.items.firstInbox'), completed: onboardingProgress.hasAddedInboxTask },
+      { id: 'scheduled', label: t('gettingStarted.items.firstScheduled'), completed: onboardingProgress.hasAddedScheduledTask },
+      { id: 'drag', label: isMobile ? t('gettingStarted.items.scheduleFromInbox') : t('gettingStarted.items.dragToTimeline'), completed: onboardingProgress.hasDraggedToTimeline },
+      { id: 'priority', label: t('gettingStarted.items.priorityOrDeadline'), completed: onboardingProgress.hasSetPriority || onboardingProgress.hasAddedDeadline },
+      { id: 'notes', label: t('gettingStarted.items.notesOrSubtasks'), completed: onboardingProgress.hasAddedNotes },
+      { id: 'tags', label: t('gettingStarted.items.useTags'), completed: onboardingProgress.hasUsedTags },
+      { id: 'recurring', label: t('gettingStarted.items.createRecurring'), completed: onboardingProgress.hasCreatedRecurring },
+      { id: 'focus', label: t('gettingStarted.items.tryFocus'), completed: onboardingProgress.hasUsedFocusMode },
+      { id: 'sync', label: t('gettingStarted.items.calendarSync'), completed: onboardingProgress.hasSetupSync },
+      { id: 'optional', label: t('gettingStarted.items.optionalFeatures'), completed: onboardingProgress.hasEnabledOptionalFeature },
     ];
-  }, [onboardingProgress, isMobile]);
+  }, [onboardingProgress, isMobile, t]);
 
   const allGettingStartedComplete = gettingStartedItems.every(item => item.completed);
   const gettingStartedCompleteCount = gettingStartedItems.filter(item => item.completed).length;
@@ -6682,7 +6682,7 @@ const DayPlanner = () => {
     const committedMinutes = scheduledItems.reduce((sum, t) => sum + (t.duration || 0), 0);
 
     // Day label
-    const dayLabel = tomorrow.toLocaleDateString('en-US', { weekday: 'long' });
+    const dayLabel = tomorrow.toLocaleDateString(getAppLocale(), { weekday: 'long' });
 
     return {
       dayLabel,
@@ -7587,7 +7587,7 @@ const DayPlanner = () => {
 
     const snapshot = {
       date: todayStr,
-      dateLabel: today.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      dateLabel: today.toLocaleDateString(getAppLocale(), { weekday: 'short', month: 'short', day: 'numeric' }),
       steps,
       use24Hour: use24HourClock,
       overdue: overdueItems,
@@ -8782,7 +8782,7 @@ const DayPlanner = () => {
           return `${h}h ${m}m`;
         };
         const dayData = focusLog[focusLogModalDate] || { totalMinutes: 0, sessions: 0, cyclesCompleted: 0, tasksCompleted: 0 };
-        const displayDate = new Date(focusLogModalDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        const displayDate = new Date(focusLogModalDate + 'T12:00:00').toLocaleDateString(getAppLocale(), { weekday: 'long', month: 'short', day: 'numeric' });
 
         // Last 7 days ending on focusLogModalDate
         const anchorDate = new Date(focusLogModalDate + 'T12:00:00');
@@ -9481,7 +9481,7 @@ const DayPlanner = () => {
                   </div>
                   {allTimeInboxCompletedCount > 0 && (
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2"><Inbox size={14} className="text-amber-400" /> Inbox done</div>
+                      <div className="flex items-center gap-2"><Inbox size={14} className="text-amber-400" /> {t('app.inboxDone')}</div>
                       <span className={`font-medium ${textPrimary}`}>{allTimeInboxCompletedCount}</span>
                     </div>
                   )}
@@ -9594,7 +9594,7 @@ const DayPlanner = () => {
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className={`font-semibold ${textPrimary}`}>
-                  {new Date(habitDayPopup + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  {new Date(habitDayPopup + 'T12:00:00').toLocaleDateString(getAppLocale(), { weekday: 'long', month: 'long', day: 'numeric' })}
                 </div>
                 <div className={`text-xs ${textSecondary} mt-0.5`}>{t('app.habitSummary')}</div>
               </div>
@@ -10017,7 +10017,7 @@ const DayPlanner = () => {
       {quickAddFrameModal && (() => {
         const { dateStr: qDateStr, startMinutes: qStart, endMinutes: qEnd } = quickAddFrameModal;
         const qDate = new Date(qDateStr + 'T12:00:00');
-        const dateDisplay = qDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        const dateDisplay = qDate.toLocaleDateString(getAppLocale(), { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         // Pick first color not already used on that date
         const usedColors = getFrameInstancesForDate(qDate).map(f => f.color);
         const defaultColor = FRAME_COLORS.find(c => !usedColors.includes(c.class))?.class || FRAME_COLORS[0].class;

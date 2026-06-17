@@ -116,7 +116,7 @@ const MobileBottomSheets = () => {
                   <div className="font-medium text-sm truncate">{renderTitle(task.title)}</div>
                   <div className="text-xs opacity-75 mt-1">
                     {task._deletedFrom === 'inbox' ? (
-                      <>Inbox • {task.duration}min</>
+                      <>{t('task.inbox')} • {task.duration}min</>
                     ) : task.startTime ? (
                       <>{formatTime(task.startTime)} • {task.duration}min</>
                     ) : (
@@ -449,7 +449,7 @@ const MobileBottomSheets = () => {
               </div>
               {allTimeInboxCompletedCount > 0 && (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2"><Inbox size={14} className="text-amber-400" /> Inbox done</div>
+                      <div className="flex items-center gap-2"><Inbox size={14} className="text-amber-400" /> {t('app.inboxDone')}</div>
                   <span className={`font-medium ${textPrimary}`}>{allTimeInboxCompletedCount}</span>
                 </div>
               )}

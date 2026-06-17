@@ -92,7 +92,7 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
         <button
           onClick={openNewInboxTask}
           className="px-2.5 flex items-center justify-center gap-1 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          title="New Inbox Task"
+          title={t('task.newInbox')}
         >
           <Plus size={14} strokeWidth={3} />
           <span className="text-xs font-medium">{t('common.newTask')}</span>
@@ -293,7 +293,7 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
                       }
                     }}
                     className={`hover:bg-white/20 rounded p-1 transition-colors ${hasNotesOrSubtasks(task) || extractWikilinks(task.title).length > 0 ? '' : 'opacity-40'}`}
-                    title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (hold to edit)` : "Notes & subtasks"}
+                    title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (${t('common.holdToEdit')})` : t('common.notesSubtasks')}
                   >
                     {isLinkOnlyTask(task) ? <ExternalLink size={14} /> : hasOnlySubtasks(task) ? <CheckSquare size={14} /> : isObsidianNoteOnlyTask(task) ? <BookOpen size={14} /> : <FileText size={14} />}
                   </button>
@@ -304,7 +304,7 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
                         setShowDeadlinePicker(showDeadlinePicker === task.id ? null : task.id);
                       }}
                       className={`hover:bg-white/20 rounded p-1 transition-colors ${task.deadline ? 'bg-white/20' : 'opacity-40'}`}
-                      title={task.deadline ? `Deadline: ${formatDeadlineDate(task.deadline)}` : 'Set deadline'}
+                      title={task.deadline ? t('common.deadlineLabel', { date: formatDeadlineDate(task.deadline) }) : t('task.deadline')}
                     >
                       <Calendar size={14} />
                     </button>
@@ -396,7 +396,7 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
       <button
         onClick={openNewInboxTask}
         className="p-2 flex items-center justify-center bg-blue-600 text-white rounded-lg active:bg-blue-700 transition-colors"
-        title="New Inbox Task"
+        title={t('task.newInbox')}
       >
         <Plus size={16} strokeWidth={3} />
       </button>
@@ -451,10 +451,10 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
         </div>
         <p className={`text-base font-semibold ${textPrimary} mb-1`}>
           {unscheduledTasks.filter(t => !t.isExample).length === 0
-            ? "Inbox zero"
+            ? t('app.inboxZero')
             : unscheduledTasks.filter(t => !t.isExample).length === 0
               ? "All overdue"
-              : "No matches"}
+              : t('app.noMatches')}
         </p>
         <p className={`text-sm ${textSecondary} text-center mb-5`}>
           {unscheduledTasks.filter(t => !t.isExample).length === 0
@@ -479,10 +479,10 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
           <div className={`relative rounded-lg ${(showDeadlinePicker === task.id || expandedNotesTaskId === task.id) ? '' : 'overflow-hidden'}`}>
             {/* Swipe action strips */}
             <div data-swipe-strip="right" style={{ display: 'none' }} className={`absolute inset-0 ${darkMode ? 'bg-green-900/80 text-green-300' : 'bg-green-100 text-green-600'} rounded-lg flex items-center pl-3 text-xs font-medium`}>
-              <Calendar size={14} className="mr-1" />Schedule
+              <Calendar size={14} className="mr-1" />{t('common.schedule')}
             </div>
             <div data-swipe-strip="left" style={{ display: 'none' }} className={`absolute inset-0 ${darkMode ? 'bg-amber-900/80 text-amber-300' : 'bg-amber-100 text-amber-600'} rounded-lg flex items-center justify-end pr-3 text-xs font-medium`}>
-              Edit<Settings size={14} className="ml-1" />
+              {t('common.edit')}<Settings size={14} className="ml-1" />
             </div>
           <div
             data-ctx-menu
@@ -591,7 +591,7 @@ const InboxSidebar = ({ variant = 'desktop' }) => {
                           setShowDeadlinePicker(showDeadlinePicker === task.id ? null : task.id);
                         }}
                         className={`hover:bg-white/20 rounded p-1 transition-colors ${task.deadline ? 'bg-white/20' : 'opacity-40'}`}
-                        title={task.deadline ? `Deadline: ${formatDeadlineDate(task.deadline)}` : 'Set deadline'}
+                        title={task.deadline ? t('common.deadlineLabel', { date: formatDeadlineDate(task.deadline) }) : t('task.deadline')}
                       >
                         <Calendar size={14} />
                       </button>

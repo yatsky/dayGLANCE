@@ -87,10 +87,10 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
         }
       }}
       className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''} ${hasNotesOrSubtasks(task) || extractWikilinks(task.title).length > 0 ? '' : 'opacity-40'}`}
-      title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (hold to edit)` : "Notes & subtasks"}
+      title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (${t('common.holdToEdit')})` : t('common.notesSubtasks')}
     >
       {isLinkOnlyTask(task) ? <ExternalLink size={14} /> : hasOnlySubtasks(task) ? <CheckSquare size={14} /> : isObsidianNoteOnlyTask(task) ? <BookOpen size={14} /> : <FileText size={14} />}
-      {inMenu && <span className="text-xs">{isLinkOnlyTask(task) ? 'Open Link' : 'Notes'}</span>}
+      {inMenu && <span className="text-xs">{isLinkOnlyTask(task) ? 'Open Link' : t('task.notes')}</span>}
     </button>
   );
 
@@ -103,7 +103,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
           <button
             onClick={() => postponeTask(task.id)}
             className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-            title="Postpone to tomorrow"
+            title={t('common.postponeTomorrow')}
           >
             <SkipForward size={14} />
             {inMenu && <span className="text-xs">{t('common.postpone')}</span>}
@@ -113,7 +113,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
           <button
             onClick={() => openMobileEditTask(task, false)}
             className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-            title="Edit"
+            title={t('common.edit')}
           >
             <Pencil size={14} />
             {inMenu && <span className="text-xs">{t('common.edit')}</span>}
@@ -123,7 +123,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
           <button
             onClick={() => moveToRecycleBin(task.id)}
             className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-            title="Delete"
+            title={t('common.delete')}
           >
             <Trash2 size={14} />
             {inMenu && <span className="text-xs">{t('common.delete')}</span>}
@@ -138,7 +138,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
         <button
           onClick={() => postponeTask(task.id)}
           className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-          title="Postpone to tomorrow"
+          title={t('common.postponeTomorrow')}
         >
           <SkipForward size={14} />
           {inMenu && <span className="text-xs">{t('common.postpone')}</span>}
@@ -147,7 +147,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
         <button
           onClick={() => openMobileEditTask(task, false)}
           className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-          title="Edit"
+          title={t('common.edit')}
         >
           <Pencil size={14} />
           {inMenu && <span className="text-xs">{t('common.edit')}</span>}
@@ -157,7 +157,7 @@ const AllDayTaskCard = ({ task, fillWidth = true }) => {
         <button
           onClick={() => moveToInbox(task.id)}
           className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-          title="Move to Inbox"
+          title={t('task.moveToInbox')}
         >
           <Inbox size={14} />
           {inMenu && <span className="text-xs">{t('common.toInbox')}</span>}

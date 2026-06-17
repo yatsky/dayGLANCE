@@ -343,7 +343,7 @@ const TimeGrid = () => {
                     }
                   }}
                   className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''} ${hasNotesOrSubtasks(task) || extractWikilinks(task.title).length > 0 ? '' : 'opacity-40'}`}
-                  title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (hold to edit)` : "Notes & subtasks"}
+                  title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (${t('common.holdToEdit')})` : t('common.notesSubtasks')}
                 >
                   {isLinkOnlyTask(task) ? <ExternalLink size={14} /> : hasOnlySubtasks(task) ? <CheckSquare size={14} /> : isObsidianNoteOnlyTask(task) ? <BookOpen size={14} /> : <FileText size={14} />}
                   {inMenu && <span className="text-xs">{isLinkOnlyTask(task) ? 'Open Link' : 'Notes'}</span>}
@@ -360,7 +360,7 @@ const TimeGrid = () => {
                     <button
                       onClick={() => postponeTask(task.id)}
                       className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-                      title="Postpone to tomorrow"
+                      title={t('common.postponeTomorrow')}
                     >
                       <SkipForward size={14} />
                       {inMenu && <span className="text-xs">{t('common.postpone')}</span>}
@@ -396,7 +396,7 @@ const TimeGrid = () => {
                   <button
                     onClick={() => postponeTask(task.id)}
                     className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-                    title="Postpone to tomorrow"
+                    title={t('common.postponeTomorrow')}
                   >
                     <SkipForward size={14} />
                     {inMenu && <span className="text-xs">{t('common.postpone')}</span>}
@@ -415,7 +415,7 @@ const TimeGrid = () => {
                   <button
                     onClick={() => moveToInbox(task.id)}
                     className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-                    title="Move to Inbox"
+                    title={t('task.moveToInbox')}
                   >
                     <Inbox size={14} />
                     {inMenu && <span className="text-xs">{t('common.toInbox')}</span>}
@@ -472,11 +472,11 @@ const TimeGrid = () => {
                       {isRecurringTask ? (
                         <><Trash2 size={14} className="mr-1" />{t('common.delete')}</>
                       ) : (
-                        <><Inbox size={14} className="mr-1" />Inbox</>
+                        <><Inbox size={14} className="mr-1" />{t('task.inbox')}</>
                       )}
                     </div>
                     <div data-swipe-strip="left" style={{ display: 'none' }} className={`absolute inset-0 ${darkMode ? 'bg-amber-900/80 text-amber-300' : 'bg-amber-100 text-amber-600'} rounded-lg flex items-center justify-end pr-3 text-xs font-medium`}>
-                      Edit<Settings size={14} className="ml-1" />
+                      {t('common.edit')}<Settings size={14} className="ml-1" />
                     </div>
                   </>
                 )}

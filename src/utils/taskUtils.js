@@ -29,56 +29,69 @@ export const extractWikilinks = (title) => {
 export const stripWikilinks = (title) =>
   title.replace(/\[\[[^\]]+\]\]/g, '').replace(/\s+/g, ' ').trim();
 
+export const getAppLocale = () => {
+  const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('i18nextLng') : null;
+  const browser = typeof navigator !== 'undefined' ? navigator.language : null;
+  const locale = stored || browser || 'en-US';
+  return locale.toLowerCase().startsWith('zh') ? 'zh-CN' : locale;
+};
+
+const formatLocaleDate = (date, options) =>
+  new Intl.DateTimeFormat(getAppLocale(), options).format(date);
+
+const formatRangePart = (date, includeYear = false) =>
+  formatLocaleDate(date, { month: 'short', day: 'numeric', ...(includeYear ? { year: 'numeric' } : {}) });
+
 // Human-readable label for a recurrence rule object.
 export const getRecurrenceLabel = (rec) => {
   if (!rec) return 'None';
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const isZh = getAppLocale().toLowerCase().startsWith('zh');
+  const dayNames = isZh ? ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fullDayNames = isZh ? dayNames : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const ordinals = ['', '1st', '2nd', '3rd', '4th', '5th'];
 
-  let label = 'Custom';
-  if (rec.type === 'daily') label = 'Every day';
+  let label = isZh ? '自定义' : 'Custom';
+  if (rec.type === 'daily') label = isZh ? '每天' : 'Every day';
   else if (rec.type === 'weekly') {
     const days = rec.daysOfWeek && rec.daysOfWeek.length > 0
       ? rec.daysOfWeek.sort((a, b) => a - b).map(d => dayNames[d]).join(', ')
       : dayNames[new Date(rec.startDate + 'T12:00:00').getDay()];
-    label = `Weekly on ${days}`;
+    label = isZh ? `每周 ${days}` : `Weekly on ${days}`;
   }
   else if (rec.type === 'biweekly') {
     const days = rec.daysOfWeek && rec.daysOfWeek.length > 0
       ? rec.daysOfWeek.sort((a, b) => a - b).map(d => dayNames[d]).join(', ')
       : dayNames[new Date(rec.startDate + 'T12:00:00').getDay()];
-    label = `Every 2 weeks on ${days}`;
+    label = isZh ? `每 2 周 ${days}` : `Every 2 weeks on ${days}`;
   }
   else if (rec.type === 'monthly') {
     if (rec.monthWeekday) {
-      label = `Monthly on the ${ordinals[rec.monthWeekday.week]} ${fullDayNames[rec.monthWeekday.day]}`;
+      label = isZh
+        ? `每月第 ${rec.monthWeekday.week} 个${fullDayNames[rec.monthWeekday.day]}`
+        : `Monthly on the ${ordinals[rec.monthWeekday.week]} ${fullDayNames[rec.monthWeekday.day]}`;
     } else {
       const d = rec.monthDay || new Date(rec.startDate + 'T12:00:00').getDate();
       const suffix = d === 1 || d === 21 || d === 31 ? 'st' : d === 2 || d === 22 ? 'nd' : d === 3 || d === 23 ? 'rd' : 'th';
-      label = `Monthly on the ${d}${suffix}`;
+      label = isZh ? `每月 ${d} 日` : `Monthly on the ${d}${suffix}`;
     }
   }
   else if (rec.type === 'yearly') {
     const sd = new Date(rec.startDate + 'T12:00:00');
-    label = `Yearly on ${monthNames[sd.getMonth()]} ${sd.getDate()}`;
+    label = isZh ? `每年 ${sd.getMonth() + 1} 月 ${sd.getDate()} 日` : `Yearly on ${formatLocaleDate(sd, { month: 'long', day: 'numeric' })}`;
   }
 
   if (rec.endDate) {
     const ed = new Date(rec.endDate + 'T12:00:00');
-    label += ` until ${monthNames[ed.getMonth()].slice(0, 3)} ${ed.getDate()}`;
+    label += isZh ? `，直到 ${formatRangePart(ed)}` : ` until ${formatRangePart(ed)}`;
   } else if (rec.maxOccurrences) {
-    label += ` (${rec.maxOccurrences} times)`;
+    label += isZh ? `（${rec.maxOccurrences} 次）` : ` (${rec.maxOccurrences} times)`;
   }
   return label;
 };
 
 // Format a Date object as "Monday, Jan 5".
 export const formatDate = (date) => {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+  return formatLocaleDate(date, { weekday: 'long', month: 'short', day: 'numeric' });
 };
 
 // Format an array of Date objects as a human-readable range string.
@@ -86,24 +99,21 @@ export const formatDateRange = (dates) => {
   if (dates.length === 1) {
     return formatDate(dates[0]);
   }
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const first = dates[0];
   const last = dates[dates.length - 1];
 
   if (first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear()) {
-    return `${months[first.getMonth()]} ${first.getDate()} - ${last.getDate()}, ${first.getFullYear()}`;
+    return `${formatRangePart(first)} - ${last.getDate()}, ${first.getFullYear()}`;
   } else if (first.getFullYear() === last.getFullYear()) {
-    return `${months[first.getMonth()]} ${first.getDate()} - ${months[last.getMonth()]} ${last.getDate()}, ${first.getFullYear()}`;
+    return `${formatRangePart(first)} - ${formatRangePart(last)}, ${first.getFullYear()}`;
   } else {
-    return `${months[first.getMonth()]} ${first.getDate()}, ${first.getFullYear()} - ${months[last.getMonth()]} ${last.getDate()}, ${last.getFullYear()}`;
+    return `${formatRangePart(first, true)} - ${formatRangePart(last, true)}`;
   }
 };
 
 // Format a Date object as "Mon, Jan 5" (abbreviated day name).
 export const formatShortDate = (date) => {
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+  return formatLocaleDate(date, { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
 // Format a deadline YYYY-MM-DD string as "Today", "Tomorrow", or "Jan 5".
@@ -114,11 +124,12 @@ export const formatDeadlineDate = (deadline) => {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = dateToString(tomorrow);
 
-  if (deadline === todayStr) return 'Today';
-  if (deadline === tomorrowStr) return 'Tomorrow';
+  const isZh = getAppLocale().toLowerCase().startsWith('zh');
+  if (deadline === todayStr) return isZh ? '今天' : 'Today';
+  if (deadline === tomorrowStr) return isZh ? '明天' : 'Tomorrow';
 
   const date = new Date(deadline + 'T12:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return formatLocaleDate(date, { month: 'short', day: 'numeric' });
 };
 
 // Determine which previously-imported CalDAV task-calendar items have disappeared

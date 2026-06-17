@@ -61,19 +61,19 @@ const DesktopWelcomeModal = () => {
                   <span className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Eye size={16} className="text-blue-500" />
                   </span>
-                  <span><strong className={textPrimary}>GLANCE</strong> — your smart agenda with overdue tasks and today&apos;s schedule</span>
+                  <span>{t('onboarding.glanceSectionDesc')}</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Inbox size={16} className="text-blue-500" />
                   </span>
-                  <span><strong className={textPrimary}>Inbox</strong> — capture tasks to organize later, drag them to the timeline when ready</span>
+                  <span>{t('onboarding.inboxSectionDesc')}</span>
                 </div>
                 <div className="flex items-start gap-3">
                   <span className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Calendar size={16} className="text-blue-500" />
                   </span>
-                  <span><strong className={textPrimary}>Timeline</strong> — your day&apos;s schedule, click or use the <Plus size={12} className="inline mx-0.5" /> button to add tasks</span>
+                  <span>{t('onboarding.timelineSectionDesc')}</span>
                 </div>
               </div>
             </div>
@@ -85,15 +85,15 @@ const DesktopWelcomeModal = () => {
               </div>
               <h2 className={`text-xl font-bold ${textPrimary} mb-4`}>{t('onboarding.interactingTitle')}</h2>
               <ul className={`text-sm ${textSecondary} space-y-2 text-left list-none`}>
-                <li>Click on the <strong className={textPrimary}>timeline</strong> to add a task at that time</li>
-                <li>Click on the <strong className={textPrimary}>date header</strong> to add an all-day task</li>
-                <li>Drag tasks from Inbox to timeline to <strong className={textPrimary}>schedule</strong> them</li>
-                <li>Drag the bottom edge of a task to <strong className={textPrimary}>resize</strong> its duration</li>
-                <li>Set tasks to <strong className={textPrimary}>repeat</strong> daily, weekly, monthly, or yearly</li>
-                <li>Double-click a task title to <strong className={textPrimary}>edit</strong> it or add <strong className={textPrimary}>tags</strong></li>
-                <li>Expand a task to add <strong className={textPrimary}>notes</strong> <FileText size={14} className="inline mx-0.5" /> and <strong className={textPrimary}>subtasks</strong> for extra detail</li>
-                <li>Click <NotebookPen size={14} className="inline mx-0.5" /> on a date header to write <strong className={textPrimary}>daily notes</strong></li>
-                <li>Use <strong className={textPrimary}>Focus Mode</strong> <Target size={14} className="inline mx-0.5" /> for distraction-free deep work with a Pomodoro timer</li>
+                <li>{t('onboarding.interactingClickTimeline')}</li>
+                <li>{t('onboarding.interactingClickDateHeader')}</li>
+                <li>{t('onboarding.interactingDragFromInbox')}</li>
+                <li>{t('onboarding.interactingDragResize')}</li>
+                <li>{t('onboarding.interactingRepeat')}</li>
+                <li>{t('onboarding.interactingEdit')}</li>
+                <li>{t('onboarding.interactingNotes')} <FileText size={14} className="inline mx-0.5" /></li>
+                <li><NotebookPen size={14} className="inline mx-0.5" /> {t('onboarding.interactingDailyNotes')}</li>
+                <li>{t('onboarding.interactingFocusMode')} <Target size={14} className="inline mx-0.5" /></li>
               </ul>
             </div>
           )}

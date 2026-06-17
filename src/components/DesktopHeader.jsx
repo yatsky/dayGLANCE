@@ -3,10 +3,11 @@ import {
   Bell, BookOpen, ChevronLeft, ChevronRight, Cloud,
   HelpCircle, Moon, RefreshCw, Save, Settings, Sun,
 } from 'lucide-react';
-import { dateToString, formatDateRange } from '../utils/taskUtils.js';
+import { dateToString, formatDateRange, getAppLocale } from '../utils/taskUtils.js';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { useTranslation } from 'react-i18next';
 
 const DesktopHeader = () => {
   const {
@@ -36,6 +37,7 @@ const DesktopHeader = () => {
     cloudSyncUpload, syncAll, performObsidianSync,
   } = useSyncCtx();
   const { setShowRemindersSettings, activeReminders } = useFeaturesCtx();
+  const { t } = useTranslation();
 
   return (
       <div className={`${cardBg} border-b ${borderClass} px-4 py-2 flex items-center justify-between relative`} style={{ height: '80px' }}>
@@ -97,7 +99,7 @@ const DesktopHeader = () => {
         <div className="absolute inset-0 flex items-center justify-center max-[950px]:pr-36 pointer-events-none">
         <div className="pointer-events-auto">
           <div className="flex items-center gap-1 relative">
-            <button onClick={() => changeDate(-1)} className={`p-1.5 rounded-lg ${hoverBg} transition-colors`} aria-label="Previous day">
+            <button onClick={() => changeDate(-1)} className={`p-1.5 rounded-lg ${hoverBg} transition-colors`} aria-label={t('common.previousDay')}>
               <ChevronLeft size={20} className={textSecondary} />
             </button>
             <button
@@ -113,26 +115,26 @@ const DesktopHeader = () => {
                 ? formatDateRange(weekViewDates)
                 : formatDateRange(visibleDates)}
             </button>
-            <button onClick={() => changeDate(1)} className={`p-1.5 rounded-lg ${hoverBg} transition-colors`} aria-label="Next day">
+            <button onClick={() => changeDate(1)} className={`p-1.5 rounded-lg ${hoverBg} transition-colors`} aria-label={t('common.nextDay')}>
               <ChevronRight size={20} className={textSecondary} />
             </button>
             <button
               onClick={goToToday}
               className={`ml-1 px-3 py-1 text-xs bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors${dateToString(selectedDate) === dateToString(new Date()) ? ' invisible' : ''}`}
             >
-              Today
+              {t('common.today')}
             </button>
             {/* Month View Popup */}
             {showMonthView && (
               <div className={`month-view-container absolute top-full left-1/2 -translate-x-1/2 mt-2 ${cardBg} rounded-lg shadow-xl border ${borderClass} p-4 z-50 min-w-[300px]`}>
                 <div className="flex items-center justify-between mb-3">
-                  <button type="button" onClick={(e) => { e.stopPropagation(); changeViewedMonth(-1); }} className={`p-1 rounded ${hoverBg}`}>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); changeViewedMonth(-1); }} className={`p-1 rounded ${hoverBg}`} aria-label={t('common.previousMonth')}>
                     <ChevronLeft size={18} className={textSecondary} />
                   </button>
                   <div className={`font-bold ${textPrimary}`}>
-                    {viewedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {viewedMonth.toLocaleDateString(getAppLocale(), { month: 'long', year: 'numeric' })}
                   </div>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); changeViewedMonth(1); }} className={`p-1 rounded ${hoverBg}`}>
+                  <button type="button" onClick={(e) => { e.stopPropagation(); changeViewedMonth(1); }} className={`p-1 rounded ${hoverBg}`} aria-label={t('common.nextMonth')}>
                     <ChevronRight size={18} className={textSecondary} />
                   </button>
                 </div>
@@ -185,7 +187,7 @@ const DesktopHeader = () => {
             }}
             disabled={isSyncing}
             className={`relative p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg} ${isSyncing ? 'opacity-70 cursor-not-allowed' : ''}`}
-            title={isSyncing ? "Syncing..." : (calSyncConfigured ? `Sync calendars${calSyncLastSynced ? ` — last: ${new Date(calSyncLastSynced).toLocaleTimeString()}` : ''}` : "Configure calendar sync")}
+            title={isSyncing ? t('common.syncing') : (calSyncConfigured ? `${t('common.calendarSync')}${calSyncLastSynced ? ` - ${t('common.lastSynced')}: ${new Date(calSyncLastSynced).toLocaleTimeString()}` : ''}` : t('common.configureCalendarSync'))}
           >
             <RefreshCw size={18} className={`${textSecondary} ${isSyncing ? 'animate-spin' : ''}`} />
             {calSyncConfigured && (
@@ -207,8 +209,8 @@ const DesktopHeader = () => {
             }}
             className={`relative p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg}`}
             title={cloudSyncConfig?.enabled
-              ? (cloudSyncStatus === 'uploading' || cloudSyncStatus === 'downloading' ? 'Syncing...' : `Cloud sync — last: ${cloudSyncLastSynced ? new Date(cloudSyncLastSynced).toLocaleTimeString() : 'never'}`)
-              : 'Set up cloud sync'}
+              ? (cloudSyncStatus === 'uploading' || cloudSyncStatus === 'downloading' ? t('common.syncing') : `${t('common.cloudSync')} - ${t('common.lastSynced')}: ${cloudSyncLastSynced ? new Date(cloudSyncLastSynced).toLocaleTimeString() : t('common.never')}`)
+              : t('common.setupCloudSync')}
           >
             <Cloud size={18} className={`${textSecondary} ${(cloudSyncStatus === 'uploading' || cloudSyncStatus === 'downloading') ? 'animate-pulse' : ''}`} />
             {cloudSyncConfig?.enabled && (
@@ -224,7 +226,7 @@ const DesktopHeader = () => {
               onClick={() => performObsidianSync()}
               disabled={obsidianSyncStatus === 'syncing'}
               className={`relative p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg} ${obsidianSyncStatus === 'syncing' ? 'opacity-70 cursor-not-allowed' : ''}`}
-              title={obsidianSyncStatus === 'syncing' ? 'Syncing...' : obsidianSyncStatus === 'error' && obsidianSyncError ? `Obsidian sync error: ${obsidianSyncError}` : `Obsidian sync — last: ${obsidianLastSynced ? new Date(obsidianLastSynced).toLocaleTimeString() : 'never'}`}
+              title={obsidianSyncStatus === 'syncing' ? t('common.syncing') : obsidianSyncStatus === 'error' && obsidianSyncError ? `Obsidian sync error: ${obsidianSyncError}` : `Obsidian sync - ${t('common.lastSynced')}: ${obsidianLastSynced ? new Date(obsidianLastSynced).toLocaleTimeString() : t('common.never')}`}
             >
               <BookOpen size={18} className={`${textSecondary} ${obsidianSyncStatus === 'syncing' ? 'animate-pulse' : ''}`} />
               <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 ${darkMode ? 'border-gray-800' : 'border-white'} ${
@@ -237,7 +239,7 @@ const DesktopHeader = () => {
           <button
             onClick={() => setShowSettings(true)}
             className={`relative p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg}`}
-            title="Settings"
+            title={t('common.settings')}
           >
             <Settings size={18} className={textSecondary} />
             {updateInfo && (
@@ -247,7 +249,7 @@ const DesktopHeader = () => {
           <button
             onClick={() => setShowRemindersSettings(true)}
             className={`relative p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg}`}
-            title="Reminders"
+            title={t('common.reminders')}
           >
             <Bell size={18} className={textSecondary} />
             {activeReminders.length > 0 && (
@@ -257,21 +259,21 @@ const DesktopHeader = () => {
           <button
             onClick={() => setDarkMode(!darkMode)}
             className={`p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg}`}
-            title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+            title={darkMode ? t('common.switchLightMode') : t('common.switchDarkMode')}
           >
             {darkMode ? <Sun size={18} className={textSecondary} /> : <Moon size={18} className={textSecondary} />}
           </button>
           <button
             onClick={() => setShowBackupMenu(true)}
             className={`p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg}`}
-            title="Backup or restore data"
+            title={t('common.backupRestoreData')}
           >
             <Save size={18} className={textSecondary} />
           </button>
           <button
             onClick={() => setShowHelpModal(true)}
             className={`p-2 ${darkMode ? 'bg-gray-700' : 'bg-stone-200'} rounded-lg ${hoverBg}`}
-            title="Help & Feedback"
+            title={t('common.helpFeedback')}
           >
             <HelpCircle size={18} className={textSecondary} />
           </button>

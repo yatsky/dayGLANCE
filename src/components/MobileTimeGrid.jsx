@@ -12,6 +12,7 @@ import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { getHGBarsForDate } from '../hooks/useHyperGlance.js';
 import HyperGlanceBar from './HyperGlanceBar.jsx';
+import { useTranslation } from 'react-i18next';
 
 const MobileTimeGrid = () => {
   const {
@@ -61,6 +62,7 @@ const MobileTimeGrid = () => {
     setFrameContextMenu,
     aiConfig, aiSubtasksLoadingForTask, generateAISubtasks,
   } = useFeaturesCtx();
+  const { t } = useTranslation();
 
   return (
 <div ref={timeGridRef} className="relative">
@@ -363,7 +365,7 @@ const MobileTimeGrid = () => {
                   <button
                     onClick={(e) => { e.stopPropagation(); postponeTask(task.id); }}
                     className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-                    title="Postpone to tomorrow"
+                    title={t('common.postponeTomorrow')}
                   >
                     <SkipForward size={14} />
                     {inMenu && <span className="text-xs">Postpone</span>}
@@ -407,14 +409,14 @@ const MobileTimeGrid = () => {
                     {!task.imported && (
                       <div data-swipe-strip="right" style={{ display: 'none' }} className={`absolute inset-0 ${typeof task.id === 'string' && task.id.startsWith('recurring-') ? (darkMode ? 'bg-red-900/80 text-red-300' : 'bg-red-100 text-red-600') : (darkMode ? 'bg-blue-900/80 text-blue-300' : 'bg-blue-100 text-blue-600')} rounded-lg flex items-center pl-3 text-xs font-medium`}>
                         {typeof task.id === 'string' && task.id.startsWith('recurring-') ? (
-                          <><Trash2 size={14} className="mr-1" />Delete</>
+                          <><Trash2 size={14} className="mr-1" />{t('common.delete')}</>
                         ) : (
-                          <><Inbox size={14} className="mr-1" />Inbox</>
+                          <><Inbox size={14} className="mr-1" />{t('task.inbox')}</>
                         )}
                       </div>
                     )}
                     <div data-swipe-strip="left" style={{ display: 'none' }} className={`absolute inset-0 ${darkMode ? 'bg-amber-900/80 text-amber-300' : 'bg-amber-100 text-amber-600'} rounded-lg flex items-center justify-end pr-3 text-xs font-medium`}>
-                      Edit<Settings size={14} className="ml-1" />
+                      {t('common.edit')}<Settings size={14} className="ml-1" />
                     </div>
                   </>
                 )}

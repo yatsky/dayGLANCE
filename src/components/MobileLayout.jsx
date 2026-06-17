@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { isNativeAndroid, isNativeApp, nativeUpdateEvent } from '../native.js';
 import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySubtasks, isObsidianNoteOnlyTask, renderFormattedText } from '../utils/textFormatting.jsx';
-import { dateToString, extractTags, extractWikilinks, formatDate, formatDateRange, formatDeadlineDate, formatShortDate } from '../utils/taskUtils.js';
+import { dateToString, extractTags, extractWikilinks, formatDate, formatDateRange, formatDeadlineDate, formatShortDate, getAppLocale } from '../utils/taskUtils.js';
 import { HABIT_COLORS, HABIT_ICONS } from '../constants/habits.js';
 import { cloudSyncProviders } from '../utils/cloudSyncProviders.js';
 import { PROVIDER_MODELS, PROVIDER_LABELS } from '../ai.js';
@@ -510,18 +510,18 @@ const MobileLayout = () => {
                         type="button"
                         onClick={(e) => { e.stopPropagation(); changeViewedMonth(-1); }}
                         className={`p-1 rounded ${hoverBg} transition-colors`}
-                        aria-label="Previous month"
+                        aria-label={t('common.previousMonth')}
                       >
                         <ChevronLeft size={18} className={textSecondary} />
                       </button>
                       <div className={`font-bold ${textPrimary}`}>
-                        {viewedMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        {viewedMonth.toLocaleDateString(getAppLocale(), { month: 'long', year: 'numeric' })}
                       </div>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); changeViewedMonth(1); }}
                         className={`p-1 rounded ${hoverBg} transition-colors`}
-                        aria-label="Next month"
+                        aria-label={t('common.nextMonth')}
                       >
                         <ChevronRight size={18} className={textSecondary} />
                       </button>
@@ -573,7 +573,7 @@ const MobileLayout = () => {
               <div className={`${cardBg} border-b ${borderClass} sticky top-0 z-30`} data-inbox-container>
                 <div className="px-4 pt-3 pb-1">
                   <h2 className={`font-bold text-lg ${textPrimary} flex items-center gap-2`}>
-                    <Inbox size={20} /> Inbox
+                    <Inbox size={20} /> {t('task.inbox')}
                   </h2>
                 </div>
                 <div className="flex items-center justify-between px-4 py-2">
@@ -581,7 +581,7 @@ const MobileLayout = () => {
                     <button
                       onClick={openNewInboxTask}
                       className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-blue-600 text-white rounded-lg active:bg-blue-700 transition-colors"
-                      title="New Inbox Task"
+                      title={t('task.newInbox')}
                     >
                       <Plus size={14} strokeWidth={3} />
                       <span className="text-xs font-medium">{t('common.newTask')}</span>
@@ -879,14 +879,14 @@ const MobileLayout = () => {
                       </div>
                       <p className={`text-base font-semibold ${textPrimary} mb-1`}>
                         {unscheduledTasks.filter(t => !t.isExample).length === 0
-                          ? "Inbox zero"
+                          ? t('app.inboxZero')
                           : unscheduledTasks.filter(t => !t.isExample).length === 0
                             ? "All overdue"
-                            : "No matches"}
+                            : t('app.noMatches')}
                       </p>
                       <p className={`text-sm ${textSecondary} text-center mb-5`}>
                         {unscheduledTasks.filter(t => !t.isExample).length === 0
-                          ? "Add tasks here to schedule later"
+                          ? t('app.addTasksToScheduleLater')
                           : unscheduledTasks.filter(t => !t.isExample).length === 0
                             ? "All inbox tasks have overdue deadlines"
                             : "No tasks match the current filter"}
@@ -910,7 +910,7 @@ const MobileLayout = () => {
                             <Calendar size={14} className="mr-1" />Schedule
                           </div>
                           <div data-swipe-strip="left" style={{ display: 'none' }} className={`absolute inset-0 ${darkMode ? 'bg-amber-900/80 text-amber-300' : 'bg-amber-100 text-amber-600'} rounded-lg flex items-center justify-end pr-3 text-xs font-medium`}>
-                            Edit<Settings size={14} className="ml-1" />
+                            {t('common.edit')}<Settings size={14} className="ml-1" />
                           </div>
                         <div
                           data-ctx-menu
@@ -1019,7 +1019,7 @@ const MobileLayout = () => {
                                         setShowDeadlinePicker(showDeadlinePicker === task.id ? null : task.id);
                                       }}
                                       className={`hover:bg-white/20 rounded p-1 transition-colors ${task.deadline ? 'bg-white/20' : 'opacity-40'}`}
-                                      title={task.deadline ? `Deadline: ${formatDeadlineDate(task.deadline)}` : 'Set deadline'}
+                                      title={task.deadline ? t('common.deadlineLabel', { date: formatDeadlineDate(task.deadline) }) : t('task.deadline')}
                                     >
                                       <Calendar size={14} />
                                     </button>
@@ -1147,7 +1147,7 @@ const MobileLayout = () => {
                 onClick={() => setDailyNotesModalDate(getTodayStr())}
                 className={`fixed left-4 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors ${darkMode ? 'bg-gray-700 text-gray-300 active:bg-gray-600' : 'bg-stone-200 text-stone-600 active:bg-stone-300'}`}
                 style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
-                title="Today's daily note"
+                title={t('common.dailyNoteToday')}
               >
                 {obsidianConfig?.enabled ? <BookOpen size={22} /> : <NotebookPen size={22} />}
               </button>

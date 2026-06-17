@@ -49,11 +49,11 @@ const MobileWelcomeModal = () => {
             </div>
             <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>{t('onboarding.mobileGlance')}</h2>
             <ul className={`${textSecondary} text-sm text-center space-y-2 max-w-xs mx-auto list-none`}>
-              <li>Your <strong className={textPrimary}>smart agenda</strong> — see <strong className={textPrimary}>overdue</strong>, <strong className={textPrimary}>in-progress</strong>, and <strong className={textPrimary}>upcoming</strong> tasks in real time</li>
-              <li>Track your progress with <strong className={textPrimary}>daily</strong> and <strong className={textPrimary}>all-time summaries</strong> <BarChart3 size={14} className="inline mx-0.5" /></li>
-              <li><strong className={textPrimary}>Search</strong> <Search size={14} className="inline mx-0.5" /> across all your tasks and events, and filter your day by <strong className={textPrimary}>#tags</strong> <Filter size={14} className="inline mx-0.5" /></li>
-              <li>Deleted something by mistake? Restore it from the <strong className={textPrimary}>Recycle Bin</strong> <Trash2 size={14} className="inline mx-0.5" /></li>
-              <li>Tap <strong className={textPrimary}>Focus Mode</strong> <Target size={14} className="inline mx-0.5" /> on an in-progress task for a distraction-free deep work session with a Pomodoro timer</li>
+              <li>{t('onboarding.mobileGlanceSmartAgendaFull')}</li>
+              <li>{t('onboarding.mobileGlanceSummariesFull')} <BarChart3 size={14} className="inline mx-0.5" /></li>
+              <li>{t('onboarding.mobileGlanceSearchFull')} <Search size={14} className="inline mx-0.5" /> <Filter size={14} className="inline mx-0.5" /></li>
+              <li>{t('onboarding.mobileGlanceBinFull')} <Trash2 size={14} className="inline mx-0.5" /></li>
+              <li>{t('onboarding.mobileGlanceFocusFull')} <Target size={14} className="inline mx-0.5" /></li>
             </ul>
           </div>
         )}
@@ -64,11 +64,11 @@ const MobileWelcomeModal = () => {
             </div>
             <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>{t('onboarding.mobileTimelineTitle')}</h2>
             <ul className={`${textSecondary} text-sm text-center space-y-2 max-w-xs mx-auto list-none`}>
-              <li>Swipe a task <strong className={textPrimary}>right</strong> to move it to inbox</li>
-              <li>Swipe a task <strong className={textPrimary}>left</strong> to edit it</li>
-              <li><strong className={textPrimary}>Long-press</strong> and drag to reschedule a task</li>
-              <li>Expand tasks to add <strong className={textPrimary}>notes</strong> and <strong className={textPrimary}>subtasks</strong></li>
-              <li>Tap <NotebookPen size={14} className="inline mx-0.5" /> on a date to write <strong className={textPrimary}>daily notes</strong></li>
+              <li>{t('onboarding.mobileTimelineSwipeRightFull')}</li>
+              <li>{t('onboarding.mobileTimelineSwipeLeftFull')}</li>
+              <li>{t('onboarding.mobileTimelineLongPressFull')}</li>
+              <li>{t('onboarding.mobileTimelineExpandFull')}</li>
+              <li><NotebookPen size={14} className="inline mx-0.5" /> {t('onboarding.mobileTimelineDailyNotesFull')}</li>
             </ul>
           </div>
         )}
@@ -79,10 +79,10 @@ const MobileWelcomeModal = () => {
             </div>
             <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>{t('onboarding.mobileInboxTitle')}</h2>
             <ul className={`${textSecondary} text-sm text-center space-y-2 max-w-xs mx-auto list-none`}>
-              <li>Swipe a task <strong className={textPrimary}>right</strong> to schedule it</li>
-              <li>Swipe a task <strong className={textPrimary}>left</strong> to edit it</li>
-              <li>Tap the <strong className={textPrimary}>+</strong> button to add a new inbox task</li>
-              <li>Use the <strong className={textPrimary}>priority filter</strong> to focus on what matters</li>
+              <li>{t('onboarding.mobileInboxSwipeRightFull')}</li>
+              <li>{t('onboarding.mobileInboxSwipeLeftFull')}</li>
+              <li>{t('onboarding.mobileInboxAddFull')}</li>
+              <li>{t('onboarding.mobileInboxFilterFull')}</li>
             </ul>
           </div>
         )}
@@ -98,19 +98,19 @@ const MobileWelcomeModal = () => {
                 <span className="w-8 h-8 bg-teal-100 dark:bg-teal-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                   <RefreshCw size={16} className="text-teal-500" />
                 </span>
-                <span><strong className={textPrimary}>Routines</strong> — daily task templates for each day of the week</span>
+                <span>{t('onboarding.routinesFeatureFull')}</span>
               </div>
               <div className="flex items-start gap-3">
                 <span className="w-8 h-8 bg-rose-100 dark:bg-rose-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Target size={16} className="text-rose-500" />
                 </span>
-                <span><strong className={textPrimary}>Habits</strong> — track daily habits with visual progress rings and history</span>
+                <span>{t('onboarding.habitsFeatureFull')}</span>
               </div>
               <div className="flex items-start gap-3">
                 <span className="w-8 h-8 bg-amber-100 dark:bg-amber-900 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Mic size={16} className="text-amber-500" />
                 </span>
-                <span><strong className={textPrimary}>AI Features</strong> — voice input, morning briefings, and smart task parsing (BYO API key)</span>
+                <span>{t('onboarding.aiFeaturesFull')}</span>
               </div>
             </div>
           </div>
@@ -122,10 +122,10 @@ const MobileWelcomeModal = () => {
             </div>
             <h2 className={`text-xl font-bold ${textPrimary} mb-2`}>{t('onboarding.mobileSettingsTitle')}</h2>
             <ul className={`${textSecondary} text-sm text-center space-y-2 max-w-xs mx-auto list-none`}>
-              <li><strong className={textPrimary}>Quick toggles</strong> for common settings</li>
-              <li><strong className={textPrimary}>Sync</strong> your calendars</li>
-              <li>Set up <strong className={textPrimary}>cloud sync</strong> between devices</li>
-              <li><strong className={textPrimary}>Backup</strong> and restore your data</li>
+              <li>{t('onboarding.mobileSettingsTogglesFull')}</li>
+              <li>{t('onboarding.mobileSettingsSyncFull')}</li>
+              <li>{t('onboarding.mobileSettingsCloudFull')}</li>
+              <li>{t('onboarding.mobileSettingsBackupFull')}</li>
             </ul>
           </div>
         )}

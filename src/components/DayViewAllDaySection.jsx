@@ -12,6 +12,7 @@ import { renderTitle, getLinkUrl, hasNotesOrSubtasks, isLinkOnlyTask, hasOnlySub
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
+import { useTranslation } from 'react-i18next';
 
 const CHIP_ROW_H = 40; // approximate AllDayTaskCard height in px
 const ROW_GAP = 4;     // gap-1 = 4px
@@ -37,6 +38,7 @@ const GroupChips = ({ tasks, deadlineTasks = [], date, dateStr, darkMode, border
   } = useDayPlannerCtx();
   const { aiConfig, aiSubtasksLoadingForTask, generateAISubtasks } = useFeaturesCtx();
   const { loadWikiNote, saveWikiNote, openInObsidian } = useSyncCtx();
+  const { t } = useTranslation();
 
   const ghostRef = useRef(null);
   const buttonRef = useRef(null);
@@ -113,10 +115,10 @@ const GroupChips = ({ tasks, deadlineTasks = [], date, dateStr, darkMode, border
       {isTablet && (
         <>
           <div data-swipe-strip="right" style={{ display: 'none', left: '8px' }} className={`absolute inset-0 ${darkMode ? 'bg-blue-900/80 text-blue-300' : 'bg-blue-100 text-blue-600'} rounded-lg flex items-center pl-3 text-xs font-medium`}>
-            <Inbox size={14} className="mr-1" />Inbox
+            <Inbox size={14} className="mr-1" />{t('task.inbox')}
           </div>
           <div data-swipe-strip="left" style={{ display: 'none', left: '8px' }} className={`absolute inset-0 ${darkMode ? 'bg-amber-900/80 text-amber-300' : 'bg-amber-100 text-amber-600'} rounded-lg flex items-center justify-end pr-3 text-xs font-medium`}>
-            Edit<Settings size={14} className="ml-1" />
+            {t('common.edit')}<Settings size={14} className="ml-1" />
           </div>
         </>
       )}
@@ -180,18 +182,18 @@ const GroupChips = ({ tasks, deadlineTasks = [], date, dateStr, darkMode, border
                     onMouseLeave={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
                     onClick={(e) => { e.stopPropagation(); if (isLinkOnlyTask(task)) { if (!longPressTriggeredRef.current) window.open(getLinkUrl(task), '_blank', 'noopener,noreferrer'); longPressTriggeredRef.current = false; } else { setExpandedNotesTaskId(prev => prev === task.id ? null : task.id); } }}
                     className={`notes-toggle-button hover:bg-white/20 rounded p-1 transition-colors ${hasNotesOrSubtasks(task) || extractWikilinks(task.title).length > 0 ? '' : 'opacity-40'}`}
-                    title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (hold to edit)` : 'Notes & subtasks'}
+                    title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (${t('common.holdToEdit')})` : t('common.notesSubtasks')}
                   >
                     {isLinkOnlyTask(task) ? <ExternalLink size={14} /> : hasOnlySubtasks(task) ? <CheckSquare size={14} /> : isObsidianNoteOnlyTask(task) ? <BookOpen size={14} /> : <FileText size={14} />}
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); postponeDeadlineTask(task.id); }} className="hover:bg-white/20 rounded p-1 transition-colors" title="Postpone to tomorrow">
+                  <button onClick={(e) => { e.stopPropagation(); postponeDeadlineTask(task.id); }} className="hover:bg-white/20 rounded p-1 transition-colors" title={t('common.postponeTomorrow')}>
                     <SkipForward size={14} />
                   </button>
                   <div className="deadline-picker-container relative">
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowDeadlinePicker(showDeadlinePicker === task.id ? null : task.id); }}
                       className="hover:bg-white/20 rounded p-1 transition-colors bg-white/20"
-                      title={`Deadline: ${formatDeadlineDate(task.deadline)}`}
+                      title={t('common.deadlineLabel', { date: formatDeadlineDate(task.deadline) })}
                     >
                       <Calendar size={14} />
                     </button>

@@ -399,7 +399,7 @@ const CalendarHeader = () => {
               className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors
                 ${darkMode ? 'bg-blue-700/60 text-blue-200 hover:bg-blue-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
             >
-              {allDayTasks.length} all day
+              {t(allDayTasks.length === 1 ? 'common.allDayCount' : 'common.allDayCount_plural', { count: allDayTasks.length })}
             </button>
           )}
           {weekDeadlineTasks.length > 0 && (
@@ -417,7 +417,7 @@ const CalendarHeader = () => {
               className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors
                 ${darkMode ? 'bg-red-800/60 text-red-200 hover:bg-red-800' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
             >
-              {weekDeadlineTasks.length} deadline{weekDeadlineTasks.length > 1 ? 's' : ''}
+              {t(weekDeadlineTasks.length === 1 ? 'common.deadlineCount' : 'common.deadlineCount_plural', { count: weekDeadlineTasks.length })}
             </button>
           )}
           {routinesEnabled && isDateToday && todayRoutines.filter(r => r.isAllDay).map(routine => (
@@ -502,11 +502,11 @@ const CalendarHeader = () => {
                   >
                     {isLinkOnlyTask(task) ? <ExternalLink size={14} /> : hasOnlySubtasks(task) ? <CheckSquare size={14} /> : isObsidianNoteOnlyTask(task) ? <BookOpen size={14} /> : <FileText size={14} />}
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); postponeDeadlineTask(task.id); }} className="hover:bg-white/20 rounded p-1 transition-colors" title="Postpone to tomorrow">
+                  <button onClick={(e) => { e.stopPropagation(); postponeDeadlineTask(task.id); }} className="hover:bg-white/20 rounded p-1 transition-colors" title={t('common.postponeTomorrow')}>
                     <SkipForward size={14} />
                   </button>
                   <div className="deadline-picker-container relative">
-                    <button onClick={(e) => { e.stopPropagation(); setShowDeadlinePicker(showDeadlinePicker === task.id ? null : task.id); }} className="hover:bg-white/20 rounded p-1 transition-colors bg-white/20" title={`Deadline: ${formatDeadlineDate(task.deadline)}`}>
+                    <button onClick={(e) => { e.stopPropagation(); setShowDeadlinePicker(showDeadlinePicker === task.id ? null : task.id); }} className="hover:bg-white/20 rounded p-1 transition-colors bg-white/20" title={t('common.deadlineLabel', { date: formatDeadlineDate(task.deadline) })}>
                       <Calendar size={14} />
                     </button>
                     {showDeadlinePicker === task.id && <DeadlinePickerPopover taskId={task.id} currentDeadline={task.deadline} onClose={() => setShowDeadlinePicker(null)} />}
@@ -614,11 +614,11 @@ const CalendarHeader = () => {
                       {isRecurringAllDay ? (
                         <><Trash2 size={14} className="mr-1" />{t('common.delete')}</>
                       ) : (
-                        <><Inbox size={14} className="mr-1" />Inbox</>
+                        <><Inbox size={14} className="mr-1" />{t('task.inbox')}</>
                       )}
                     </div>
                     <div data-swipe-strip="left" style={{ display: 'none', left: '8px' }} className={`absolute inset-0 ${darkMode ? 'bg-amber-900/80 text-amber-300' : 'bg-amber-100 text-amber-600'} rounded-lg flex items-center justify-end pr-3 text-xs font-medium`}>
-                      Edit<Settings size={14} className="ml-1" />
+                      {t('common.edit')}<Settings size={14} className="ml-1" />
                     </div>
                   </>
                 )}
@@ -658,10 +658,10 @@ const CalendarHeader = () => {
               {isTablet && (
                 <>
                   <div data-swipe-strip="right" style={{ display: 'none', left: '8px' }} className={`absolute inset-0 ${darkMode ? 'bg-blue-900/80 text-blue-300' : 'bg-blue-100 text-blue-600'} rounded-lg flex items-center pl-3 text-xs font-medium`}>
-                    <Inbox size={14} className="mr-1" />Inbox
+                    <Inbox size={14} className="mr-1" />{t('task.inbox')}
                   </div>
                   <div data-swipe-strip="left" style={{ display: 'none', left: '8px' }} className={`absolute inset-0 ${darkMode ? 'bg-amber-900/80 text-amber-300' : 'bg-amber-100 text-amber-600'} rounded-lg flex items-center justify-end pr-3 text-xs font-medium`}>
-                    Edit<Settings size={14} className="ml-1" />
+                    {t('common.edit')}<Settings size={14} className="ml-1" />
                   </div>
                 </>
               )}
@@ -767,7 +767,7 @@ const CalendarHeader = () => {
                     <button
                       onClick={(e) => { e.stopPropagation(); postponeDeadlineTask(task.id); }}
                       className="hover:bg-white/20 rounded p-1 transition-colors"
-                      title="Postpone to tomorrow"
+                      title={t('common.postponeTomorrow')}
                     >
                       <SkipForward size={14} />
                     </button>
@@ -778,7 +778,7 @@ const CalendarHeader = () => {
                           setShowDeadlinePicker(showDeadlinePicker === task.id ? null : task.id);
                         }}
                         className="hover:bg-white/20 rounded p-1 transition-colors bg-white/20"
-                        title={`Deadline: ${formatDeadlineDate(task.deadline)}`}
+                        title={t('common.deadlineLabel', { date: formatDeadlineDate(task.deadline) })}
                       >
                         <Calendar size={14} />
                       </button>

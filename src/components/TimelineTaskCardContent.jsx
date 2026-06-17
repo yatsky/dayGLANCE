@@ -14,6 +14,7 @@ import NotesSubtasksPanel from './NotesSubtasksPanel.jsx';
 import { useDayPlannerCtx } from '../context/DayPlannerContext.jsx';
 import { useSyncCtx } from '../context/SyncContext.jsx';
 import { useFeaturesCtx } from '../context/FeaturesContext.jsx';
+import { useTranslation } from 'react-i18next';
 
 const TimelineTaskCardContent = ({ task, height, isNarrowWidth, flipNotesPanel }) => {
   const {
@@ -47,6 +48,7 @@ const TimelineTaskCardContent = ({ task, height, isNarrowWidth, flipNotesPanel }
     aiConfig, aiSubtasksLoadingForTask, generateAISubtasks,
     multiUserEnabled, users,
   } = useFeaturesCtx();
+  const { t } = useTranslation();
 
   const isImported = task.imported;
   const isCalendarEvent = isImported && !task.isTaskCalendar;
@@ -78,10 +80,10 @@ const TimelineTaskCardContent = ({ task, height, isNarrowWidth, flipNotesPanel }
         }
       }}
       className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''} ${hasNotesOrSubtasks(task) || extractWikilinks(task.title).length > 0 ? '' : 'opacity-40'}`}
-      title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (hold to edit)` : "Notes & subtasks"}
+      title={isLinkOnlyTask(task) ? `${getLinkUrl(task)} (${t('common.holdToEdit')})` : t('common.notesSubtasks')}
     >
       {isLinkOnlyTask(task) ? <ExternalLink size={14} /> : hasOnlySubtasks(task) ? <CheckSquare size={14} /> : isObsidianNoteOnlyTask(task) ? <BookOpen size={14} /> : <FileText size={14} />}
-      {inMenu && <span className="text-xs">{isLinkOnlyTask(task) ? 'Open Link' : 'Notes'}</span>}
+      {inMenu && <span className="text-xs">{isLinkOnlyTask(task) ? 'Open Link' : t('task.notes')}</span>}
     </button>
   );
 
@@ -94,30 +96,30 @@ const TimelineTaskCardContent = ({ task, height, isNarrowWidth, flipNotesPanel }
           <button
             onClick={() => postponeTask(task.id)}
             className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-            title="Postpone to tomorrow"
+            title={t('common.postponeTomorrow')}
           >
             <SkipForward size={14} />
-            {inMenu && <span className="text-xs">Postpone</span>}
+            {inMenu && <span className="text-xs">{t('common.postpone')}</span>}
           </button>
           )}
           {!isTablet && (
           <button
             onClick={() => openMobileEditTask(task, false)}
             className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-            title="Edit"
+            title={t('common.edit')}
           >
             <Pencil size={14} />
-            {inMenu && <span className="text-xs">Edit</span>}
+            {inMenu && <span className="text-xs">{t('common.edit')}</span>}
           </button>
           )}
           {!isTablet && (
           <button
             onClick={() => moveToRecycleBin(task.id)}
             className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-            title="Delete"
+            title={t('common.delete')}
           >
             <Trash2 size={14} />
-            {inMenu && <span className="text-xs">Delete</span>}
+            {inMenu && <span className="text-xs">{t('common.delete')}</span>}
           </button>
           )}
         </>
@@ -129,29 +131,29 @@ const TimelineTaskCardContent = ({ task, height, isNarrowWidth, flipNotesPanel }
         <button
           onClick={() => postponeTask(task.id)}
           className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-          title="Postpone to tomorrow"
+          title={t('common.postponeTomorrow')}
         >
           <SkipForward size={14} />
-          {inMenu && <span className="text-xs">Postpone</span>}
+          {inMenu && <span className="text-xs">{t('common.postpone')}</span>}
         </button>
         {!isTablet && (
         <button
           onClick={() => openMobileEditTask(task, false)}
           className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-          title="Edit"
+          title={t('common.edit')}
         >
           <Pencil size={14} />
-          {inMenu && <span className="text-xs">Edit</span>}
+          {inMenu && <span className="text-xs">{t('common.edit')}</span>}
         </button>
         )}
         {!isTablet && (
         <button
           onClick={() => moveToInbox(task.id)}
           className={`hover:bg-white/20 rounded p-1 transition-colors ${inMenu ? 'flex items-center gap-2 w-full' : ''}`}
-          title="Move to Inbox"
+          title={t('task.moveToInbox')}
         >
           <Inbox size={14} />
-          {inMenu && <span className="text-xs">To Inbox</span>}
+          {inMenu && <span className="text-xs">{t('common.toInbox')}</span>}
         </button>
         )}
       </>
